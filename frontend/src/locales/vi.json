@@ -1,0 +1,26 @@
+{
+  "auth": {
+    "login": {
+      "welcome": "Chào mừng đến với Ứng dụng",
+      "username": "Tên đăng nhập",
+      "password": "Mật khẩu",
+      "submit": "Gửi",
+      "remember_me": "Ghi nhớ tôi",
+      "logout": "Đăng xuất",
+      "forgot_password": "Quên mật khẩu?",
+      "theme": "Chuyển đổi giao diện",
+      "language": "Chuyển ngôn ngữ",
+      "error": "Đã xảy ra lỗi: {msg}",
+      "required": "Trường này là bắt buộc",
+      "invalid": "Tên đăng nhập hoặc mật khẩu không hợp lệ"
+    },
+    "forgot": {
+      "title": "Quên mật khẩu",
+      "description": "Nhập địa chỉ email của bạn để nhận liên kết đặt lại mật khẩu.",
+      "email": "Email",
+      "send_link": "Gửi liên kết",
+      "success": "Liên kết đặt lại mật khẩu đã được gửi đến email của bạn.",
+      "error": "Không thể gửi liên kết đặt lại mật khẩu: {msg}"
+    }
+  }
+}

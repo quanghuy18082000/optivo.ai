@@ -1,0 +1,52 @@
+{
+  "common": {
+    "required": "This field is required",
+    "loading": "Loading...",
+    "error": "An error occurred: {msg}",
+    "success": "Operation completed successfully",
+    "cancel": "Cancel",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "email": "Email",
+    "name": "Name",
+    "username": "Username",
+    "password": "Password"
+  },
+  "auth": {
+    "login": {
+      "welcome": "Welcome to the App",
+      "username": "Username",
+      "password": "Password",
+      "submit": "Submit",
+      "remember_me": "Remember Me",
+      "logout": "Logout",
+      "forgot_password": "Forgot Password?",
+      "theme": "Toggle Theme",
+      "language": "Switch Language",
+      "error": "An error occurred: {msg}",
+      "invalid": "Invalid username or password"
+    }, 
+    "forgot": {
+      "title": "Forgot Password",
+      "description": "Enter your email address to receive a password reset link.",
+      "send_link": "Send Link",
+      "success": "Password reset link has been sent to your email.",
+      "error": "Unable to send password reset link: {msg}",
+      "back_to_login": "Back to Login"
+    },
+    "reset_password": {
+      "title": "Reset Your Password",
+      "instructions": "Enter your email and a new password to reset your password.",
+      "reset_button": "Reset Password",
+      "back_to_login": "Back to Login",
+      "success_message": "Your password has been successfully reset!",
+      "password_requirements": "Minimum 8 characters with at least one uppercase, one lowercase, one number and one special character",
+    "new_password": "New Password",
+    "confirm_password": "Confirm Password",
+    "processing": "Processing"
+  },
+  "password_mismatch": "Passwords do not match",
+  "password_complexity": "Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character"
+ }
+}
