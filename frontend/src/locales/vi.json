@@ -1,4 +1,20 @@
 {
+  "common": {
+    "required": "Trường này là bắt buộc",
+    "invalid_email": "Vui lòng nhập địa chỉ email hợp lệ",
+    "min_length": "Độ dài tối thiểu là {min} ký tự",
+    "loading": "Đang tải...",
+    "error": "Đã xảy ra lỗi: {msg}",
+    "success": "Thao tác hoàn thành thành công",
+    "cancel": "Hủy",
+    "save": "Lưu",
+    "delete": "Xóa",
+    "edit": "Chỉnh sửa",
+    "email": "Email",
+    "name": "Tên",
+    "username": "Tên đăng nhập",
+    "password": "Mật khẩu"
+  },
   "auth": {
     "login": {
       "welcome": "Chào mừng đến với Ứng dụng",
@@ -11,16 +27,29 @@
       "theme": "Chuyển đổi giao diện",
       "language": "Chuyển ngôn ngữ",
       "error": "Đã xảy ra lỗi: {msg}",
-      "required": "Trường này là bắt buộc",
-      "invalid": "Tên đăng nhập hoặc mật khẩu không hợp lệ"
+      "invalid": "Tên đăng nhập hoặc mật khẩu không hợp lệ",
+      "or_continue_with": "Hoặc tiếp tục với"
     },
     "forgot": {
       "title": "Quên mật khẩu",
       "description": "Nhập địa chỉ email của bạn để nhận liên kết đặt lại mật khẩu.",
-      "email": "Email",
-      "send_link": "Gửi liên kết",
+      "send_link": "Gửi liên kết đặt lại",
       "success": "Liên kết đặt lại mật khẩu đã được gửi đến email của bạn.",
-      "error": "Không thể gửi liên kết đặt lại mật khẩu: {msg}"
-    }
+      "error": "Không thể gửi liên kết đặt lại mật khẩu: {msg}",
+      "back_to_login": "Quay lại đăng nhập"
+    },
+    "reset_password": {
+      "title": "Đặt lại mật khẩu của bạn",
+      "instructions": "Nhập mật khẩu mới để đặt lại mật khẩu của bạn.",
+      "reset_button": "Đặt lại mật khẩu",
+      "back_to_login": "Quay lại đăng nhập",
+      "success_message": "Mật khẩu của bạn đã được đặt lại thành công! Đang chuyển hướng đến trang đăng nhập...",
+      "password_requirements": "Tối thiểu 8 ký tự với ít nhất một chữ hoa, một chữ thường, một số và một ký tự đặc biệt",
+      "new_password": "Mật khẩu mới",
+      "confirm_password": "Xác nhận mật khẩu",
+      "processing": "Đang xử lý..."
+    },
+    "password_mismatch": "Mật khẩu không khớp",
+    "password_complexity": "Mật khẩu phải chứa ít nhất một chữ hoa, một chữ thường, một số và một ký tự đặc biệt"
   }
 }

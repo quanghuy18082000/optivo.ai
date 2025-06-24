@@ -33,23 +33,23 @@
     "forgot": {
       "title": "Forgot Password",
       "description": "Enter your email address to receive a password reset link.",
-      "send_link": "Send Link",
+      "send_link": "Send Reset Link",
       "success": "Password reset link has been sent to your email.",
       "error": "Unable to send password reset link: {msg}",
       "back_to_login": "Back to Login"
     },
     "reset_password": {
       "title": "Reset Your Password",
-      "instructions": "Enter your email and a new password to reset your password.",
+      "instructions": "Enter a new password to reset your password.",
       "reset_button": "Reset Password",
       "back_to_login": "Back to Login",
-      "success_message": "Your password has been successfully reset!",
+      "success_message": "Your password has been successfully reset! Redirecting to login...",
       "password_requirements": "Minimum 8 characters with at least one uppercase, one lowercase, one number and one special character",
-    "new_password": "New Password",
-    "confirm_password": "Confirm Password",
-    "processing": "Processing"
-  },
-  "password_mismatch": "Passwords do not match",
-  "password_complexity": "Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character"
- }
+      "new_password": "New Password",
+      "confirm_password": "Confirm Password",
+      "processing": "Processing..."
+    },
+    "password_mismatch": "Passwords do not match",
+    "password_complexity": "Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character"
+  }
 }

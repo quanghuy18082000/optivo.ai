@@ -1,6 +1,6 @@
 import { useMutation } from '@tanstack/vue-query'
 import { useAuthStore } from '../store'
-import { login } from '../services/authService'
+import { login, forgotPassword as forgotPasswordService, resetPassword as resetPasswordService } from '../services/authService'
 import { loginWithMicrosoft } from '../services/oauthService'
 import { useRouter } from 'vue-router'
 import { ref } from 'vue'
@@ -9,6 +9,7 @@ export function useAuth() {
   const authStore = useAuthStore()
   const router = useRouter()
   const isLoading = ref(false)
+  const success = ref(false)
 
   const loginMutation = useMutation({
     mutationFn: login,
@@ -37,8 +38,44 @@ export function useAuth() {
     },
   })
 
+  const forgotPasswordMutation = useMutation({
+    mutationFn: forgotPasswordService,
+    onSuccess: () => {
+      success.value = true
+    },
+    onError: (err) => {
+      success.value = false
+      throw new Error(err.message || 'Failed to send reset link')
+    },
+  })
+
+  const resetPasswordMutation = useMutation({
+    mutationFn: resetPasswordService,
+    onSuccess: () => {
+      success.value = true
+      // Redirect to login after successful reset
+      setTimeout(() => {
+        router.push('/login')
+      }, 2000)
+    },
+    onError: (err) => {
+      success.value = false
+      throw new Error(err.message || 'Failed to reset password')
+    },
+  })
+
   const loginUser = (values) => {
     loginMutation.mutate(values)
+  }
+
+  const forgotPassword = (email) => {
+    success.value = false
+    forgotPasswordMutation.mutate(email)
+  }
+
+  const resetPassword = (resetData) => {
+    success.value = false
+    resetPasswordMutation.mutate(resetData)
   }
 
   const handleMicrosoftLogin = async () => {
@@ -74,9 +111,12 @@ export function useAuth() {
 
   return { 
     loginUser, 
+    forgotPassword,
+    resetPassword,
     loginWithMicrosoft: handleMicrosoftLogin,
     logout,
-    error: loginMutation.error || microsoftLoginMutation.error,
-    isLoading: isLoading.value || loginMutation.isPending || microsoftLoginMutation.isPending
+    error: loginMutation.error || microsoftLoginMutation.error || forgotPasswordMutation.error || resetPasswordMutation.error,
+    isLoading: isLoading.value || loginMutation.isPending || microsoftLoginMutation.isPending || forgotPasswordMutation.isPending || resetPasswordMutation.isPending,
+    success: success.value
   }
 }
