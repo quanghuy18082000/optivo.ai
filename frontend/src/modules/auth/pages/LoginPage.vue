@@ -15,11 +15,12 @@ const {
   loginWithMicrosoft,
   loginWithGoogle,
   error: authError,
+  isLoading,
 } = useAuth();
 
 const schema = toTypedSchema(
   zod.object({
-    username: zod
+    email: zod
       .string({ required_error: t("common.required") })
       .email(t("common.invalid_email")),
     password: zod
@@ -30,40 +31,55 @@ const schema = toTypedSchema(
 
 const { handleSubmit } = useForm({ validationSchema: schema });
 
-const { value: username, errorMessage: usernameError } = useField("username");
+const { value: email, errorMessage: emailError } = useField("email");
 const { value: password, errorMessage: passwordError } = useField("password");
 const { value: rememberMe } = useField("rememberMe");
 
-const isLoading = ref(false);
+const localLoading = ref(false);
 
 const onSubmit = handleSubmit(async (values) => {
-  isLoading.value = true;
-  await loginUser(values);
-  isLoading.value = false;
+  localLoading.value = true;
+  try {
+    await loginUser(values);
+  } finally {
+    localLoading.value = false;
+  }
 });
-
 const handleMicrosoftLogin = async () => {
-  isLoading.value = true;
+  localLoading.value = true;
   try {
     await loginWithMicrosoft();
+  } catch (error) {
+    console.error("Microsoft login failed:", error);
   } finally {
-    isLoading.value = false;
+    localLoading.value = false;
   }
 };
 
 const handleGoogleLogin = async () => {
-  isLoading.value = true;
+  localLoading.value = true;
   try {
     await loginWithGoogle();
+  } catch (error) {
+    console.error("Google login failed:", error);
   } finally {
-    isLoading.value = false;
+    localLoading.value = false;
   }
 };
+
+const callback = (response) => {
+  // This callback will be triggered when the user selects or login to
+  // his Google account from the popup
+  console.log("Handle the response", response);
+};
+
+let isAnyLoading = ref(false);
+$: isAnyLoading = localLoading.value || isLoading;
 </script>
 
 <template>
   <div class="min-h-screen flex items-center justify-center bg-gray-100 px-4">
-    <div class="w-full max-w-sm bg-white shadow-lg rounded-lg p-8">
+    <div class="w-full max-w-md bg-white shadow-lg rounded-lg p-8">
       <h1 class="text-center text-2xl font-semibold text-gray-900 mb-6">
         Login to <span class="text-[#0368FA] font-bold">Optivo</span>
       </h1>
@@ -71,18 +87,19 @@ const handleGoogleLogin = async () => {
       <form @submit.prevent="onSubmit" class="space-y-5">
         <div>
           <label
-            for="username"
+            for="email"
             class="block text-sm font-medium text-gray-700 mb-1"
           >
             {{ t("common.email") }}
           </label>
           <Input
-            id="username"
-            v-model="username"
+            id="email"
+            v-model="email"
             type="email"
             placeholder="your-email@gmail.com"
-            :error="!!usernameError"
-            :error-message="usernameError"
+            :error="!!emailError"
+            :error-message="emailError"
+            :disabled="isAnyLoading"
             class="w-full"
           />
         </div>
@@ -101,20 +118,16 @@ const handleGoogleLogin = async () => {
             placeholder="**********"
             :error="!!passwordError"
             :error-message="passwordError"
+            :disabled="isAnyLoading"
             class="w-full"
           />
         </div>
 
-        <div class="flex items-center justify-between text-sm">
-          <Checkbox
-            id="rememberMe"
-            v-model="rememberMe"
-            :label="t('auth.login.remember_me')"
-            class="text-[#0368FA]"
-          />
+        <div class="flex items-center justify-end text-sm">
           <router-link
             to="/forgot-password"
             class="text-[#0368FA] hover:underline"
+            :class="{ 'pointer-events-none opacity-50': isAnyLoading }"
           >
             {{ t("auth.login.forgot_password") || "Forgot Password?" }}
           </router-link>
@@ -123,9 +136,32 @@ const handleGoogleLogin = async () => {
         <Button
           type="submit"
           class="w-full bg-[#0368FA] hover:bg-blue-700 text-white font-semibold py-2 rounded-md transition"
-          :loading="isLoading"
+          :disabled="isAnyLoading"
         >
-          Log In
+          <span v-if="localLoading" class="flex items-center justify-center">
+            <svg
+              class="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <circle
+                class="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                stroke-width="4"
+              ></circle>
+              <path
+                class="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+              ></path>
+            </svg>
+            {{ t("common.loading") || "Loading..." }}
+          </span>
+          <span v-else>Log In</span>
         </Button>
 
         <div class="relative">
@@ -139,33 +175,83 @@ const handleGoogleLogin = async () => {
           </div>
         </div>
 
-        <div class="flex gap-4">
+        <div class="flex w-full gap-4">
           <Button
             type="button"
             @click="handleMicrosoftLogin"
-            class="w-full flex items-center justify-center !text-gray-500 gap-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 font-medium py-2 rounded-md transition"
-            :loading="isLoading"
+            class="w-full !text-gray-500 !px-0 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 font-medium rounded-md transition"
+            :disabled="isAnyLoading"
           >
-            <img
-              src="@/assets/images/microsoft-logo.png"
-              alt="Microsoft"
-              class="h-5 w-5"
-            />
-            Microsoft
+            <div class="flex items-center justify-center gap-2">
+              <img
+                src="@/assets/images/microsoft-logo.png"
+                alt="Microsoft"
+                class="h-5 w-5"
+              />
+              <span v-if="isAnyLoading" class="flex items-center">
+                <svg
+                  class="animate-spin -ml-1 mr-2 h-4 w-4 text-gray-500"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    class="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    stroke-width="4"
+                  ></circle>
+                  <path
+                    class="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  ></path>
+                </svg>
+              </span>
+              <span v-else>Microsoft</span>
+            </div>
           </Button>
-          <Button
-            type="button"
-            @click="handleGoogleLogin"
-            class="w-full flex items-center justify-center gap-2 bg-white !text-gray-500 border border-gray-300 hover:bg-gray-50 text-gray-700 font-medium py-2 rounded-md transition"
-            :loading="isLoading"
-          >
-            <img
-              src="@/assets/icons/google-logo.svg"
-              alt="Google"
-              class="h-5 w-5"
-            />
-            Google
-          </Button>
+
+          <GoogleLogin :callback="callback" popupType="CODE" class="w-full">
+            <Button
+              type="button"
+              class="w-full bg-white !text-gray-500 border border-gray-300 hover:bg-gray-50 text-gray-700 font-medium rounded-md transition"
+              :disabled="isAnyLoading"
+            >
+              <div class="flex items-center justify-center gap-2">
+                <img
+                  src="@/assets/icons/google-logo.svg"
+                  alt="Google"
+                  class="h-5 w-5"
+                />
+                <span v-if="isAnyLoading" class="flex items-center">
+                  <svg
+                    class="animate-spin -ml-1 mr-2 h-4 w-4 text-gray-500"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      class="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      stroke-width="4"
+                    ></circle>
+                    <path
+                      class="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    ></path>
+                  </svg>
+                </span>
+                <span v-else>Google</span>
+              </div>
+            </Button>
+          </GoogleLogin>
         </div>
 
         <div v-if="authError" class="text-center text-red-500 text-sm mt-3">

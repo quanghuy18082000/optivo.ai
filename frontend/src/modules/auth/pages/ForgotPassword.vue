@@ -29,7 +29,7 @@ const onSubmit = handleSubmit((values) => {
 
 <template>
   <div class="min-h-screen flex items-center justify-center bg-gray-100 px-4">
-    <div class="w-full max-w-sm bg-white shadow-lg rounded-lg p-8">
+    <div class="w-full max-w-md bg-white shadow-lg rounded-lg p-8">
       <h1 class="text-center text-2xl font-semibold text-gray-900 mb-6">
         {{ t("auth.forgot.title") }}
       </h1>
