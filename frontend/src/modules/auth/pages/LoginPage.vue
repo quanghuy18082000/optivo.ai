@@ -13,7 +13,6 @@ const { t } = useI18n();
 const {
   loginUser,
   loginWithMicrosoft,
-  loginWithGoogle,
   error: authError,
   isLoading,
 } = useAuth();
@@ -51,17 +50,6 @@ const handleMicrosoftLogin = async () => {
     await loginWithMicrosoft();
   } catch (error) {
     console.error("Microsoft login failed:", error);
-  } finally {
-    localLoading.value = false;
-  }
-};
-
-const handleGoogleLogin = async () => {
-  localLoading.value = true;
-  try {
-    await loginWithGoogle();
-  } catch (error) {
-    console.error("Google login failed:", error);
   } finally {
     localLoading.value = false;
   }

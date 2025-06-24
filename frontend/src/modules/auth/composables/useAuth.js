@@ -1,7 +1,7 @@
 import { useMutation } from '@tanstack/vue-query'
 import { useAuthStore } from '../store'
 import { login } from '../services/authService'
-import { loginWithMicrosoft, loginWithGoogle, logoutMicrosoft, logoutGoogle } from '../services/oauthService'
+import { loginWithMicrosoft } from '../services/oauthService'
 import { useRouter } from 'vue-router'
 import { ref } from 'vue'
 
@@ -37,22 +37,6 @@ export function useAuth() {
     },
   })
 
-  const googleLoginMutation = useMutation({
-    mutationFn: loginWithGoogle,
-    onSuccess: (data) => {
-      // Store the token if returned from backend
-      if (data.token) {
-        localStorage.setItem('token', data.token)
-      }
-      authStore.login({ email: data.email, provider: 'google' }, 'user')
-      router.push('/dashboard')
-    },
-    onError: (err) => {
-      console.error('Google login error:', err)
-      throw new Error(err.message || 'Google login failed')
-    },
-  })
-
   const loginUser = (values) => {
     loginMutation.mutate(values)
   }
@@ -69,18 +53,6 @@ export function useAuth() {
     }
   }
 
-  const handleGoogleLogin = async () => {
-    try {
-      isLoading.value = true
-      await googleLoginMutation.mutateAsync()
-    } catch (error) {
-      console.error('Google login failed:', error)
-      throw error
-    } finally {
-      isLoading.value = false
-    }
-  }
-
   const logout = async () => {
     try {
       // Clear local storage
@@ -88,8 +60,7 @@ export function useAuth() {
       localStorage.removeItem('isAuthenticated')
       
       // Logout from OAuth providers
-      await logoutMicrosoft()
-      logoutGoogle()
+
       
       // Clear auth store
       authStore.logout()
@@ -104,9 +75,8 @@ export function useAuth() {
   return { 
     loginUser, 
     loginWithMicrosoft: handleMicrosoftLogin,
-    loginWithGoogle: handleGoogleLogin,
     logout,
-    error: loginMutation.error || microsoftLoginMutation.error || googleLoginMutation.error,
-    isLoading: isLoading.value || loginMutation.isPending || microsoftLoginMutation.isPending || googleLoginMutation.isPending
+    error: loginMutation.error || microsoftLoginMutation.error,
+    isLoading: isLoading.value || loginMutation.isPending || microsoftLoginMutation.isPending
   }
 }
