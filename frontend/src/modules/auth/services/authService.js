@@ -1,8 +1,9 @@
-import axios from 'axios'
+
+import { post } from '@/utils/requestClient.js'
 
 export const login = async (credentials) => {
   try {
-    const response = await axios.post('https://jsonplaceholder.typicode.com/users', credentials)
+    const response = await post('/v1/api/users/', credentials)
     return { username: credentials.username }
   } catch (error) {
     throw new Error(error.message || 'Login failed')

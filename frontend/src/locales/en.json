@@ -1,6 +1,8 @@
 {
   "common": {
     "required": "This field is required",
+    "invalid_email": "Please enter a valid email address",
+    "min_length": "Minimum length is {min} characters",
     "loading": "Loading...",
     "error": "An error occurred: {msg}",
     "success": "Operation completed successfully",
@@ -25,7 +27,8 @@
       "theme": "Toggle Theme",
       "language": "Switch Language",
       "error": "An error occurred: {msg}",
-      "invalid": "Invalid username or password"
+      "invalid": "Invalid username or password",
+      "or_continue_with": "Or continue with"
     }, 
     "forgot": {
       "title": "Forgot Password",
