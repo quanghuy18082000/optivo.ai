@@ -13,6 +13,7 @@ const { t } = useI18n();
 const {
   loginUser,
   loginWithMicrosoft,
+  loginWithGoogle,
   error: authError,
   isLoading,
 } = useAuth();
@@ -35,6 +36,7 @@ const { value: password, errorMessage: passwordError } = useField("password");
 const { value: rememberMe } = useField("rememberMe");
 
 const localLoading = ref(false);
+const googleError = ref(null);
 
 const onSubmit = handleSubmit(async (values) => {
   localLoading.value = true;
@@ -44,6 +46,7 @@ const onSubmit = handleSubmit(async (values) => {
     localLoading.value = false;
   }
 });
+
 const handleMicrosoftLogin = async () => {
   localLoading.value = true;
   try {
@@ -55,10 +58,27 @@ const handleMicrosoftLogin = async () => {
   }
 };
 
-const callback = (response) => {
-  // This callback will be triggered when the user selects or login to
-  // his Google account from the popup
-  console.log("Handle the response", response);
+// Google OAuth callback function
+const handleGoogleCallback = async (response) => {
+  console.log("Google OAuth response:", response);
+  
+  try {
+    localLoading.value = true;
+    googleError.value = null;
+    
+    // Check if we have the authorization code
+    if (response.code) {
+      // Send the authorization code to your backend
+      await loginWithGoogle(response.code);
+    } else {
+      throw new Error("No authorization code received from Google");
+    }
+  } catch (error) {
+    console.error("Google login failed:", error);
+    googleError.value = error.message || "Google login failed";
+  } finally {
+    localLoading.value = false;
+  }
 };
 
 let isAnyLoading = ref(false);
@@ -202,7 +222,7 @@ $: isAnyLoading = localLoading.value || isLoading;
             </div>
           </Button>
 
-          <GoogleLogin :callback="callback" popupType="CODE" class="w-full">
+          <GoogleLogin :callback="handleGoogleCallback" popupType="CODE" class="w-full">
             <Button
               type="button"
               class="w-full bg-white !text-gray-500 border border-gray-300 hover:bg-gray-50 text-gray-700 font-medium rounded-md transition"
@@ -242,8 +262,8 @@ $: isAnyLoading = localLoading.value || isLoading;
           </GoogleLogin>
         </div>
 
-        <div v-if="authError" class="text-center text-red-500 text-sm mt-3">
-          {{ t("common.error", { msg: authError }) }}
+        <div v-if="authError || googleError" class="text-center text-red-500 text-sm mt-3">
+          {{ t("common.error", { msg: authError || googleError }) }}
         </div>
       </form>
     </div>

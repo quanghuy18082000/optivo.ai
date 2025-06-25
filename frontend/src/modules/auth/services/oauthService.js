@@ -49,6 +49,18 @@ export const loginWithMicrosoft = async () => {
   }
 }
 
+// Google Login
+export const loginWithGoogle = async (code) => {
+  try {
+    // Send the authorization code to your backend
+    const response = await post('/auth/oauth/google', { code })
+    return response.data
+  } catch (error) {
+    console.error('Google OAuth error:', error)
+    throw new Error(error.response?.data?.message || error.message || 'Google login failed')
+  }
+}
+
 // const parseJwt = (token) => {
 //   try {
 //     console.log(123, token)

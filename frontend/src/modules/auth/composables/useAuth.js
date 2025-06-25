@@ -1,7 +1,7 @@
 import { useMutation } from '@tanstack/vue-query'
 import { useAuthStore } from '../store'
 import { login, forgotPassword as forgotPasswordService, resetPassword as resetPasswordService } from '../services/authService'
-import { loginWithMicrosoft } from '../services/oauthService'
+import { loginWithMicrosoft, loginWithGoogle } from '../services/oauthService'
 import { useRouter } from 'vue-router'
 import { ref } from 'vue'
 
@@ -35,6 +35,22 @@ export function useAuth() {
     onError: (err) => {
       console.error('Microsoft login error:', err)
       throw new Error(err.message || 'Microsoft login failed')
+    },
+  })
+
+  const googleLoginMutation = useMutation({
+    mutationFn: loginWithGoogle,
+    onSuccess: (data) => {
+      // Store the token if returned from backend
+      if (data.token) {
+        localStorage.setItem('token', data.token)
+      }
+      authStore.login({ email: data.email, provider: 'google' }, 'user')
+      router.push('/dashboard')
+    },
+    onError: (err) => {
+      console.error('Google login error:', err)
+      throw new Error(err.message || 'Google login failed')
     },
   })
 
@@ -90,6 +106,18 @@ export function useAuth() {
     }
   }
 
+  const handleGoogleLogin = async (code) => {
+    try {
+      isLoading.value = true
+      await googleLoginMutation.mutateAsync(code)
+    } catch (error) {
+      console.error('Google login failed:', error)
+      throw error
+    } finally {
+      isLoading.value = false
+    }
+  }
+
   const logout = async () => {
     try {
       // Clear local storage
@@ -114,9 +142,10 @@ export function useAuth() {
     forgotPassword,
     resetPassword,
     loginWithMicrosoft: handleMicrosoftLogin,
+    loginWithGoogle: handleGoogleLogin,
     logout,
-    error: loginMutation.error || microsoftLoginMutation.error || forgotPasswordMutation.error || resetPasswordMutation.error,
-    isLoading: isLoading.value || loginMutation.isPending || microsoftLoginMutation.isPending || forgotPasswordMutation.isPending || resetPasswordMutation.isPending,
+    error: loginMutation.error || microsoftLoginMutation.error || googleLoginMutation.error || forgotPasswordMutation.error || resetPasswordMutation.error,
+    isLoading: isLoading.value || loginMutation.isPending || microsoftLoginMutation.isPending || googleLoginMutation.isPending || forgotPasswordMutation.isPending || resetPasswordMutation.isPending,
     success: success.value
   }
 }
