@@ -7,7 +7,11 @@ import Button from "@/components/ui/Button.vue";
 import Checkbox from "@/components/ui/Checkbox.vue";
 import { useAuth } from "../composables/useAuth";
 import { useI18n } from "vue-i18n";
-import { ref } from "vue";
+import { ref, watchEffect } from "vue";
+import { useRoute } from "vue-router";
+import { post } from "@/utils/requestClient";
+
+const route = useRoute();
 
 const { t } = useI18n();
 const {
@@ -58,14 +62,32 @@ const handleMicrosoftLogin = async () => {
   }
 };
 
+// watchEffect(async () => {
+//   const fragment = window.location.hash.substring(1); // Remove the '#' character
+
+//   // Create a URLSearchParams object to parse the query parameters
+//   const params = new URLSearchParams(fragment);
+
+//   // Get the value of the 'code' parameter
+//   const code = params.get("code");
+//   // Send OAuth data to backend
+
+//   if (code) {
+//     const backendResponse = await post("/auth/oauth/microsoft", {
+//       code: code,
+//     });
+//     return backendResponse.data;
+//   }
+// });
+
 // Google OAuth callback function
 const handleGoogleCallback = async (response) => {
   console.log("Google OAuth response:", response);
-  
+
   try {
     localLoading.value = true;
     googleError.value = null;
-    
+
     // Check if we have the authorization code
     if (response.code) {
       // Send the authorization code to your backend
@@ -222,7 +244,11 @@ $: isAnyLoading = localLoading.value || isLoading;
             </div>
           </Button>
 
-          <GoogleLogin :callback="handleGoogleCallback" popupType="CODE" class="w-full">
+          <GoogleLogin
+            :callback="handleGoogleCallback"
+            popupType="CODE"
+            class="w-full"
+          >
             <Button
               type="button"
               class="w-full bg-white !text-gray-500 border border-gray-300 hover:bg-gray-50 text-gray-700 font-medium rounded-md transition"
@@ -262,7 +288,10 @@ $: isAnyLoading = localLoading.value || isLoading;
           </GoogleLogin>
         </div>
 
-        <div v-if="authError || googleError" class="text-center text-red-500 text-sm mt-3">
+        <div
+          v-if="authError || googleError"
+          class="text-center text-red-500 text-sm mt-3"
+        >
           {{ t("common.error", { msg: authError || googleError }) }}
         </div>
       </form>

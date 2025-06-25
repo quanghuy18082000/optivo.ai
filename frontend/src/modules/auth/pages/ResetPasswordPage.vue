@@ -31,7 +31,8 @@ const schema = toTypedSchema(
         .min(8, t("common.min_length", { min: 8 }))
         .regex(
           /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/,
-          t("auth.password_complexity") || "Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character"
+          t("auth.password_complexity") ||
+            "Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character"
         ),
       confirmPassword: zod.string({
         required_error: t("common.required"),
@@ -46,7 +47,8 @@ const schema = toTypedSchema(
 const { handleSubmit } = useForm({ validationSchema: schema });
 
 const { value: password, errorMessage: passwordError } = useField("password");
-const { value: confirmPassword, errorMessage: confirmPasswordError } = useField("confirmPassword");
+const { value: confirmPassword, errorMessage: confirmPasswordError } =
+  useField("confirmPassword");
 
 const onSubmit = handleSubmit(async (values) => {
   if (!token.value) {
@@ -70,7 +72,10 @@ const onSubmit = handleSubmit(async (values) => {
       </h1>
 
       <p class="text-sm text-gray-600 mb-6 text-center">
-        {{ t("auth.reset_password.instructions") || "Enter a new password to reset your password." }}
+        {{
+          t("auth.reset_password.instructions") ||
+          "Enter a new password to reset your password."
+        }}
       </p>
 
       <form @submit.prevent="onSubmit" class="space-y-4">
@@ -92,7 +97,10 @@ const onSubmit = handleSubmit(async (values) => {
             class="w-full"
           />
           <p class="text-xs text-gray-500 mt-1">
-            {{ t("auth.reset_password.password_requirements") || "Minimum 8 characters with at least one uppercase, one lowercase, one number and one special character" }}
+            {{
+              t("auth.reset_password.password_requirements") ||
+              "Minimum 8 characters with at least one uppercase, one lowercase, one number and one special character"
+            }}
           </p>
         </div>
 
@@ -101,7 +109,9 @@ const onSubmit = handleSubmit(async (values) => {
             for="confirmPassword"
             class="block text-sm font-medium text-gray-700 mb-1"
           >
-            {{ t("auth.reset_password.confirm_password") || "Confirm Password" }}
+            {{
+              t("auth.reset_password.confirm_password") || "Confirm Password"
+            }}
           </label>
           <Input
             id="confirmPassword"
@@ -149,7 +159,8 @@ const onSubmit = handleSubmit(async (values) => {
         </Button>
 
         <div v-if="!token" class="text-center text-red-500 text-sm mt-3">
-          Invalid or missing reset token. Please request a new password reset link.
+          Invalid or missing reset token. Please request a new password reset
+          link.
         </div>
 
         <div v-if="authError" class="text-center text-red-500 text-sm mt-3">
@@ -157,7 +168,10 @@ const onSubmit = handleSubmit(async (values) => {
         </div>
 
         <div v-if="success" class="text-center text-green-500 text-sm mt-3">
-          {{ t("auth.reset_password.success_message") || "Your password has been successfully reset! Redirecting to login..." }}
+          {{
+            t("auth.reset_password.success_message") ||
+            "Your password has been successfully reset! Redirecting to login..."
+          }}
         </div>
       </form>
 

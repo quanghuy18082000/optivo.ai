@@ -9,9 +9,10 @@ export const login = async (credentials) => {
   }
 }
 
+
 export const forgotPassword = async (email) => {
   try {
-    const response = await post('/forgot-password', { email })
+    const response = await post('/auth/forgot-password', { email })
     return response.data
   } catch (error) {
     throw new Error(error.response?.data?.message || error.message || 'Failed to send reset link')
@@ -21,10 +22,9 @@ export const forgotPassword = async (email) => {
 export const resetPassword = async (resetData) => {
   try {
     const { token, password, confirmPassword } = resetData
-    const response = await post('/reset-password', {
+    const response = await post('/auth/reset-password', {
       token,
-      'new-password': password,
-      'confirm-password': confirmPassword
+      'new_password': password
     })
     return response.data
   } catch (error) {

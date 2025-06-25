@@ -5,16 +5,16 @@ import { post } from '@/utils/requestClient.js'
 const msalConfig = {
   auth: {
     clientId: import.meta.env.VITE_MICROSOFT_CLIENT_ID,
-    authority: 'https://login.microsoftonline.com/common',
-    redirectUri: window.location.origin,
+    authority: `https://login.microsoftonline.com/${import.meta.env.VITE_MICROSOFT_TENANT_ID}`,
+    redirectUri: 'http://localhost:5173/callback', // Update with your redirect URI
   },
   cache: {
-    cacheLocation: 'sessionStorage',
+    // cacheLocation: 'sessionStorage',
     storeAuthStateInCookie: false,
   },
 }
 
-const msalInstance = new PublicClientApplication(msalConfig)
+export const msalInstance = new PublicClientApplication(msalConfig)
 
 // Initialize MSAL
 await msalInstance.initialize()
@@ -23,22 +23,22 @@ await msalInstance.initialize()
 export const loginWithMicrosoft = async () => {
   try {
     const loginRequest = {
-      scopes: ['openid', 'profile', 'email'],
+      scopes: ['User.Read'],
+      prompt: 'select_account',
+      // response_mode: 'query'
     }
 
-    const response = await msalInstance.loginPopup(loginRequest)
-
-    console.log(response)
+        const response = await msalInstance.loginPopup(loginRequest)
+            console.log("Popup token response:", response);
     
     if (response && response.account) {
 
-      
       // Send OAuth data to backend
       const oauthData = {
-       code : response.accessToken,
+       code : response.idToken,
       }
 
-      const backendResponse = await post('/v1/api/users/oauth-login', oauthData)
+      const backendResponse = await post('/auth/oauth/microsoft', oauthData)
       return backendResponse.data
     }
     

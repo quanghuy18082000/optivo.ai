@@ -96,7 +96,10 @@ const onSubmit = handleSubmit((values) => {
         </div>
 
         <div v-if="success" class="text-center text-green-600 text-sm mt-3">
-          {{ t("auth.forgot.success") || "Password reset link has been sent to your email!" }}
+          {{
+            t("auth.forgot.success") ||
+            "Password reset link has been sent to your email!"
+          }}
         </div>
 
         <div class="text-center text-sm mt-4">
