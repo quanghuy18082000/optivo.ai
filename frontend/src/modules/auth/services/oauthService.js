@@ -6,10 +6,10 @@ const msalConfig = {
   auth: {
     clientId: import.meta.env.VITE_MICROSOFT_CLIENT_ID,
     authority: `https://login.microsoftonline.com/${import.meta.env.VITE_MICROSOFT_TENANT_ID}`,
-    redirectUri: 'http://localhost:5173/callback', // Update with your redirect URI
+    redirectUri: 'http://localhost:5173/login', // Update with your redirect URI
   },
   cache: {
-    // cacheLocation: 'sessionStorage',
+    cacheLocation: 'sessionStorage',
     storeAuthStateInCookie: false,
   },
 }
@@ -23,16 +23,14 @@ await msalInstance.initialize()
 export const loginWithMicrosoft = async () => {
   try {
     const loginRequest = {
-      scopes: ['User.Read'],
-      prompt: 'select_account',
-      // response_mode: 'query'
+      scopes: ['openid', 'profile', 'User.Read', 'email', 'offline_access'],
+      prompt: 'select_account'
     }
 
         const response = await msalInstance.loginPopup(loginRequest)
-            console.log("Popup token response:", response);
+        console.log('Microsoft OAuth response:', response)
     
     if (response && response.account) {
-
       // Send OAuth data to backend
       const oauthData = {
        code : response.idToken,
@@ -60,22 +58,3 @@ export const loginWithGoogle = async (code) => {
     throw new Error(error.response?.data?.message || error.message || 'Google login failed')
   }
 }
-
-// const parseJwt = (token) => {
-//   try {
-//     console.log(123, token)
-//     const base64Url = token.split('.')[1]
-//     const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/')
-//     const jsonPayload = decodeURIComponent(
-//       atob(base64)
-//         .split('')
-//         .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
-//         .join('')
-//     )
-//     return JSON.parse(jsonPayload)
-//   } catch (error) {
-//     throw new Error('Invalid token')
-//   }
-// }
-
-// Logout functions

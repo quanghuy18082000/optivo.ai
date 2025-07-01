@@ -4,7 +4,7 @@ const worklogRoutes = [
       path: '/',
       name: 'worklog-dashboard',
       component: () => import('./pages/WorklogDashboard.vue'),
-      meta: { requiresAuth: true }
+      meta: { requiresAuth: false }
     }
   ]
   

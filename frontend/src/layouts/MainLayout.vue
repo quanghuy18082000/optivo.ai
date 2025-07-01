@@ -1,0 +1,253 @@
+<template>
+  <div class="min-h-screen bg-gray-50 flex">
+    <!-- Sidebar -->
+    <aside
+      :class="[
+        'bg-blue-600 text-white flex-shrink-0 transition-all duration-300 ease-in-out',
+        isCollapsed ? 'w-16' : 'w-64',
+      ]"
+    >
+      <div class="p-4">
+        <!-- Logo and Toggle -->
+        <div class="flex items-center justify-between mb-8">
+          <div v-if="!isCollapsed" class="flex items-center gap-3">
+            <div
+              class="w-8 h-8 bg-white rounded-full flex items-center justify-center"
+            >
+              <span class="text-blue-600 font-bold text-lg">O</span>
+            </div>
+            <span class="text-xl font-bold">OPTIVO</span>
+          </div>
+          <div v-else class="flex justify-center w-full">
+            <div
+              class="w-8 h-8 bg-white rounded-full flex items-center justify-center"
+            >
+              <span class="text-blue-600 font-bold text-lg">O</span>
+            </div>
+          </div>
+          <button
+            @click="toggleSidebar"
+            class="p-1 text-white hover:bg-blue-700 rounded transition-colors"
+          >
+            <svg
+              class="w-5 h-5 transition-transform duration-300"
+              :class="{ 'rotate-180': isCollapsed }"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M15 19l-7-7 7-7"
+              />
+            </svg>
+          </button>
+        </div>
+
+        <!-- Navigation -->
+        <nav class="space-y-2">
+          <router-link
+            to="/dashboard"
+            class="flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-blue-700 transition-colors group"
+            :class="{
+              'bg-blue-700':
+                $route.path === '/dashboard' || $route.path === '/',
+            }"
+          >
+            <svg
+              class="w-5 h-5 flex-shrink-0"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+            >
+              <path
+                d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z"
+              />
+            </svg>
+            <div v-if="!isCollapsed" class="min-w-0">
+              <div class="font-medium truncate">Daily Input</div>
+              <div class="text-sm text-blue-200 truncate">Log your work</div>
+            </div>
+            <!-- Tooltip for collapsed state -->
+            <div
+              v-if="isCollapsed"
+              class="absolute left-16 bg-gray-900 text-white px-2 py-1 rounded text-sm opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50"
+            >
+              Daily Input
+            </div>
+          </router-link>
+
+          <router-link
+            to="/projects"
+            class="flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-blue-700 transition-colors group"
+            :class="{ 'bg-blue-700': $route.path === '/projects' }"
+          >
+            <svg
+              class="w-5 h-5 flex-shrink-0"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+            >
+              <path
+                d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 7a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1zM2 11a2 2 0 012-2h12a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2v-4z"
+              />
+            </svg>
+            <div v-if="!isCollapsed" class="min-w-0">
+              <div class="font-medium truncate">Projects</div>
+              <div class="text-sm text-blue-200 truncate">Manage projects</div>
+            </div>
+            <div
+              v-if="isCollapsed"
+              class="absolute left-16 bg-gray-900 text-white px-2 py-1 rounded text-sm opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50"
+            >
+              Projects
+            </div>
+          </router-link>
+
+          <router-link
+            to="/profile"
+            class="flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-blue-700 transition-colors group"
+            :class="{ 'bg-blue-700': $route.path === '/profile' }"
+          >
+            <svg
+              class="w-5 h-5 flex-shrink-0"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+            >
+              <path
+                fill-rule="evenodd"
+                d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
+                clip-rule="evenodd"
+              />
+            </svg>
+            <div v-if="!isCollapsed" class="min-w-0">
+              <div class="font-medium truncate">Profile</div>
+              <div class="text-sm text-blue-200 truncate">Your account</div>
+            </div>
+            <div
+              v-if="isCollapsed"
+              class="absolute left-16 bg-gray-900 text-white px-2 py-1 rounded text-sm opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50"
+            >
+              Profile
+            </div>
+          </router-link>
+        </nav>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <div class="flex-1 flex flex-col min-w-0">
+      <!-- Header -->
+      <header class="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-4 min-w-0">
+            <slot name="header-left">
+              <h1 class="text-2xl font-semibold text-gray-900 truncate">
+                Dashboard
+              </h1>
+            </slot>
+          </div>
+
+          <div class="flex items-center gap-4 flex-shrink-0">
+            <slot name="header-right">
+              <!-- User Menu -->
+              <div class="relative">
+                <button
+                  @click="showUserMenu = !showUserMenu"
+                  class="flex items-center gap-2 px-3 py-2 text-gray-600 hover:text-gray-900 transition-colors rounded-lg hover:bg-gray-100"
+                >
+                  <div
+                    class="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center"
+                  >
+                    <span class="text-sm font-medium text-gray-600">U</span>
+                  </div>
+                  <svg
+                    class="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M19 9l-7 7-7-7"
+                    />
+                  </svg>
+                </button>
+
+                <!-- User Dropdown -->
+                <div
+                  v-if="showUserMenu"
+                  class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50"
+                  @click.stop
+                >
+                  <button
+                    @click="logout"
+                    class="w-full flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-100 transition-colors"
+                  >
+                    <svg
+                      class="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                      />
+                    </svg>
+                    Logout
+                  </button>
+                </div>
+              </div>
+            </slot>
+          </div>
+        </div>
+      </header>
+
+      <!-- Page Content -->
+      <main class="flex-1 p-6 min-w-0">
+        <slot />
+      </main>
+    </div>
+  </div>
+
+  <!-- Click outside to close user menu -->
+  <div
+    v-if="showUserMenu"
+    class="fixed inset-0 z-40"
+    @click="showUserMenu = false"
+  ></div>
+</template>
+
+<script setup>
+import { ref, onMounted, onUnmounted } from "vue";
+import { useAuth } from "@/modules/auth/composables/useAuth";
+
+const { logout } = useAuth();
+
+const isCollapsed = ref(false);
+const showUserMenu = ref(false);
+
+const toggleSidebar = () => {
+  isCollapsed.value = !isCollapsed.value;
+};
+
+// Close user menu when clicking outside
+const handleClickOutside = (event) => {
+  if (showUserMenu.value && !event.target.closest(".relative")) {
+    showUserMenu.value = false;
+  }
+};
+
+onMounted(() => {
+  document.addEventListener("click", handleClickOutside);
+});
+
+onUnmounted(() => {
+  document.removeEventListener("click", handleClickOutside);
+});
+</script>

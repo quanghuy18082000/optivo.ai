@@ -62,24 +62,6 @@ const handleMicrosoftLogin = async () => {
   }
 };
 
-// watchEffect(async () => {
-//   const fragment = window.location.hash.substring(1); // Remove the '#' character
-
-//   // Create a URLSearchParams object to parse the query parameters
-//   const params = new URLSearchParams(fragment);
-
-//   // Get the value of the 'code' parameter
-//   const code = params.get("code");
-//   // Send OAuth data to backend
-
-//   if (code) {
-//     const backendResponse = await post("/auth/oauth/microsoft", {
-//       code: code,
-//     });
-//     return backendResponse.data;
-//   }
-// });
-
 // Google OAuth callback function
 const handleGoogleCallback = async (response) => {
   console.log("Google OAuth response:", response);
