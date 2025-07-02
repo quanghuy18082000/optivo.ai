@@ -9,6 +9,8 @@
       :value="modelValue"
       :placeholder="placeholder"
       :disabled="disabled"
+      :min="min"
+      :max="max"
       class="px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors duration-200"
       :class="[
         error
@@ -62,6 +64,14 @@ defineProps({
   errorMessage: {
     type: String,
     default: "This field has an error",
+  },
+  min: {
+    type: [String, Number],
+    default: undefined,
+  },
+  max: {
+    type: [String, Number],
+    default: undefined,
   },
 });
 

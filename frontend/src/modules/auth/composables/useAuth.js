@@ -14,8 +14,11 @@ export function useAuth() {
   const loginMutation = useMutation({
     mutationFn: login,
     onSuccess: (data) => {
-      authStore.login({ username: data.username }, 'user')
-      router.push('/dashboard')
+
+      console.log(222, data)
+      // Handle the new response format with access_token, refresh_token, and user_info
+      authStore.login(data, 'user')
+      router.push('/')
     },
     onError: (err) => {
       return err.message || 'invalid'
@@ -25,11 +28,8 @@ export function useAuth() {
   const microsoftLoginMutation = useMutation({
     mutationFn: loginWithMicrosoft,
     onSuccess: (data) => {
-      // Store the token if returned from backend
-      if (data.token) {
-        localStorage.setItem('token', data.token)
-      }
-      authStore.login({ email: data.email, provider: 'microsoft' }, 'user')
+      // Handle the new response format with access_token, refresh_token, and user_info
+      authStore.login(data, 'user', 'microsoft')
       router.push('/dashboard')
     },
     onError: (err) => {
@@ -41,11 +41,8 @@ export function useAuth() {
   const googleLoginMutation = useMutation({
     mutationFn: loginWithGoogle,
     onSuccess: (data) => {
-      // Store the token if returned from backend
-      if (data.token) {
-        localStorage.setItem('token', data.token)
-      }
-      authStore.login({ email: data.email, provider: 'google' }, 'user')
+      // Handle the new response format with access_token, refresh_token, and user_info
+      authStore.login(data, 'user', 'google')
       router.push('/dashboard')
     },
     onError: (err) => {
@@ -81,7 +78,25 @@ export function useAuth() {
   })
 
   const loginUser = (values) => {
-    loginMutation.mutate(values)
+    // For testing purposes, we can use a mock user if the API is not available
+    if (process.env.NODE_ENV === 'development' && values.email === 'test@example.com') {
+      const mockUserData = {
+        access_token: 'mock-token',
+        refresh_token: 'mock-refresh-token',
+        user_info: {
+          id: '123',
+          name: 'Test User',
+          email: 'test@example.com',
+          avatar: null,
+          created_at: new Date().toISOString()
+        }
+      };
+      authStore.login(mockUserData, 'user');
+      router.push('/');
+      return;
+    }
+    
+    loginMutation.mutate(values);
   }
 
   const forgotPassword = (email) => {
@@ -120,14 +135,7 @@ export function useAuth() {
 
   const logout = async () => {
     try {
-      // Clear local storage
-      localStorage.removeItem('token')
-      localStorage.removeItem('isAuthenticated')
-      
-      // Logout from OAuth providers
-
-      
-      // Clear auth store
+      // Clear auth store (which will also clear localStorage)
       authStore.logout()
       
       // Redirect to login

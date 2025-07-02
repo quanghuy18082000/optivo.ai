@@ -8,17 +8,14 @@
     </template>
 
     <template #header-right>
-      <div class="flex items-center gap-3">
-        <!-- Filters Button -->
+      <div class="relative">
+        <!-- Profile Icon -->
         <button
-          @click="showFilters = true"
-          class="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-gray-900 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-          :class="{
-            'bg-blue-50 border-blue-300 text-blue-700': hasActiveFilters,
-          }"
+          @click="showProfileMenu = !showProfileMenu"
+          class="profile-button flex items-center justify-center w-10 h-10 rounded-full bg-blue-100 text-blue-600 hover:bg-blue-200 transition-colors"
         >
           <svg
-            class="w-4 h-4"
+            class="w-6 h-6"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -27,46 +24,106 @@
               stroke-linecap="round"
               stroke-linejoin="round"
               stroke-width="2"
-              d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
+              d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
             />
           </svg>
-          Filters
-          <span
-            v-if="activeFilterCount > 0"
-            class="ml-1 bg-blue-600 text-white text-xs rounded-full px-2 py-0.5"
-          >
-            {{ activeFilterCount }}
-          </span>
         </button>
 
-        <!-- Log Work Today Button -->
-        <Button
-          variant="primary"
-          class="bg-blue-600 hover:bg-blue-700"
-          @click="logWorkToday"
+        <!-- Profile Dropdown Menu -->
+        <div
+          v-if="showProfileMenu"
+          class="profile-menu absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-10"
         >
-          <svg
-            class="w-4 h-4 mr-2"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
+          <div class="px-4 py-3 border-b border-gray-100">
+            <p class="text-sm font-medium text-gray-900">
+              {{ authStore.user?.name || "Guest User" }}
+            </p>
+            <p class="text-xs text-gray-500 truncate">
+              {{ authStore.user?.email || "No email available" }}
+            </p>
+          </div>
+          <a
+            href="#"
+            class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+            >Your Profile</a
           >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-            />
-          </svg>
-          Log Work Today
-        </Button>
+          <a
+            href="#"
+            class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+            >Settings</a
+          >
+          <button
+            @click="handleLogout"
+            class="w-full text-left block px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+          >
+            Sign out
+          </button>
+        </div>
       </div>
     </template>
 
     <!-- Main Content -->
     <div class="space-y-6">
+      <!-- Action Buttons -->
+      <div class="flex items-center justify-between">
+        <h2 class="text-lg font-medium text-gray-900">Your Worklogs</h2>
+
+        <div class="flex items-center gap-3">
+          <!-- Filters Button -->
+          <button
+            @click="showFilters = true"
+            class="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-gray-900 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            :class="{
+              'bg-blue-50 border-blue-300 text-blue-700': hasActiveFilters,
+            }"
+          >
+            <svg
+              class="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
+              />
+            </svg>
+            Filters
+            <span
+              v-if="activeFilterCount > 0"
+              class="ml-1 bg-blue-600 text-white text-xs rounded-full px-2 py-0.5"
+            >
+              {{ activeFilterCount }}
+            </span>
+          </button>
+
+          <!-- Log Work Today Button -->
+          <Button
+            variant="primary"
+            class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700"
+            @click="logWorkToday"
+          >
+            <svg
+              class="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+              />
+            </svg>
+            Log Work Today
+          </Button>
+        </div>
+      </div>
       <!-- Stats Cards -->
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <!-- <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <div class="bg-white rounded-lg shadow p-6">
           <div class="flex items-center">
             <div class="flex-shrink-0">
@@ -186,7 +243,7 @@
             </div>
           </div>
         </div>
-      </div>
+      </div> -->
 
       <!-- Loading State -->
       <div v-if="isLoading" class="flex items-center justify-center py-12">
@@ -232,7 +289,7 @@
           <Button
             variant="secondary"
             :disabled="pagination.page <= 1"
-            @click="changePage(pagination.page - 1)"
+            @click="handleChangePage(pagination.page - 1)"
           >
             Previous
           </Button>
@@ -241,7 +298,7 @@
             <button
               v-for="page in visiblePages"
               :key="page"
-              @click="changePage(page)"
+              @click="handleChangePage(page)"
               class="px-3 py-2 text-sm rounded-md transition-colors"
               :class="[
                 page === pagination.page
@@ -256,7 +313,7 @@
           <Button
             variant="secondary"
             :disabled="pagination.page >= pagination.total_pages"
-            @click="changePage(pagination.page + 1)"
+            @click="handleChangePage(pagination.page + 1)"
           >
             Next
           </Button>
@@ -270,38 +327,56 @@
       :filters="filters"
       @close="showFilters = false"
       @apply="applyFilters"
-      @reset="resetFilters"
+      @reset="handleResetFilters"
     />
   </MainLayout>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, onBeforeUnmount } from "vue";
 import MainLayout from "@/layouts/MainLayout.vue";
 import WorklogTable from "../components/WorklogTable.vue";
 import WorklogFilters from "../components/WorklogFilters.vue";
 import Button from "@/components/ui/Button.vue";
+import { useWorklog } from "../composables/useWorklog";
+import { useAuthStore } from "@/modules/auth/store";
+import { useRouter } from "vue-router";
 
-// Reactive data
-const worklogs = ref([]);
+const router = useRouter();
+
+// Use the auth store
+const authStore = useAuthStore();
+
+// Use the worklog composable with fetchWorklogs explicitly set to true
+const {
+  worklogs,
+  pagination,
+  filters,
+  isLoading,
+  error,
+  updateFilters,
+  resetFilters,
+  changePage,
+  refetch,
+} = useWorklog({ fetchWorklogs: true });
+
 const showFilters = ref(false);
-const isLoading = ref(false);
+const showProfileMenu = ref(false);
 
-const filters = ref({
-  timePeriod: "all", // Changed default to 'all' to show all data initially
-  projectIds: [],
-  categories: [],
-  statuses: [],
-  dateFrom: "",
-  dateTo: "",
-});
+// Click outside handler for profile menu
+const handleClickOutside = (event) => {
+  const profileMenu = document.querySelector(".profile-menu");
+  const profileButton = document.querySelector(".profile-button");
 
-const pagination = ref({
-  total: 0,
-  page: 1,
-  limit: 5, // Reduced for better pagination demo
-  total_pages: 0,
-});
+  if (
+    profileMenu &&
+    showProfileMenu.value &&
+    !profileMenu.contains(event.target) &&
+    !profileButton.contains(event.target)
+  ) {
+    showProfileMenu.value = false;
+  }
+};
 
 // Computed
 const visiblePages = computed(() => {
@@ -322,107 +397,70 @@ const visiblePages = computed(() => {
 
 const hasActiveFilters = computed(() => {
   return (
-    filters.value.projectIds.length > 0 ||
-    filters.value.categories.length > 0 ||
-    filters.value.statuses.length > 0 ||
-    (filters.value.timePeriod && filters.value.timePeriod !== "all") ||
-    (filters.value.dateFrom && filters.value.dateTo)
+    filters.value.projectId ||
+    filters.value.category ||
+    (filters.value.createdAfter && filters.value.createdBefore) ||
+    (filters.value.sortBy && filters.value.sortBy !== "created_at") ||
+    (filters.value.sortOrder && filters.value.sortOrder !== "desc")
   );
 });
 
 const activeFilterCount = computed(() => {
   let count = 0;
-  if (filters.value.projectIds.length > 0) count++;
-  if (filters.value.categories.length > 0) count++;
-  if (filters.value.statuses.length > 0) count++;
-  if (filters.value.timePeriod && filters.value.timePeriod !== "all") count++;
-  if (filters.value.dateFrom && filters.value.dateTo) count++;
+  if (filters.value.projectId) count++;
+  if (filters.value.category) count++;
+  if (filters.value.createdAfter && filters.value.createdBefore) count++;
+  if (filters.value.sortBy && filters.value.sortBy !== "created_at") count++;
+  if (filters.value.sortOrder && filters.value.sortOrder !== "desc") count++;
   return count;
 });
 
 // Methods
-const fetchWorklogs = async () => {
-  isLoading.value = true;
-  try {
-    // Simulate API call with mock data
-    await new Promise((resolve) => setTimeout(resolve, 800));
-
-    // Prepare API params - only send filters that have values
-    const apiParams = {
-      page: pagination.value.page,
-      limit: pagination.value.limit,
-    };
-
-    // Only add filter params if they have values
-    if (filters.value.projectIds.length > 0) {
-      apiParams.project_ids = filters.value.projectIds;
-    }
-
-    if (filters.value.categories.length > 0) {
-      apiParams.categories = filters.value.categories;
-    }
-
-    if (filters.value.statuses.length > 0) {
-      apiParams.statuses = filters.value.statuses;
-    }
-
-    if (filters.value.timePeriod && filters.value.timePeriod !== "all") {
-      apiParams.time_period = filters.value.timePeriod;
-    }
-
-    if (filters.value.dateFrom && filters.value.dateTo) {
-      apiParams.date_from = filters.value.dateFrom;
-      apiParams.date_to = filters.value.dateTo;
-    }
-
-    // Use mock data with filtering and pagination
-    const response = getMockApiResponse(
-      filters.value,
-      pagination.value.page,
-      pagination.value.limit
-    );
-
-    worklogs.value = response.data.items;
-    pagination.value = response.data.pagination;
-  } catch (error) {
-    console.error("Failed to fetch worklogs:", error);
-  } finally {
-    isLoading.value = false;
-  }
-};
-
 const applyFilters = (newFilters) => {
-  filters.value = { ...filters.value, ...newFilters };
-  pagination.value.page = 1;
-  fetchWorklogs();
+  updateFilters(newFilters);
 };
 
-const resetFilters = () => {
-  filters.value = {
-    timePeriod: "all", // Reset to 'all' to show all data
-    projectIds: [],
-    categories: [],
-    statuses: [],
-    dateFrom: "",
-    dateTo: "",
-  };
-  pagination.value.page = 1;
-  fetchWorklogs();
+const handleResetFilters = () => {
+  resetFilters();
 };
 
-const changePage = (page) => {
-  pagination.value.page = page;
-  fetchWorklogs();
+const handleChangePage = (page) => {
+  changePage(page);
 };
 
 const logWorkToday = () => {
-  // Handle log work today action
-  console.log("Log work today clicked");
-  // In real implementation, this would open a modal or navigate to a form
+  router.push("/worklog/create"); // Navigate to create worklog page
+};
+
+const handleLogout = () => {
+  // Close the profile menu
+  showProfileMenu.value = false;
+
+  // Call the logout action from the auth store
+  authStore.logout();
+
+  // Redirect to login page
+  window.location.href = "/login";
+};
+
+// Handle escape key to close profile menu
+const handleEscKey = (e) => {
+  if (e.key === "Escape" && showProfileMenu.value) {
+    showProfileMenu.value = false;
+  }
 };
 
 // Lifecycle
 onMounted(() => {
-  fetchWorklogs();
+  // The useWorklog composable automatically fetches data when mounted
+  document.addEventListener("keydown", handleEscKey);
+  document.addEventListener("click", handleClickOutside);
 });
+
+onBeforeUnmount(() => {
+  document.removeEventListener("keydown", handleEscKey);
+  document.removeEventListener("click", handleClickOutside);
+});
+
+// In Vue 3 setup script, directives are automatically registered when defined in the script
 </script>

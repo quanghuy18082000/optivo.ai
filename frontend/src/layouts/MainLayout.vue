@@ -49,11 +49,10 @@
         <!-- Navigation -->
         <nav class="space-y-2">
           <router-link
-            to="/dashboard"
+            to="/"
             class="flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-blue-700 transition-colors group"
             :class="{
-              'bg-blue-700':
-                $route.path === '/dashboard' || $route.path === '/',
+              'bg-blue-700': $route.path === '/',
             }"
           >
             <svg
@@ -151,58 +150,7 @@
           <div class="flex items-center gap-4 flex-shrink-0">
             <slot name="header-right">
               <!-- User Menu -->
-              <div class="relative">
-                <button
-                  @click="showUserMenu = !showUserMenu"
-                  class="flex items-center gap-2 px-3 py-2 text-gray-600 hover:text-gray-900 transition-colors rounded-lg hover:bg-gray-100"
-                >
-                  <div
-                    class="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center"
-                  >
-                    <span class="text-sm font-medium text-gray-600">U</span>
-                  </div>
-                  <svg
-                    class="w-4 h-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M19 9l-7 7-7-7"
-                    />
-                  </svg>
-                </button>
-
-                <!-- User Dropdown -->
-                <div
-                  v-if="showUserMenu"
-                  class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50"
-                  @click.stop
-                >
-                  <button
-                    @click="logout"
-                    class="w-full flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-100 transition-colors"
-                  >
-                    <svg
-                      class="w-4 h-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
-                      />
-                    </svg>
-                    Logout
-                  </button>
-                </div>
-              </div>
+              <UserMenu />
             </slot>
           </div>
         </div>
@@ -214,40 +162,15 @@
       </main>
     </div>
   </div>
-
-  <!-- Click outside to close user menu -->
-  <div
-    v-if="showUserMenu"
-    class="fixed inset-0 z-40"
-    @click="showUserMenu = false"
-  ></div>
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from "vue";
-import { useAuth } from "@/modules/auth/composables/useAuth";
-
-const { logout } = useAuth();
+import { ref } from "vue";
+import UserMenu from "@/components/UserMenu.vue";
 
 const isCollapsed = ref(false);
-const showUserMenu = ref(false);
 
 const toggleSidebar = () => {
   isCollapsed.value = !isCollapsed.value;
 };
-
-// Close user menu when clicking outside
-const handleClickOutside = (event) => {
-  if (showUserMenu.value && !event.target.closest(".relative")) {
-    showUserMenu.value = false;
-  }
-};
-
-onMounted(() => {
-  document.addEventListener("click", handleClickOutside);
-});
-
-onUnmounted(() => {
-  document.removeEventListener("click", handleClickOutside);
-});
 </script>

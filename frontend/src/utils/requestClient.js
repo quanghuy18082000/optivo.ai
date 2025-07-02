@@ -6,7 +6,7 @@ const API_URL = import.meta.env.VITE_BASE_API_URL;
 // Create an Axios instance to centralize API configuration
 const apiClient = axios.create({
   baseURL: API_URL,
-  timeout: 10000, // Optional: Set a timeout (in milliseconds) for all requests
+  // withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -15,27 +15,42 @@ const apiClient = axios.create({
 // Intercept requests to add authorization token (if any)
 apiClient.interceptors.request.use(
   (config) => {
-    // Retrieve token from localStorage (or any other state management tool)
-    const token = localStorage.getItem('token');
+    // Retrieve access token from localStorage
+    const accessToken = localStorage.getItem('accessToken');
+    // const refreshToken = localStorage.getItem('refreshToken');
     
-    if (token) {
-      config.headers['Authorization'] = `Bearer ${token}`;
+    if (accessToken) {
+      config.headers['Authorization'] = `Bearer ${accessToken}`;
     }
-
+    console.log("🚀 ~ file: requestClient.js:23 ~ config:", config);
     return config;
   },
   (error) => {
+    console.error('Error:', error);
     return Promise.reject(error);
   }
 );
 
 // Intercept responses to handle errors
 apiClient.interceptors.response.use(
-  (response) => response,
+  (response) => { 
+    console.log('Response:', response);
+    return response; // Make sure to return the response
+  },
   (error) => {
+    console.error('API Error:', error);
     if (error.response && error.response.status === 401) {
       // Handle Unauthorized error (e.g., redirect to login page)
       console.error('Unauthorized! Please log in again.');
+      
+      // Clear auth data
+      localStorage.removeItem('isAuthenticated');
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
+      localStorage.removeItem('userInfo');
+      
+      // Redirect to login page
+      window.location.href = '/login';
     }
     return Promise.reject(error);
   }

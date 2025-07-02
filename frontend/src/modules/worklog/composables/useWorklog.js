@@ -1,67 +1,81 @@
 import { ref, computed } from 'vue'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
 import { getWorklogs, createWorklog, updateWorklog, deleteWorklog } from '../services/worklogService'
+import { useAuthStore } from '@/modules/auth/store'
 
-export function useWorklog() {
+export function useWorklog(options = { fetchWorklogs: true }) {
   const queryClient = useQueryClient()
+  const authStore = useAuthStore()
   
   const filters = ref({
-    timePeriod: 'last_week',
     projectId: null,
     category: null,
-    status: null,
-    dateFrom: '',
-    dateTo: '',
+    createdAfter: '',
+    createdBefore: '',
+    sortBy: 'created_at',
+    sortOrder: 'desc',
     page: 1,
-    limit: 20,
+    size: 20,
+  })
+
+  // Get the current user ID from auth store
+  const userId = computed(() => {
+    return authStore.user?.id || null
   })
 
   const queryParams = computed(() => {
     const params = {}
+  
     
+    // Add project_id if selected
     if (filters.value.projectId) {
       params.project_id = filters.value.projectId
     }
     
+    // Add category if selected
     if (filters.value.category) {
       params.category = filters.value.category
     }
     
-    if (filters.value.status) {
-      params.status = filters.value.status
+    // Add date filters if available
+    if (filters.value.createdAfter) {
+      params.created_after = filters.value.createdAfter
     }
     
-    // Handle time period
-    if (filters.value.timePeriod === 'custom' && filters.value.dateFrom && filters.value.dateTo) {
-      params.date_from = filters.value.dateFrom
-      params.date_to = filters.value.dateTo
-    } else if (filters.value.timePeriod !== 'custom') {
-      params.time_period = filters.value.timePeriod
+    if (filters.value.createdBefore) {
+      params.created_before = filters.value.createdBefore
     }
     
+    // Add sorting parameters
+    params.sort_by = filters.value.sortBy
+    params.sort_order = filters.value.sortOrder
+    
+    // Add pagination parameters
     params.page = filters.value.page
-    params.limit = filters.value.limit
+    params.size = filters.value.size
     
     return params
   })
 
-  // Query for fetching worklogs
+  // Query for fetching worklogs - only initialize if fetchWorklogs is true
   const {
     data: worklogData,
     isLoading,
     error,
     refetch
-  } = useQuery({
-    queryKey: ['worklogs', queryParams],
-    queryFn: () => getWorklogs(queryParams.value),
-    keepPreviousData: true,
-  })
+  } = options.fetchWorklogs 
+    ? useQuery({
+        queryKey: ['worklogs', queryParams],
+        queryFn: () => getWorklogs(queryParams.value),
+        keepPreviousData: true,
+      })
+    : { data: ref(null), isLoading: ref(false), error: ref(null), refetch: () => {} }
 
   const worklogs = computed(() => worklogData.value?.data?.items || [])
   const pagination = computed(() => worklogData.value?.data?.pagination || {
     total: 0,
     page: 1,
-    limit: 20,
+    size: 20,
     total_pages: 0,
   })
 
@@ -94,14 +108,14 @@ export function useWorklog() {
 
   const resetFilters = () => {
     filters.value = {
-      timePeriod: 'last_week',
       projectId: null,
       category: null,
-      status: null,
-      dateFrom: '',
-      dateTo: '',
+      createdAfter: '',
+      createdBefore: '',
+      sortBy: 'created_at',
+      sortOrder: 'desc',
       page: 1,
-      limit: 20,
+      size: 20,
     }
   }
 

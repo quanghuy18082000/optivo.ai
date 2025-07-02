@@ -37,65 +37,47 @@
 
       <!-- Filter Content -->
       <div class="p-6 space-y-6 overflow-y-auto h-full pb-24">
+        <!-- Project -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-3"
+            >Project</label
+          >
+          <Select
+            v-model="localFilters.projectId"
+            :options="projectOptions"
+            placeholder="Select project"
+          />
+        </div>
+
+        <!-- Category -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-3"
+            >Category</label
+          >
+          <Select
+            v-model="localFilters.category"
+            :options="categoryOptions"
+            placeholder="Select category"
+          />
+        </div>
+
         <!-- Time Period -->
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-3"
             >Time Period</label
           >
-          <Select
-            v-model="localFilters.timePeriod"
-            :options="timePeriodOptions"
-            placeholder="Select time period"
-          />
+          <div class="grid grid-cols-1 gap-3">
+            <Select
+              v-model="selectedTimePeriod"
+              :options="timePeriodOptions"
+              placeholder="Select time period"
+              @update:modelValue="handleTimePeriodChange"
+            />
+          </div>
         </div>
 
-        <!-- Projects (MultiSelect) -->
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-3"
-            >Projects</label
-          >
-          <MultiSelect
-            v-model="localFilters.projectIds"
-            :options="projectOptions"
-            placeholder="Select projects"
-            :searchable="true"
-            :show-select-all="true"
-            :max-display-items="2"
-          />
-        </div>
-
-        <!-- Categories (MultiSelect) -->
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-3"
-            >Categories</label
-          >
-          <MultiSelect
-            v-model="localFilters.categories"
-            :options="categoryOptions"
-            placeholder="Select categories"
-            :searchable="true"
-            :show-select-all="true"
-            :max-display-items="2"
-          />
-        </div>
-
-        <!-- Status (MultiSelect) -->
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-3"
-            >Status</label
-          >
-          <MultiSelect
-            v-model="localFilters.statuses"
-            :options="statusOptions"
-            placeholder="Select status"
-            :searchable="false"
-            :show-select-all="true"
-            :max-display-items="2"
-          />
-        </div>
-
-        <!-- Custom Date Range -->
-        <div v-if="localFilters.timePeriod === 'custom'">
+        <!-- Custom Date Range (shown only when Custom is selected) -->
+        <div v-if="selectedTimePeriod === 'custom'">
           <label class="block text-sm font-medium text-gray-700 mb-3"
             >Custom Date Range</label
           >
@@ -103,15 +85,17 @@
             <div>
               <label class="block text-xs text-gray-500 mb-1">From</label>
               <DatePicker
-                v-model="localFilters.dateFrom"
-                placeholder="dd/mm/yyyy"
+                v-model="localFilters.createdAfter"
+                placeholder="yyyy-mm-dd"
+                type="date"
               />
             </div>
             <div>
               <label class="block text-xs text-gray-500 mb-1">To</label>
               <DatePicker
-                v-model="localFilters.dateTo"
-                placeholder="dd/mm/yyyy"
+                v-model="localFilters.createdBefore"
+                placeholder="yyyy-mm-dd"
+                type="date"
               />
             </div>
           </div>
@@ -124,21 +108,14 @@
         >
           <h4 class="text-sm font-medium text-blue-900 mb-2">Active Filters</h4>
           <div class="space-y-1 text-xs text-blue-700">
-            <div v-if="localFilters.projectIds.length > 0">
-              Projects: {{ getSelectedProjectNames().join(", ") }}
+            <div v-if="localFilters.projectId">
+              Project: {{ getProjectName(localFilters.projectId) }}
             </div>
-            <div v-if="localFilters.categories.length > 0">
-              Categories: {{ localFilters.categories.join(", ") }}
+            <div v-if="localFilters.category">
+              Category: {{ localFilters.category }}
             </div>
-            <div v-if="localFilters.statuses.length > 0">
-              Status: {{ getSelectedStatusNames().join(", ") }}
-            </div>
-            <div
-              v-if="
-                localFilters.timePeriod && localFilters.timePeriod !== 'all'
-              "
-            >
-              Time: {{ getTimePeriodLabel() }}
+            <div v-if="localFilters.createdAfter && localFilters.createdBefore">
+              Time Period: {{ getTimePeriodLabel() }}
             </div>
           </div>
         </div>
@@ -175,12 +152,28 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from "vue";
+import { ref, computed, watch, onMounted } from "vue";
+import { useQuery } from "@tanstack/vue-query";
 import Select from "@/components/ui/Select.vue";
 import MultiSelect from "@/components/ui/MultiSelect.vue";
 import DatePicker from "@/components/ui/DatePicker.vue";
 import Button from "@/components/ui/Button.vue";
-import { mockProjects, mockCategories } from "../data/mockData";
+import { getProjects, getCategories } from "../services/worklogService";
+import {
+  format,
+  startOfDay,
+  endOfDay,
+  startOfWeek,
+  endOfWeek,
+  startOfMonth,
+  endOfMonth,
+  startOfYear,
+  endOfYear,
+  subDays,
+  subWeeks,
+  subMonths,
+  subYears,
+} from "date-fns";
 
 const props = defineProps({
   isOpen: {
@@ -196,79 +189,151 @@ const props = defineProps({
 const emit = defineEmits(["close", "apply", "reset"]);
 
 const localFilters = ref({
-  timePeriod: "all", // Changed default to 'all' to show all data initially
-  projectIds: [],
-  categories: [],
-  statuses: [],
-  dateFrom: "",
-  dateTo: "",
+  projectId: null,
+  category: null,
+  createdAfter: "",
+  createdBefore: "",
   ...props.filters,
 });
 
-const timePeriodOptions = [
-  { label: "All time", value: "all" }, // Added 'All time' option as default
-  { label: "Last week", value: "last_week" },
-  { label: "Last month", value: "last_month" },
-  { label: "Last 3 months", value: "last_3_months" },
-  { label: "This year", value: "this_year" },
-  { label: "Custom range", value: "custom" },
-];
+// Time period selection
+const selectedTimePeriod = ref("today");
 
-const projectOptions = computed(() =>
-  mockProjects.map((project) => ({
+// Fetch projects from API
+const { data: projectsData, isLoading: isLoadingProjects } = useQuery({
+  queryKey: ["projects"],
+  queryFn: getProjects,
+});
+
+// Fetch categories from API
+const { data: categoriesData, isLoading: isLoadingCategories } = useQuery({
+  queryKey: ["categories"],
+  queryFn: getCategories,
+});
+
+const projects = computed(() => projectsData.value?.data || []);
+const categories = computed(() => categoriesData.value?.data || []);
+
+const projectOptions = computed(() => {
+  return projects.value.map((project) => ({
     label: project.name,
     value: project.id,
-  }))
-);
+  }));
+});
 
-const categoryOptions = computed(() =>
-  mockCategories.map((category) => ({
+const categoryOptions = computed(() => {
+  return categories.value.map((category) => ({
     label: category.name,
     value: category.name,
-  }))
-);
+  }));
+});
 
-const statusOptions = [
-  { label: "In Progress", value: "in_progress" },
-  { label: "Completed", value: "completed" },
-  { label: "On Hold", value: "on_hold" },
+const timePeriodOptions = [
+  { label: "Today", value: "today" },
+  { label: "Yesterday", value: "yesterday" },
+  { label: "This Week", value: "this_week" },
+  { label: "Last Week", value: "last_week" },
+  { label: "This Month", value: "this_month" },
+  { label: "Last Month", value: "last_month" },
+  { label: "This Year", value: "this_year" },
+  { label: "Last Year", value: "last_year" },
+  { label: "Custom Range", value: "custom" },
 ];
+
+// Function to handle time period changes
+const handleTimePeriodChange = (value) => {
+  if (value === "custom") {
+    // For custom, we don't set dates automatically
+    return;
+  }
+
+  const now = new Date();
+  let startDate;
+  let endDate;
+
+  switch (value) {
+    case "today":
+      startDate = startOfDay(now);
+      endDate = endOfDay(now);
+      break;
+
+    case "yesterday":
+      startDate = startOfDay(subDays(now, 1));
+      endDate = endOfDay(subDays(now, 1));
+      break;
+
+    case "this_week":
+      startDate = startOfWeek(now, { weekStartsOn: 1 }); // Week starts on Monday
+      endDate = endOfDay(now);
+      break;
+
+    case "last_week":
+      startDate = startOfWeek(subWeeks(now, 1), { weekStartsOn: 1 });
+      endDate = endOfWeek(subWeeks(now, 1), { weekStartsOn: 1 });
+      break;
+
+    case "this_month":
+      startDate = startOfMonth(now);
+      endDate = endOfDay(now);
+      break;
+
+    case "last_month":
+      startDate = startOfMonth(subMonths(now, 1));
+      endDate = endOfMonth(subMonths(now, 1));
+      break;
+
+    case "this_year":
+      startDate = startOfYear(now);
+      endDate = endOfDay(now);
+      break;
+
+    case "last_year":
+      startDate = startOfYear(subYears(now, 1));
+      endDate = endOfYear(subYears(now, 1));
+      break;
+  }
+
+  // Format dates for API in ISO format: YYYY-MM-DDTHH:MM:SS
+  localFilters.value.createdAfter = format(startDate, "yyyy-MM-dd'T'HH:mm:ss");
+  localFilters.value.createdBefore = format(endDate, "yyyy-MM-dd'T'HH:mm:ss");
+};
 
 const hasActiveFilters = computed(() => {
   return (
-    localFilters.value.projectIds.length > 0 ||
-    localFilters.value.categories.length > 0 ||
-    localFilters.value.statuses.length > 0 ||
-    (localFilters.value.timePeriod &&
-      localFilters.value.timePeriod !== "all") ||
-    (localFilters.value.dateFrom && localFilters.value.dateTo)
+    localFilters.value.projectId ||
+    localFilters.value.category ||
+    (localFilters.value.createdAfter && localFilters.value.createdBefore)
   );
 });
 
-const getSelectedProjectNames = () => {
-  return mockProjects
-    .filter((project) => localFilters.value.projectIds.includes(project.id))
-    .map((project) => project.name);
-};
-
-const getSelectedStatusNames = () => {
-  return statusOptions
-    .filter((status) => localFilters.value.statuses.includes(status.value))
-    .map((status) => status.label);
-};
-
+// Function to get the label for the selected time period
 const getTimePeriodLabel = () => {
-  const option = timePeriodOptions.find(
-    (opt) => opt.value === localFilters.value.timePeriod
-  );
-  if (
-    localFilters.value.timePeriod === "custom" &&
-    localFilters.value.dateFrom &&
-    localFilters.value.dateTo
-  ) {
-    return `${localFilters.value.dateFrom} to ${localFilters.value.dateTo}`;
+  if (selectedTimePeriod.value === "custom") {
+    return `${formatDate(localFilters.value.createdAfter)} to ${formatDate(
+      localFilters.value.createdBefore
+    )}`;
+  } else {
+    const option = timePeriodOptions.find(
+      (opt) => opt.value === selectedTimePeriod.value
+    );
+    return option ? option.label : "Custom Range";
   }
-  return option ? option.label : "";
+};
+
+const getProjectName = (projectId) => {
+  const project = projects.value.find((p) => p.id === projectId);
+  return project ? project.name : projectId;
+};
+
+// Initialize with today's date range
+onMounted(() => {
+  handleTimePeriodChange("today");
+});
+
+const formatDate = (dateString) => {
+  if (!dateString) return "";
+  const date = new Date(dateString);
+  return format(date, "MMM d, yyyy");
 };
 
 const closePanel = () => {
@@ -282,13 +347,13 @@ const applyFilters = () => {
 
 const resetFilters = () => {
   localFilters.value = {
-    timePeriod: "all", // Reset to 'all' to show all data
-    projectIds: [],
-    categories: [],
-    statuses: [],
-    dateFrom: "",
-    dateTo: "",
+    projectId: null,
+    category: null,
+    createdAfter: "",
+    createdBefore: "",
   };
+  selectedTimePeriod.value = "today";
+  handleTimePeriodChange("today");
   emit("reset");
 };
 
@@ -297,7 +362,49 @@ watch(
   () => props.filters,
   (newFilters) => {
     localFilters.value = { ...localFilters.value, ...newFilters };
+
+    // Try to determine the time period based on the dates
+    if (newFilters.createdAfter && newFilters.createdBefore) {
+      selectedTimePeriod.value = "custom";
+
+      // You could add logic here to detect if the date range matches any of the predefined periods
+      // and set selectedTimePeriod accordingly
+    }
   },
   { deep: true }
+);
+
+// Watch for changes in the date filters to update the time period
+watch(
+  () => [localFilters.value.createdAfter, localFilters.value.createdBefore],
+  () => {
+    // If dates are manually changed, set to custom
+    if (localFilters.value.createdAfter && localFilters.value.createdBefore) {
+      selectedTimePeriod.value = "custom";
+
+      // Convert date strings to ISO format if they're not already
+      if (
+        localFilters.value.createdAfter &&
+        !localFilters.value.createdAfter.includes("T")
+      ) {
+        const startDate = new Date(localFilters.value.createdAfter);
+        localFilters.value.createdAfter = format(
+          startOfDay(startDate),
+          "yyyy-MM-dd'T'HH:mm:ss"
+        );
+      }
+
+      if (
+        localFilters.value.createdBefore &&
+        !localFilters.value.createdBefore.includes("T")
+      ) {
+        const endDate = new Date(localFilters.value.createdBefore);
+        localFilters.value.createdBefore = format(
+          endOfDay(endDate),
+          "yyyy-MM-dd'T'HH:mm:ss"
+        );
+      }
+    }
+  }
 );
 </script>

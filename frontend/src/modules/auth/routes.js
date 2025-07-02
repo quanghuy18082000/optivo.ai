@@ -11,6 +11,11 @@ const authRoutes = [
   {
     path: '/reset-password',
     component: () => import('./pages/ResetPasswordPage.vue'),
+  },
+  {
+    path: '/profile',
+    component: () => import('./pages/ProfilePage.vue'),
+    meta: { requiresAuth: true }
   }
 ]
 

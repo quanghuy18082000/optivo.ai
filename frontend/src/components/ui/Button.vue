@@ -35,9 +35,7 @@
         ></path>
       </svg>
     </div>
-    <div :class="{ 'opacity-0': loading }">
-      <slot />
-    </div>
+    <slot />
   </button>
 </template>
 
