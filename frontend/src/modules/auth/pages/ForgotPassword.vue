@@ -1,30 +1,55 @@
 <script setup>
 import { useForm, useField } from "vee-validate";
-import { toTypedSchema } from "@vee-validate/zod";
-import * as zod from "zod";
+import { toTypedSchema } from "@vee-validate/yup";
+import * as yup from "yup";
 import Input from "@/components/ui/Input.vue";
 import Button from "@/components/ui/Button.vue";
 import { useI18n } from "vue-i18n";
 import { useAuth } from "../composables/useAuth";
+import { ref } from "vue";
 
 const { t } = useI18n();
 const { forgotPassword, error: authError, success, isLoading } = useAuth();
 
+// Create validation schema using Yup
 const schema = toTypedSchema(
-  zod.object({
-    email: zod
-      .string({ required_error: t("common.required") })
+  yup.object({
+    email: yup
+      .string()
+      .required(t("common.required"))
       .email(t("common.invalid_email")),
   })
 );
 
-const { handleSubmit } = useForm({ validationSchema: schema });
+// Initialize form with validation - only validate when explicitly called
+const { handleSubmit, errors, validate } = useForm({
+  validationSchema: schema,
+  validateOnMount: false,
+  validateOnBlur: false,
+  validateOnChange: false,
+  validateOnInput: false,
+  validateOnModelUpdate: false,
+});
 
 const { value: email, errorMessage: emailError } = useField("email");
+const formError = ref(null);
 
-const onSubmit = handleSubmit((values) => {
-  forgotPassword(values.email);
-});
+// Form submission handler - manually validate on submit
+const onSubmit = async (event) => {
+  event.preventDefault();
+  formError.value = null;
+
+  // Manually trigger validation when the form is submitted
+  const validationResult = await validate();
+
+  // Only proceed if validation passes
+  if (!validationResult.valid) {
+    return;
+  }
+
+  // Get current values from the form
+  forgotPassword(email.value);
+};
 </script>
 
 <template>
@@ -38,7 +63,7 @@ const onSubmit = handleSubmit((values) => {
         {{ t("auth.forgot.description") }}
       </p>
 
-      <form @submit.prevent="onSubmit" class="space-y-5">
+      <form @submit="onSubmit" class="space-y-5">
         <div>
           <label
             for="email"
@@ -91,11 +116,28 @@ const onSubmit = handleSubmit((values) => {
           </span>
         </Button>
 
-        <div v-if="authError" class="text-center text-red-500 text-sm mt-3">
-          {{ t("auth.forgot.error", { msg: authError }) }}
+        <div
+          v-if="authError || formError"
+          class="text-center text-red-500 text-sm mt-3 p-2 bg-red-50 rounded-md border border-red-200"
+        >
+          {{ t("auth.forgot.error", { msg: authError || formError }) }}
         </div>
 
-        <div v-if="success" class="text-center text-green-600 text-sm mt-3">
+        <!-- Validation errors summary - only shown after form submission -->
+        <div
+          v-if="Object.keys(errors).length > 0"
+          class="text-center text-red-500 text-sm mt-3 p-2 bg-red-50 rounded-md border border-red-200"
+        >
+          <div v-if="errors.email">{{ errors.email }}</div>
+          <div v-if="!errors.email">
+            Please fix the errors above to continue
+          </div>
+        </div>
+
+        <div
+          v-if="success"
+          class="text-center text-green-600 text-sm mt-3 p-2 bg-green-50 rounded-md border border-green-200"
+        >
           {{
             t("auth.forgot.success") ||
             "Password reset link has been sent to your email!"

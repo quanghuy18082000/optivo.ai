@@ -3,8 +3,8 @@
     <!-- Sidebar -->
     <aside
       :class="[
-        'bg-blue-600 text-white flex-shrink-0 transition-all duration-300 ease-in-out',
-        isCollapsed ? 'w-16' : 'w-64',
+        'bg-blue-600 text-white relative flex-shrink-0 transition-all duration-300 ease-in-out',
+        isCollapsed ? 'w-19' : 'w-64',
       ]"
     >
       <div class="p-4">
@@ -12,25 +12,25 @@
         <div class="flex items-center justify-between mb-8">
           <div v-if="!isCollapsed" class="flex items-center gap-3">
             <div
-              class="w-8 h-8 bg-white rounded-full flex items-center justify-center"
+              class="w-10 h-10 rounded-full flex items-center justify-center"
             >
-              <span class="text-blue-600 font-bold text-lg">O</span>
+              <img src="@/assets/images/optivo-logo.png" alt="" class="rounded-full" /></img>
             </div>
             <span class="text-xl font-bold">OPTIVO</span>
           </div>
           <div v-else class="flex justify-center w-full">
             <div
-              class="w-8 h-8 bg-white rounded-full flex items-center justify-center"
+              class="w-10 h-10 rounded-full flex items-center justify-center"
             >
-              <span class="text-blue-600 font-bold text-lg">O</span>
+            <img src="@/assets/images/optivo-logo.png" alt="" class="rounded-full" /></img>
             </div>
           </div>
           <button
             @click="toggleSidebar"
-            class="p-1 text-white hover:bg-blue-700 rounded transition-colors"
+            class="absolute right--4 top-5 p-1 hover:scale-110 bg-white text-blue-600 border-1 shadow-lg rounded-full transition-colors"
           >
             <svg
-              class="w-5 h-5 transition-transform duration-300"
+              class="w-6 h-6 transition-transform duration-300"
               :class="{ 'rotate-180': isCollapsed }"
               fill="none"
               stroke="currentColor"
@@ -69,12 +69,6 @@
               <div class="text-sm text-blue-200 truncate">Log your work</div>
             </div>
             <!-- Tooltip for collapsed state -->
-            <div
-              v-if="isCollapsed"
-              class="absolute left-16 bg-gray-900 text-white px-2 py-1 rounded text-sm opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50"
-            >
-              Daily Input
-            </div>
           </router-link>
 
           <router-link
@@ -94,12 +88,6 @@
             <div v-if="!isCollapsed" class="min-w-0">
               <div class="font-medium truncate">Projects</div>
               <div class="text-sm text-blue-200 truncate">Manage projects</div>
-            </div>
-            <div
-              v-if="isCollapsed"
-              class="absolute left-16 bg-gray-900 text-white px-2 py-1 rounded text-sm opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50"
-            >
-              Projects
             </div>
           </router-link>
 
@@ -122,12 +110,6 @@
             <div v-if="!isCollapsed" class="min-w-0">
               <div class="font-medium truncate">Profile</div>
               <div class="text-sm text-blue-200 truncate">Your account</div>
-            </div>
-            <div
-              v-if="isCollapsed"
-              class="absolute left-16 bg-gray-900 text-white px-2 py-1 rounded text-sm opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50"
-            >
-              Profile
             </div>
           </router-link>
         </nav>

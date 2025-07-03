@@ -18,20 +18,10 @@
       </div>
       <div
         v-else
-        class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0"
+        class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0"
       >
         <span class="text-sm font-medium text-blue-600">{{
           userInitials
-        }}</span>
-      </div>
-
-      <!-- User Info -->
-      <div class="flex flex-col items-start overflow-hidden">
-        <span class="text-sm font-medium truncate max-w-[120px]">{{
-          userName
-        }}</span>
-        <span class="text-xs text-gray-500 truncate max-w-[120px]">{{
-          userEmail
         }}</span>
       </div>
 
@@ -57,10 +47,18 @@
       v-if="isOpen"
       class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50"
     >
+      <div class="px-4 py-3 border-b border-gray-100">
+        <p class="text-sm font-medium text-gray-900">
+          {{ authStore.user?.name || "Guest User" }}
+        </p>
+        <p class="text-xs text-gray-500 truncate">
+          {{ authStore.user?.email || "No email available" }}
+        </p>
+      </div>
       <!-- Profile Option -->
       <router-link
         to="/profile"
-        class="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-100 transition-colors"
+        class="flex items-center gap-2 text-0.925rem px-4 py-2 text-gray-700 hover:bg-gray-100 transition-colors"
         @click="isOpen = false"
       >
         <svg
@@ -82,7 +80,7 @@
       <!-- Logout Option -->
       <button
         @click="handleLogout"
-        class="w-full flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-100 transition-colors"
+        class="w-full flex items-center text-0.925rem gap-2 px-4 py-2 text-gray-700 hover:bg-gray-100 transition-colors"
       >
         <svg
           class="w-4 h-4"

@@ -1,8 +1,9 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import authRoutes from '@/modules/auth/routes'
 import worklogRoutes from '@/modules/worklog/routes'
+import projectRoutes from "@/modules/projects/routes" // Imp
 
-const routes = [...authRoutes, ...worklogRoutes]
+const routes = [...authRoutes, ...worklogRoutes, ...projectRoutes]
 
 const router = createRouter({
   history: createWebHistory(),

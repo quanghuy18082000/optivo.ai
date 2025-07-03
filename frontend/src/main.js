@@ -9,6 +9,25 @@ import vue3GoogleLogin from 'vue3-google-login'
 import '@unocss/reset/tailwind.css'
 import 'uno.css'
 
+// Import ECharts core and required components
+import * as echarts from 'echarts/core'
+import { LineChart } from 'echarts/charts'
+import {
+  GridComponent,
+  TooltipComponent,
+  LegendComponent
+} from 'echarts/components'
+import { CanvasRenderer } from 'echarts/renderers'
+
+// Register ECharts components
+echarts.use([
+  LineChart,
+  GridComponent,
+  TooltipComponent,
+  LegendComponent,
+  CanvasRenderer
+])
+
 const app = createApp(App)
 const pinia = createPinia()
 

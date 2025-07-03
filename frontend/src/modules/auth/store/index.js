@@ -84,5 +84,13 @@ export const useAuthStore = defineStore('auth', {
         }
       }
     },
+    
+    updateUserProfile(userData) {
+      // Update the user data in the store
+      this.user = { ...this.user, ...userData }
+      
+      // Update localStorage
+      localStorage.setItem('userInfo', JSON.stringify(this.user))
+    },
   },
 })

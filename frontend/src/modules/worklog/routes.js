@@ -4,19 +4,19 @@ const worklogRoutes = [
       path: '/',
       name: 'worklog-dashboard',
       component: () => import('./pages/WorklogDashboard.vue'),
-      meta: { requiresAuth: true }
+      meta: { requiresAuth: false }
     },
     {
       path: "/worklog/create",
       name: "create-worklog",
       component: () => import("./pages/CreateWorklogPage.vue"),
-      meta: { requiresAuth: true },
+      meta: { requiresAuth: false },
     },
     {
       path: "/worklog/edit/:id",
       name: "edit-worklog",
       component: () => import("./pages/EditWorklogPage.vue"),
-      meta: { requiresAuth: true },
+      meta: { requiresAuth: false },
       props: true,
     },
   ]

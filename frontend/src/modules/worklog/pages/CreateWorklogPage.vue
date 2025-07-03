@@ -1,8 +1,8 @@
 <script setup>
 import { ref, computed } from "vue";
 import { useForm, useFieldArray } from "vee-validate";
-import { toTypedSchema } from "@vee-validate/zod";
-import * as z from "zod";
+import { toTypedSchema } from "@vee-validate/yup";
+import * as yup from "yup";
 import { v4 as uuidv4 } from "uuid";
 import { useI18n } from "vue-i18n";
 import { useQuery } from "@tanstack/vue-query";
@@ -34,37 +34,42 @@ const projectOptions = computed(() => {
   );
 });
 
-// Zod Schemas for validation
-const workEntrySchema = z
+// Yup Schemas for validation
+const workEntrySchema = yup
   .object({
-    id: z.string().uuid(),
-    description: z.string().min(1, t("common.required")),
-    hours: z
-      .number({ invalid_type_error: t("common.required") })
+    id: yup.string().required(),
+    description: yup.string().required(t("common.required")),
+    hours: yup
+      .number()
+      .typeError(t("common.required"))
       .min(0, "Hours cannot be negative")
-      .max(23, "Max 23 hours"),
-    minutes: z
-      .number({ invalid_type_error: t("common.required") })
+      .max(23, "Max 23 hours")
+      .required(t("common.required")),
+    minutes: yup
+      .number()
+      .typeError(t("common.required"))
       .min(0, "Minutes cannot be negative")
-      .max(59, "Max 59 minutes"),
+      .max(59, "Max 59 minutes")
+      .required(t("common.required")),
   })
-  .refine((data) => data.hours * 60 + data.minutes > 0, {
-    message: "Total time must be greater than 0",
-    path: ["hours"], // Points to hours field for error display
+  .test("total-time", "Total time must be greater than 0", function (value) {
+    return value.hours * 60 + value.minutes > 0;
   });
 
-const worklogGroupSchema = z.object({
-  id: z.string().uuid(),
-  projectId: z.string().min(1, t("common.required")),
-  workEntries: z
-    .array(workEntrySchema)
+const worklogGroupSchema = yup.object({
+  id: yup.string().required(),
+  projectId: yup.string().required("Project selection is required"),
+  workEntries: yup
+    .array()
+    .of(workEntrySchema)
     .min(1, "At least one work entry is required for each project"),
 });
 
 const formSchema = toTypedSchema(
-  z.object({
-    worklogGroups: z
-      .array(worklogGroupSchema)
+  yup.object({
+    worklogGroups: yup
+      .array()
+      .of(worklogGroupSchema)
       .min(1, "At least one worklog group is required"),
   })
 );
@@ -167,7 +172,7 @@ const isFormLoading = computed(
       </div>
     </template>
 
-    <div class="p-6 bg-white rounded-lg shadow-md max-w-4xl mx-auto">
+    <div class="p-6 bg-white rounded-lg shadow-md w-full mx-auto">
       <form @submit.prevent="onSubmit" class="space-y-8">
         <!-- Form Header -->
         <div class="grid grid-cols-12 gap-4 text-sm font-medium text-gray-500">
@@ -240,7 +245,7 @@ const isFormLoading = computed(
               <Input
                 v-model.number="entry.hours"
                 type="number"
-                placeholder="0"
+                placeholder="00"
                 :min="0"
                 :max="23"
                 :disabled="isFormLoading"

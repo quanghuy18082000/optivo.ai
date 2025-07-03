@@ -6,7 +6,7 @@ const msalConfig = {
   auth: {
     clientId: import.meta.env.VITE_MICROSOFT_CLIENT_ID,
     authority: `https://login.microsoftonline.com/${import.meta.env.VITE_MICROSOFT_TENANT_ID}`,
-    redirectUri: 'http://localhost:5173/login', // Update with your redirect URI
+    redirectUri: window.location.origin, // Update with your redirect URI
   },
   cache: {
     cacheLocation: 'sessionStorage',
@@ -17,7 +17,7 @@ const msalConfig = {
 export const msalInstance = new PublicClientApplication(msalConfig)
 
 // Initialize MSAL
-await msalInstance.initialize()
+msalInstance.initialize()
 
 // Microsoft Login
 export const loginWithMicrosoft = async () => {

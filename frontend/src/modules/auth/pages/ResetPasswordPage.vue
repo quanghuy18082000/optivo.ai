@@ -1,9 +1,10 @@
 <script setup>
 import { ref, onMounted } from "vue";
 import { useForm, useField } from "vee-validate";
-import { toTypedSchema } from "@vee-validate/zod";
-import * as zod from "zod";
+import { toTypedSchema } from "@vee-validate/yup";
+import * as yup from "yup";
 import Input from "@/components/ui/Input.vue";
+import PasswordInput from "@/components/ui/PasswordInput.vue";
 import Button from "@/components/ui/Button.vue";
 import { useAuth } from "../composables/useAuth";
 import { useI18n } from "vue-i18n";
@@ -14,6 +15,7 @@ const route = useRoute();
 const { resetPassword, error: authError, isLoading, success } = useAuth();
 
 const token = ref("");
+const formError = ref(null);
 
 onMounted(() => {
   // Get token from URL params
@@ -23,45 +25,69 @@ onMounted(() => {
   }
 });
 
+// Create validation schema using Yup
 const schema = toTypedSchema(
-  zod
-    .object({
-      password: zod
-        .string({ required_error: t("common.required") })
-        .min(8, t("common.min_length", { min: 8 }))
-        .regex(
-          /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/,
-          t("auth.password_complexity") ||
-            "Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character"
-        ),
-      confirmPassword: zod.string({
-        required_error: t("common.required"),
-      }),
-    })
-    .refine((data) => data.password === data.confirmPassword, {
-      message: t("auth.password_mismatch") || "Passwords do not match",
-      path: ["confirmPassword"],
-    })
+  yup.object({
+    password: yup
+      .string()
+      .required(t("common.required"))
+      .min(8, t("common.min_length", { min: 8 }))
+      .matches(
+        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/,
+        t("auth.password_complexity") ||
+          "Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character"
+      ),
+    confirmPassword: yup
+      .string()
+      .required(t("common.required"))
+      .oneOf(
+        [yup.ref("password")],
+        t("auth.password_mismatch") || "Passwords do not match"
+      ),
+  })
 );
 
-const { handleSubmit } = useForm({ validationSchema: schema });
+// Initialize form with validation - only validate when explicitly called
+const { handleSubmit, errors, validate } = useForm({
+  validationSchema: schema,
+  validateOnMount: false,
+  validateOnBlur: false,
+  validateOnChange: false,
+  validateOnInput: false,
+  validateOnModelUpdate: false,
+});
 
 const { value: password, errorMessage: passwordError } = useField("password");
 const { value: confirmPassword, errorMessage: confirmPasswordError } =
   useField("confirmPassword");
 
-const onSubmit = handleSubmit(async (values) => {
+// Form submission handler - manually validate on submit
+const onSubmit = async (event) => {
+  event.preventDefault();
+  formError.value = null;
+
   if (!token.value) {
     console.error("No reset token available");
+    formError.value =
+      "Invalid or missing reset token. Please request a new password reset link.";
     return;
   }
 
+  // Manually trigger validation when the form is submitted
+  const validationResult = await validate();
+
+  // Only proceed if validation passes
+  if (!validationResult.valid) {
+    return;
+  }
+
+  // Get current values from the form
   resetPassword({
     token: token.value,
-    password: values.password,
-    confirmPassword: values.confirmPassword,
+    password: password.value,
+    confirmPassword: confirmPassword.value,
   });
-});
+};
 </script>
 
 <template>
@@ -78,7 +104,7 @@ const onSubmit = handleSubmit(async (values) => {
         }}
       </p>
 
-      <form @submit.prevent="onSubmit" class="space-y-4">
+      <form @submit="onSubmit" class="space-y-4">
         <div>
           <label
             for="password"
@@ -86,15 +112,13 @@ const onSubmit = handleSubmit(async (values) => {
           >
             {{ t("auth.reset_password.new_password") || "New Password" }}
           </label>
-          <Input
+          <PasswordInput
             id="password"
             v-model="password"
-            type="password"
             placeholder="••••••••"
             :error="!!passwordError"
             :error-message="passwordError"
             :disabled="isLoading"
-            class="w-full"
           />
           <p class="text-xs text-gray-500 mt-1">
             {{
@@ -113,15 +137,13 @@ const onSubmit = handleSubmit(async (values) => {
               t("auth.reset_password.confirm_password") || "Confirm Password"
             }}
           </label>
-          <Input
+          <PasswordInput
             id="confirmPassword"
             v-model="confirmPassword"
-            type="password"
             placeholder="••••••••"
             :error="!!confirmPasswordError"
             :error-message="confirmPasswordError"
             :disabled="isLoading"
-            class="w-full"
           />
         </div>
 
@@ -158,16 +180,39 @@ const onSubmit = handleSubmit(async (values) => {
           </span>
         </Button>
 
-        <div v-if="!token" class="text-center text-red-500 text-sm mt-3">
-          Invalid or missing reset token. Please request a new password reset
-          link.
+        <div
+          v-if="!token || formError"
+          class="text-center text-red-500 text-sm mt-3 p-2 bg-red-50 rounded-md border border-red-200"
+        >
+          {{
+            formError ||
+            "Invalid or missing reset token. Please request a new password reset link."
+          }}
         </div>
 
-        <div v-if="authError" class="text-center text-red-500 text-sm mt-3">
+        <div
+          v-if="authError"
+          class="text-center text-red-500 text-sm mt-3 p-2 bg-red-50 rounded-md border border-red-200"
+        >
           {{ t("common.error", { msg: authError }) }}
         </div>
 
-        <div v-if="success" class="text-center text-green-500 text-sm mt-3">
+        <!-- Validation errors summary - only shown after form submission -->
+        <div
+          v-if="Object.keys(errors).length > 0"
+          class="text-center text-red-500 text-sm mt-3 p-2 bg-red-50 rounded-md border border-red-200"
+        >
+          <div v-if="errors.password">{{ errors.password }}</div>
+          <div v-if="errors.confirmPassword">{{ errors.confirmPassword }}</div>
+          <div v-if="!errors.password && !errors.confirmPassword">
+            Please fix the errors above to continue
+          </div>
+        </div>
+
+        <div
+          v-if="success"
+          class="text-center text-green-500 text-sm mt-3 p-2 bg-green-50 rounded-md border border-green-200"
+        >
           {{
             t("auth.reset_password.success_message") ||
             "Your password has been successfully reset! Redirecting to login..."

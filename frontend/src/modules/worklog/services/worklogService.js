@@ -5,7 +5,8 @@ export const getWorklogs = async (params = {}) => {
     const response = await get('/worklogs/', params)
     return response.data
   } catch (error) {
-    throw new Error(error.response?.data?.message || error.message || 'Failed to fetch worklogs')
+    console.error('API Error:', error);
+    throw new Error(error.response?.data?.message || error.message || 'Failed to fetch worklogs');
   }
 }
 
@@ -14,7 +15,8 @@ export const getWorklogById = async (id) => {
     const response = await get(`/worklogs/${id}`)
     return response.data
   } catch (error) {
-    throw new Error(error.response?.data?.message || error.message || `Failed to fetch worklog with ID: ${id}`)
+    console.error('API Error:', error);
+    throw new Error(error.response?.data?.message || error.message || 'Failed to fetch worklog details');
   }
 }
 
@@ -23,7 +25,8 @@ export const getProjects = async () => {
     const response = await get('/projects')
     return response.data
   } catch (error) {
-    throw new Error(error.response?.data?.message || error.message || 'Failed to fetch projects')
+    console.error('API Error:', error);
+    throw new Error(error.response?.data?.message || error.message || 'Failed to fetch projects');
   }
 }
 
@@ -32,7 +35,8 @@ export const getCategories = async () => {
     const response = await get('/categories')
     return response.data
   } catch (error) {
-    throw new Error(error.response?.data?.message || error.message || 'Failed to fetch categories')
+    console.error('API Error:', error);
+    throw new Error(error.response?.data?.message || error.message || 'Failed to fetch categories');
   }
 }
 
@@ -41,6 +45,7 @@ export const createWorklog = async (worklogData) => {
     const response = await post('/worklogs', worklogData)
     return response.data
   } catch (error) {
+    console.error('API Error:', error);
     throw new Error(error.response?.data?.message || error.message || 'Failed to create worklog')
   }
 }
@@ -50,6 +55,7 @@ export const updateWorklog = async (id, worklogData) => {
     const response = await put(`/worklogs/${id}`, worklogData)
     return response.data
   } catch (error) {
+    console.error('API Error:', error);
     throw new Error(error.response?.data?.message || error.message || 'Failed to update worklog')
   }
 }
@@ -59,6 +65,17 @@ export const deleteWorklog = async (id) => {
     const response = await del(`/worklogs/${id}`)
     return response.data
   } catch (error) {
+    console.error('API Error:', error);
     throw new Error(error.response?.data?.message || error.message || 'Failed to delete worklog')
+  }
+}
+
+export const deleteWorklogEntry = async (worklogId, entryId) => {
+  try {
+    const response = await del(`/worklogs/${worklogId}/entries/${entryId}`)
+    return response.data
+  } catch (error) {
+    console.error('API Error:', error);
+    throw new Error(error.response?.data?.message || error.message || 'Failed to delete worklog entry')
   }
 }

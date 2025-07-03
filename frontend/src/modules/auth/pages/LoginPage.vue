@@ -1,13 +1,14 @@
 <script setup>
 import { useForm, useField } from "vee-validate";
-import { toTypedSchema } from "@vee-validate/zod";
-import * as zod from "zod";
+import { toTypedSchema } from "@vee-validate/yup";
+import * as yup from "yup";
 import Input from "@/components/ui/Input.vue";
+import PasswordInput from "@/components/ui/PasswordInput.vue";
 import Button from "@/components/ui/Button.vue";
 import Checkbox from "@/components/ui/Checkbox.vue";
 import { useAuth } from "../composables/useAuth";
 import { useI18n } from "vue-i18n";
-import { ref, watchEffect } from "vue";
+import { ref, computed, watch } from "vue";
 import { useRoute } from "vue-router";
 import { post } from "@/utils/requestClient";
 
@@ -22,41 +23,100 @@ const {
   isLoading,
 } = useAuth();
 
+// Create validation schema using Yup
 const schema = toTypedSchema(
-  zod.object({
-    email: zod
-      .string({ required_error: t("common.required") })
-      .email(t("common.invalid_email")),
-    password: zod
-      .string({ required_error: t("common.required") })
-      .min(6, t("common.min_length", { length: 6 })),
+  yup.object({
+    email: yup.string().required(t("common.required")),
+    password: yup.string().required(t("common.required")),
   })
 );
 
-const { handleSubmit } = useForm({ validationSchema: schema });
+// Initialize form with validation - only validate when explicitly called
+const { handleSubmit, errors, setFieldError, setErrors, validate } = useForm({
+  validationSchema: schema,
+  initialValues: {
+    email: "",
+    password: "",
+  }, // Disable validation when model updates
+});
 
+// Form fields
 const { value: email, errorMessage: emailError } = useField("email");
 const { value: password, errorMessage: passwordError } = useField("password");
-const { value: rememberMe } = useField("rememberMe");
 
+// Local state for form errors
+const formError = ref(null);
 const localLoading = ref(false);
 const googleError = ref(null);
 
-const onSubmit = handleSubmit(async (values) => {
-  localLoading.value = true;
-  try {
-    await loginUser(values);
-  } finally {
-    localLoading.value = false;
+// Computed property for any loading state
+const isAnyLoading = computed(() => {
+  return localLoading.value || isLoading.value;
+});
+
+// Watch for auth errors and map them to form fields
+watch(authError, (newError) => {
+  if (newError) {
+    const errorMessage = newError.message || newError;
+    formError.value = errorMessage;
+
+    // Map backend errors to form fields if possible
+    if (errorMessage.toLowerCase().includes("email")) {
+      setFieldError("email", errorMessage);
+    } else if (errorMessage.toLowerCase().includes("password")) {
+      setFieldError("password", errorMessage);
+    } else if (errorMessage.toLowerCase().includes("credentials")) {
+      setErrors({
+        email: "Invalid credentials",
+        password: "Invalid credentials",
+      });
+    }
+  } else {
+    formError.value = null;
   }
 });
 
-const handleMicrosoftLogin = async () => {
+// Form submission handler - manually validate on submit
+const onSubmit = async (event) => {
+  event.preventDefault();
+  formError.value = null;
+
+  // Manually trigger validation when the form is submitted
+  const validationResult = await validate();
+
+  // Only proceed if validation passes
+  if (!validationResult.valid) {
+    return;
+  }
+
   localLoading.value = true;
+
+  try {
+    // Get current values from the form
+    const values = {
+      email: email.value,
+      password: password.value,
+    };
+
+    await loginUser(values);
+  } catch (error) {
+    console.error("Login error:", error);
+    formError.value = error.message || "Login failed";
+  } finally {
+    localLoading.value = false;
+  }
+};
+
+// Microsoft login handler
+const handleMicrosoftLogin = async () => {
+  formError.value = null;
+  localLoading.value = true;
+
   try {
     await loginWithMicrosoft();
   } catch (error) {
     console.error("Microsoft login failed:", error);
+    formError.value = error.message || "Microsoft login failed";
   } finally {
     localLoading.value = false;
   }
@@ -64,11 +124,11 @@ const handleMicrosoftLogin = async () => {
 
 // Google OAuth callback function
 const handleGoogleCallback = async (response) => {
-  console.log("Google OAuth response:", response);
+  formError.value = null;
+  googleError.value = null;
 
   try {
     localLoading.value = true;
-    googleError.value = null;
 
     // Check if we have the authorization code
     if (response.code) {
@@ -80,13 +140,13 @@ const handleGoogleCallback = async (response) => {
   } catch (error) {
     console.error("Google login failed:", error);
     googleError.value = error.message || "Google login failed";
+    formError.value = error.message || "Google login failed";
   } finally {
     localLoading.value = false;
   }
 };
 
-let isAnyLoading = ref(false);
-$: isAnyLoading = localLoading.value || isLoading;
+// isAnyLoading is already defined as a computed property above
 </script>
 
 <template>
@@ -96,13 +156,13 @@ $: isAnyLoading = localLoading.value || isLoading;
         Login to <span class="text-[#0368FA] font-bold">Optivo</span>
       </h1>
 
-      <form @submit.prevent="onSubmit" class="space-y-5">
+      <form @submit="onSubmit" class="space-y-5">
         <div>
           <label
             for="email"
             class="block text-sm font-medium text-gray-700 mb-1"
           >
-            {{ t("common.email") }}
+            {{ t("common.email") }} <span class="text-red-500">*</span>
           </label>
           <Input
             id="email"
@@ -113,6 +173,8 @@ $: isAnyLoading = localLoading.value || isLoading;
             :error-message="emailError"
             :disabled="isAnyLoading"
             class="w-full"
+            required
+            autocomplete="email"
           />
         </div>
 
@@ -121,17 +183,17 @@ $: isAnyLoading = localLoading.value || isLoading;
             for="password"
             class="block text-sm font-medium text-gray-700 mb-1"
           >
-            {{ t("common.password") }}
+            {{ t("common.password") }} <span class="text-red-500">*</span>
           </label>
-          <Input
+          <PasswordInput
             id="password"
             v-model="password"
-            type="password"
             placeholder="**********"
             :error="!!passwordError"
             :error-message="passwordError"
             :disabled="isAnyLoading"
-            class="w-full"
+            required
+            autocomplete="current-password"
           />
         </div>
 
@@ -270,11 +332,24 @@ $: isAnyLoading = localLoading.value || isLoading;
           </GoogleLogin>
         </div>
 
+        <!-- Form-level error message -->
         <div
-          v-if="authError || googleError"
-          class="text-center text-red-500 text-sm mt-3"
+          v-if="formError || authError || googleError"
+          class="text-center text-red-500 text-sm mt-3 p-2 bg-red-50 rounded-md border border-red-200"
         >
-          {{ t("common.error", { msg: authError || googleError }) }}
+          {{ formError || authError?.message || authError || googleError }}
+        </div>
+
+        <!-- Validation errors summary - only shown after form submission -->
+        <div
+          v-if="Object.keys(errors).length > 0"
+          class="text-center text-red-500 text-sm mt-3 p-2 bg-red-50 rounded-md border border-red-200"
+        >
+          <div v-if="errors.email">{{ errors.email }}</div>
+          <div v-if="errors.password">{{ errors.password }}</div>
+          <div v-if="!errors.email && !errors.password">
+            Please fix the errors above to continue
+          </div>
         </div>
       </form>
     </div>
