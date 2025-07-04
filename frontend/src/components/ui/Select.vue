@@ -37,7 +37,7 @@
     <!-- Dropdown -->
     <div
       v-if="isOpen"
-      class="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto"
+      class="fixed z-50 min-w-xs max-w-md mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto"
     >
       <div
         v-for="option in options"

@@ -199,8 +199,7 @@ const handleResetFilters = () => {
 };
 
 const addNewProject = () => {
-  // Implement navigation to a new project creation page/modal
-  console.log("Add new project clicked");
+  router.push("/projects/add");
 };
 
 const handleLogout = () => {

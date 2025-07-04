@@ -79,23 +79,6 @@ export function useAuth() {
 
   const loginUser = (values) => {
     // For testing purposes, we can use a mock user if the API is not available
-    if (process.env.NODE_ENV === 'development' && values.email === 'test@example.com') {
-      const mockUserData = {
-        access_token: 'mock-token',
-        refresh_token: 'mock-refresh-token',
-        user_info: {
-          id: '123',
-          name: 'Test User',
-          email: 'test@example.com',
-          avatar: null,
-          created_at: new Date().toISOString()
-        }
-      };
-      authStore.login(mockUserData, 'user');
-      router.push('/');
-      return;
-    }
-    
     loginMutation.mutate(values);
   }
 

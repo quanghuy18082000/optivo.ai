@@ -32,7 +32,7 @@ export const getProjects = async () => {
 
 export const getCategories = async () => {
   try {
-    const response = await get('/categories')
+    const response = await get('/worklogs/categories')
     return response.data
   } catch (error) {
     console.error('API Error:', error);

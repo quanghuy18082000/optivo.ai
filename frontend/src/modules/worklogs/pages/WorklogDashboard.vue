@@ -284,13 +284,9 @@ import WorklogTable from "../components/WorklogTable.vue";
 import WorklogFilters from "../components/WorklogFilters.vue";
 import Button from "@/components/ui/Button.vue";
 import { useWorklog } from "../composables/useWorklog";
-import { useAuthStore } from "@/modules/auth/store";
 import { useRouter } from "vue-router";
 
 const router = useRouter();
-
-// Use the auth store
-const authStore = useAuthStore();
 
 // Use the worklog composable with fetchWorklogs explicitly set to true
 const {
@@ -375,17 +371,6 @@ const handleChangePage = (page) => {
 
 const logWorkToday = () => {
   router.push("/worklog/create"); // Navigate to create worklog page
-};
-
-const handleLogout = () => {
-  // Close the profile menu
-  showProfileMenu.value = false;
-
-  // Call the logout action from the auth store
-  authStore.logout();
-
-  // Redirect to login page
-  window.location.href = "/login";
 };
 
 // Handle escape key to close profile menu

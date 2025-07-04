@@ -1,6 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import authRoutes from '@/modules/auth/routes'
-import worklogRoutes from '@/modules/worklog/routes'
+import worklogRoutes from '@/modules/worklogs/routes'
 import projectRoutes from "@/modules/projects/routes" // Imp
 
 const routes = [...authRoutes, ...worklogRoutes, ...projectRoutes]
