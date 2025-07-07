@@ -293,9 +293,9 @@ const handleTimePeriodChange = (value) => {
       break;
   }
 
-  // Format dates for API in ISO format: YYYY-MM-DDTHH:MM:SS
-  localFilters.value.createdAfter = format(startDate, "yyyy-MM-dd'T'HH:mm:ss");
-  localFilters.value.createdBefore = format(endDate, "yyyy-MM-dd'T'HH:mm:ss");
+  // Format dates for API in UTC ISO format: YYYY-MM-DDTHH:MM:SSZ
+  localFilters.value.createdAfter = startDate.toISOString().split(".")[0] + "Z";
+  localFilters.value.createdBefore = endDate.toISOString().split(".")[0] + "Z";
 };
 
 const hasActiveFilters = computed(() => {
@@ -341,7 +341,21 @@ const closePanel = () => {
 };
 
 const applyFilters = () => {
-  emit("apply", { ...localFilters.value });
+  // Create a copy of the filters
+  const filtersToApply = { ...localFilters.value };
+
+  // Format dates to UTC format if they exist
+  if (filtersToApply.createdAfter) {
+    const startDate = new Date(filtersToApply.createdAfter);
+    filtersToApply.createdAfter = startDate.toISOString().split(".")[0] + "Z";
+  }
+
+  if (filtersToApply.createdBefore) {
+    const endDate = new Date(filtersToApply.createdBefore);
+    filtersToApply.createdBefore = endDate.toISOString().split(".")[0] + "Z";
+  }
+
+  emit("apply", filtersToApply);
   closePanel();
 };
 
@@ -382,16 +396,16 @@ watch(
     if (localFilters.value.createdAfter && localFilters.value.createdBefore) {
       selectedTimePeriod.value = "custom";
 
-      // Convert date strings to ISO format if they're not already
+      // Convert date strings to UTC ISO format if they're not already
       if (
         localFilters.value.createdAfter &&
         !localFilters.value.createdAfter.includes("T")
       ) {
         const startDate = new Date(localFilters.value.createdAfter);
-        localFilters.value.createdAfter = format(
-          startOfDay(startDate),
-          "yyyy-MM-dd'T'HH:mm:ss"
-        );
+        // Set to start of day in UTC
+        const utcStartDate = startOfDay(startDate);
+        localFilters.value.createdAfter =
+          utcStartDate.toISOString().split(".")[0] + "Z";
       }
 
       if (
@@ -399,10 +413,10 @@ watch(
         !localFilters.value.createdBefore.includes("T")
       ) {
         const endDate = new Date(localFilters.value.createdBefore);
-        localFilters.value.createdBefore = format(
-          endOfDay(endDate),
-          "yyyy-MM-dd'T'HH:mm:ss"
-        );
+        // Set to end of day in UTC
+        const utcEndDate = endOfDay(endDate);
+        localFilters.value.createdBefore =
+          utcEndDate.toISOString().split(".")[0] + "Z";
       }
     }
   }

@@ -17,7 +17,7 @@
     <!-- Table Body -->
     <div class="divide-y divide-gray-200">
       <div
-        v-for="worklog in worklogs"
+        v-for="worklog in transformedData"
         :key="worklog.id"
         class="px-6 py-4 hover:bg-gray-50 transition-colors"
       >
@@ -27,23 +27,33 @@
             <div class="flex items-center gap-2">
               <div class="w-2 h-2 bg-blue-500 rounded-full"></div>
               <span class="text-sm font-medium text-gray-900">
-                {{ formatDate(worklog.date) }}
+                {{ worklog.formattedDate }}
               </span>
             </div>
           </div>
 
           <div class="col-span-2">
             <span class="text-sm font-medium text-gray-900">
-              {{ worklog.project_name }}
+              {{ worklog.project?.name }}
             </span>
           </div>
 
           <div class="col-span-2">
-            <!-- Categories will be shown in sub-rows -->
+            <div class="flex items-center gap-2">
+              <div
+                class="w-3 h-3 rounded-full"
+                :style="{ backgroundColor: worklog.project?.color }"
+              ></div>
+              <span class="text-sm text-gray-700">
+                {{ worklog.category }}
+              </span>
+            </div>
           </div>
 
           <div class="col-span-2">
-            <!-- Time will be shown in sub-rows -->
+            <span class="text-sm font-medium text-gray-900">
+              {{ worklog?.percentOfDay }}% ({{ worklog.formattedDuration }})
+            </span>
           </div>
 
           <div class="col-span-2">
@@ -123,44 +133,6 @@
                   </svg>
                   Edit
                 </button>
-                <button
-                  @click="duplicateWorklog(worklog.id)"
-                  class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors flex items-center gap-2"
-                >
-                  <svg
-                    class="w-4 h-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-                    />
-                  </svg>
-                  Duplicate
-                </button>
-                <button
-                  @click="deleteWorklog(worklog.id)"
-                  class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors flex items-center gap-2"
-                >
-                  <svg
-                    class="w-4 h-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1-1H8a1 1 0 00-1 1v3M4 7h16"
-                    />
-                  </svg>
-                  Delete
-                </button>
               </div>
             </div>
           </div>
@@ -204,7 +176,7 @@
     </div>
 
     <!-- Empty State -->
-    <div v-if="!worklogs.length" class="text-center py-12">
+    <div v-if="!worklogs?.length" class="text-center py-12">
       <svg
         class="mx-auto h-12 w-12 text-gray-400"
         fill="none"
@@ -244,7 +216,7 @@
 </template>
 
 <script setup>
-import { ref } from "vue";
+import { ref, watch } from "vue";
 import { useRouter } from "vue-router";
 import WorklogDetailModal from "./WorklogDetailModal.vue";
 import ConfirmModal from "@/components/ui/ConfirmModal.vue";
@@ -252,10 +224,13 @@ import { deleteWorklog as deleteWorklogAPI } from "../services/worklogService";
 
 const props = defineProps({
   worklogs: {
-    type: Array,
-    default: () => [],
+    type: Object,
+    default: () => ({ data: [], total: 0 }),
   },
 });
+
+// Store transformed data
+const transformedData = ref([]);
 
 const emit = defineEmits(["refresh"]);
 
@@ -267,13 +242,177 @@ const showDeleteConfirmation = ref(false);
 const worklogToDelete = ref(null);
 const deleteConfirmMessage = ref("");
 
+// Project mapping - in a real app, this would come from your API or store
+const projectMap = {
+  1: { name: "Website Redesign", color: "bg-blue-500" },
+  2: { name: "Mobile App", color: "bg-green-500" },
+  3: { name: "API Integration", color: "bg-purple-500" },
+};
+
+// Format minutes to hours and minutes
+const formatDuration = (minutes) => {
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  return hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
+};
+
+// Format date
 const formatDate = (dateString) => {
   const date = new Date(dateString);
-  return date.toLocaleDateString("en-GB", {
-    day: "2-digit",
-    month: "short",
+  return date.toLocaleDateString("en-US", {
     year: "numeric",
+    month: "short",
+    day: "numeric",
   });
+};
+
+// Get project name
+const getProjectName = (projectId) => {
+  return projectMap[projectId]?.name || `Project ${projectId}`;
+};
+
+// Get project initials for the avatar
+const getProjectInitials = (projectId) => {
+  const name = getProjectName(projectId);
+  return name
+    .split(" ")
+    .map((word) => word[0])
+    .join("")
+    .substring(0, 2)
+    .toUpperCase();
+};
+
+// Transform worklog data
+const transformWorklogData = (worklogs) => {
+  if (!worklogs) {
+    return [];
+  }
+
+  // Define standard work day in minutes (8 hours)
+  const STANDARD_WORK_DAY = 8 * 60;
+
+  // First, enhance each worklog with additional information
+  const enhancedWorklogs = worklogs?.map((worklog) => {
+    // Calculate percentage of standard work day
+    const percentOfDay = Math.round(
+      (worklog?.duration / STANDARD_WORK_DAY) * 100
+    );
+
+    console.log(percentOfDay);
+
+    return {
+      id: worklog.worklog_id, // Use worklog_id as id for consistency
+      worklog_id: worklog.worklog_id,
+      user_id: worklog.user_id,
+      project_id: worklog.project_id,
+      duration: worklog.duration,
+      description: worklog.description,
+      created_at: worklog.created_at,
+      category: worklog.category,
+
+      // Add formatted duration with percentage
+      formattedDuration: formatDuration(worklog.duration),
+      time_spent: `${percentOfDay}% (${formatDuration(worklog.duration)})`,
+      percentOfDay: percentOfDay,
+
+      // Add project information
+      project: {
+        id: worklog.project_id,
+        name: getProjectName(worklog.project_id),
+        initials: getProjectInitials(worklog.project_id),
+        color: getCategoryColor(worklog.category), // Use category color
+      },
+
+      // Add formatted date
+      formattedDate: formatDate(worklog.created_at),
+
+      // Add work date (assuming it's the same as created_at for now)
+      workDate: new Date(worklog.created_at).toISOString().split("T")[0],
+      date: worklog.created_at, // For delete confirmation
+
+      // Add user information (placeholder - would come from user service in real app)
+      user: {
+        id: worklog.user_id,
+        name: `User ${worklog.user_id}`,
+        email: `user${worklog.user_id}@example.com`,
+      },
+
+      // Use percentage of day as progress
+      progress: percentOfDay,
+    };
+  });
+
+  // Group worklogs by project_id
+  const projectGroups = {};
+
+  enhancedWorklogs.forEach((worklog) => {
+    const projectId = worklog.project_id;
+
+    if (!projectGroups[projectId]) {
+      // Create a new project group
+      projectGroups[projectId] = {
+        id: `project-${projectId}`, // Unique ID for the group
+        project_id: projectId,
+        project: {
+          id: projectId,
+          name: getProjectName(projectId),
+          initials: getProjectInitials(projectId),
+          color: projectMap[projectId]?.color || "#6B7280",
+        },
+        // Use the date of the first worklog in this group
+        formattedDate: worklog.formattedDate,
+        created_at: worklog.created_at,
+        date: worklog.created_at,
+        // Initialize counters
+        duration: 0,
+        entries: [],
+        overall_progress: 0,
+        category: "Multiple Categories", // Default, will be overridden if all entries have same category
+      };
+    }
+
+    // Add this worklog's duration to the total
+    projectGroups[projectId].duration += worklog.duration;
+
+    // Add this worklog as an entry
+    projectGroups[projectId].entries.push({
+      id: worklog.worklog_id,
+      category: worklog.category,
+      time_spent: `${worklog?.percentOfDay}% (${formatDuration(
+        worklog.duration
+      )})`,
+      progress: worklog?.percentOfDay,
+      description: worklog.description,
+    });
+  });
+
+  // Convert the groups object to an array and calculate overall progress
+  const groupedWorklogs = Object.values(projectGroups).map((group) => {
+    // Calculate overall progress as average of all entries
+    const totalProgress = group.entries.reduce(
+      (sum, entry) => sum + entry.progress,
+      0
+    );
+    group.overall_progress = Math.round(totalProgress / group.entries.length);
+
+    // Calculate percentage of standard work day (8 hours)
+    const STANDARD_WORK_DAY = 8 * 60;
+    const percentOfDay = Math.round((group.duration / STANDARD_WORK_DAY) * 100);
+    group.percentOfDay = percentOfDay;
+
+    // Format the total duration with percentage
+    group.formattedDuration = formatDuration(group.duration);
+
+    // If all entries have the same category, use that category
+    const categories = new Set(group.entries.map((entry) => entry.category));
+    if (categories.size === 1) {
+      group.category = group.entries[0].category;
+    }
+
+    return group;
+  });
+
+  return groupedWorklogs;
 };
 
 const getProgressColor = (progress) => {
@@ -310,25 +449,48 @@ const editWorklog = (worklogId) => {
   activeActionMenu.value = null;
 };
 
-const duplicateWorklog = (worklogId) => {
-  // TODO: Implement duplicate functionality
-  console.log("Duplicate worklog:", worklogId);
-  activeActionMenu.value = null;
-};
+// const deleteWorklog = (worklogId) => {
+//   // For project groups, we need to handle differently
+//   if (worklogId.toString().startsWith("project-")) {
+//     // This is a project group, extract the project ID
+//     const projectId = parseInt(worklogId.replace("project-", ""));
 
-const deleteWorklog = (worklogId) => {
-  // Find the worklog to delete
-  const worklog = props.worklogs.find((w) => w.id === worklogId);
-  if (!worklog) return;
+//     // Set the worklog to delete and show confirmation
+//     worklogToDelete.value = worklogId;
+//     deleteConfirmMessage.value = `Are you sure you want to delete all worklogs for ${getProjectName(
+//       projectId
+//     )}? This action cannot be undone.`;
+//     showDeleteConfirmation.value = true;
+//     activeActionMenu.value = null;
+//     return;
+//   }
 
-  // Set the worklog to delete and show confirmation
-  worklogToDelete.value = worklogId;
-  deleteConfirmMessage.value = `Are you sure you want to delete the worklog for ${formatDate(
-    worklog.date
-  )}? This will delete all entries for this date and cannot be undone.`;
-  showDeleteConfirmation.value = true;
-  activeActionMenu.value = null;
-};
+//   // For individual worklogs
+//   // Find the worklog to delete in the transformed data
+//   const transformedWorklogs = transformWorklogData(props.worklogs);
+//   let worklogToDeleteInfo = null;
+
+//   // Look through all project groups and their entries
+//   for (const projectGroup of transformedWorklogs) {
+//     const entry = projectGroup.entries.find((e) => e.id === worklogId);
+//     if (entry) {
+//       worklogToDeleteInfo = {
+//         projectName: projectGroup.project.name,
+//         category: entry.category,
+//         time: entry.time_spent,
+//       };
+//       break;
+//     }
+//   }
+
+//   if (!worklogToDeleteInfo) return;
+
+//   // Set the worklog to delete and show confirmation
+//   worklogToDelete.value = worklogId;
+//   deleteConfirmMessage.value = `Are you sure you want to delete the ${worklogToDeleteInfo.category} worklog (${worklogToDeleteInfo.time}) for ${worklogToDeleteInfo.projectName}? This action cannot be undone.`;
+//   showDeleteConfirmation.value = true;
+//   activeActionMenu.value = null;
+// };
 
 const confirmDeleteWorklog = async () => {
   if (!worklogToDelete.value) return;
@@ -359,4 +521,15 @@ document.addEventListener("click", (event) => {
     activeActionMenu.value = null;
   }
 });
+
+// Watch for changes in the worklogs prop
+watch(
+  () => props.worklogs,
+  (newWorklogs) => {
+    // Transform the data when worklogs change
+    transformedData.value = transformWorklogData(newWorklogs);
+    console.log("Transformed data:", transformedData.value);
+  },
+  { immediate: true, deep: true }
+);
 </script>

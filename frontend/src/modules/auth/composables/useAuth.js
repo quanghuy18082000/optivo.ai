@@ -15,7 +15,6 @@ export function useAuth() {
     mutationFn: login,
     onSuccess: (data) => {
 
-      console.log(222, data)
       // Handle the new response format with access_token, refresh_token, and user_info
       authStore.login(data, 'user')
       router.push('/')
@@ -29,8 +28,8 @@ export function useAuth() {
     mutationFn: loginWithMicrosoft,
     onSuccess: (data) => {
       // Handle the new response format with access_token, refresh_token, and user_info
-      authStore.login(data, 'user', 'microsoft')
-      router.push('/dashboard')
+      authStore.login(data?.data, 'user', 'microsoft')
+      router.push('/')
     },
     onError: (err) => {
       console.error('Microsoft login error:', err)
@@ -41,9 +40,10 @@ export function useAuth() {
   const googleLoginMutation = useMutation({
     mutationFn: loginWithGoogle,
     onSuccess: (data) => {
+      console.log(111, data)
       // Handle the new response format with access_token, refresh_token, and user_info
-      authStore.login(data, 'user', 'google')
-      router.push('/dashboard')
+      authStore.login(data?.data, 'user', 'google')
+      router.push('/')
     },
     onError: (err) => {
       console.error('Google login error:', err)

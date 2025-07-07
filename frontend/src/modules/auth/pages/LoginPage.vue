@@ -5,14 +5,9 @@ import * as yup from "yup";
 import Input from "@/components/ui/Input.vue";
 import PasswordInput from "@/components/ui/PasswordInput.vue";
 import Button from "@/components/ui/Button.vue";
-import Checkbox from "@/components/ui/Checkbox.vue";
 import { useAuth } from "../composables/useAuth";
 import { useI18n } from "vue-i18n";
 import { ref, computed, watch } from "vue";
-import { useRoute } from "vue-router";
-import { post } from "@/utils/requestClient";
-
-const route = useRoute();
 
 const { t } = useI18n();
 const {
@@ -345,11 +340,7 @@ const handleGoogleCallback = async (response) => {
           v-if="Object.keys(errors).length > 0"
           class="text-center text-red-500 text-sm mt-3 p-2 bg-red-50 rounded-md border border-red-200"
         >
-          <div v-if="errors.email">{{ errors.email }}</div>
-          <div v-if="errors.password">{{ errors.password }}</div>
-          <div v-if="!errors.email && !errors.password">
-            Please fix the errors above to continue
-          </div>
+          Please fix the errors above to continue
         </div>
       </form>
     </div>

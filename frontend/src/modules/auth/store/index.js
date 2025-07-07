@@ -11,7 +11,6 @@ export const useAuthStore = defineStore('auth', {
   }),
   actions: {
     login(authData, role = 'user', provider = null) {
-      console.log(authData)
       // Handle the new auth response format
       if (authData.access_token && authData.user_info) {
         // Store tokens

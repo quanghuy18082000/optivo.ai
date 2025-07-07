@@ -33,7 +33,7 @@ export const loginWithMicrosoft = async () => {
     if (response && response.account) {
       // Send OAuth data to backend
       const oauthData = {
-       code : response.idToken,
+       id_token : response.idToken,
       }
 
       const backendResponse = await post('/auth/oauth/microsoft', oauthData)
