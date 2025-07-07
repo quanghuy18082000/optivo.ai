@@ -528,7 +528,6 @@ watch(
   (newWorklogs) => {
     // Transform the data when worklogs change
     transformedData.value = transformWorklogData(newWorklogs);
-    console.log("Transformed data:", transformedData.value);
   },
   { immediate: true, deep: true }
 );

@@ -6,7 +6,6 @@
         <span class="text-sm text-gray-500">Log your work</span>
       </div>
     </template>
-
     <!-- Main Content -->
     <div class="space-y-6">
       <!-- Action Buttons -->

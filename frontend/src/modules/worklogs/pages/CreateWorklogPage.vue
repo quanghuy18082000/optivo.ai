@@ -14,9 +14,11 @@ import Select from "@/components/ui/Select.vue";
 import Button from "@/components/ui/Button.vue";
 import { useWorklog } from "../composables/useWorklog";
 import { getProjects } from "../services/worklogService";
+import { useToast } from "@/composables/useToast";
 
 const router = useRouter();
 const { t } = useI18n();
+const toast = useToast();
 // Use the worklog composable with fetchWorklogs set to false to prevent unnecessary API calls
 const { createNewWorklog, isCreating, createError } = useWorklog({
   fetchWorklogs: false,
@@ -148,12 +150,25 @@ const onSubmit = handleSubmit(async (values) => {
 
   try {
     await createNewWorklog(worklogsToCreate);
-    alert(t("common.success")); // Or use a toast notification
+
+    // Show success toast
+    toast.success(
+      t("common.worklog_created") || "Worklog created successfully"
+    );
+
     resetForm(); // Clear the form
     hasAttemptedSubmit.value = false; // Reset submission attempt flag
     router.push("/"); // Redirect to dashboard
   } catch (err) {
     console.error("Failed to create worklog:", err);
+
+    // Show error toast
+    toast.error(
+      err.message ||
+        t("common.worklog_create_failed") ||
+        "Failed to create worklog"
+    );
+
     // Error message is handled by useWorklog composable's error ref
   }
 });

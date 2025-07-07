@@ -71,7 +71,7 @@ export function useWorklog(options = { fetchWorklogs: true }) {
       })
     : { data: ref(null), isLoading: ref(false), error: ref(null), refetch: () => {} }
 
-  const worklogs = computed(() => worklogData.value?.data?.data || [])
+  const worklogs = computed(() => worklogData.value?.data?.worklog_list_item || [])
   const pagination = computed(() => worklogData.value?.data?.pagination || {
     total: 0,
     page: 1,

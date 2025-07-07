@@ -326,22 +326,6 @@ const handleGoogleCallback = async (response) => {
             </Button>
           </GoogleLogin>
         </div>
-
-        <!-- Form-level error message -->
-        <div
-          v-if="formError || authError || googleError"
-          class="text-center text-red-500 text-sm mt-3 p-2 bg-red-50 rounded-md border border-red-200"
-        >
-          {{ formError || authError?.message || authError || googleError }}
-        </div>
-
-        <!-- Validation errors summary - only shown after form submission -->
-        <div
-          v-if="Object.keys(errors).length > 0"
-          class="text-center text-red-500 text-sm mt-3 p-2 bg-red-50 rounded-md border border-red-200"
-        >
-          Please fix the errors above to continue
-        </div>
       </form>
     </div>
   </div>

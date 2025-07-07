@@ -28,7 +28,8 @@
       "language": "Chuyển ngôn ngữ",
       "error": "Đã xảy ra lỗi: {msg}",
       "invalid": "Tên đăng nhập hoặc mật khẩu không hợp lệ",
-      "or_continue_with": "Hoặc tiếp tục với"
+      "or_continue_with": "Hoặc tiếp tục với",
+      "failed": "Vui lòng kiểm tra tên đăng nhập và mật khẩu của bạn và thử lại."
     },
     "forgot": {
       "title": "Quên mật khẩu",

@@ -4,22 +4,29 @@ import { login, forgotPassword as forgotPasswordService, resetPassword as resetP
 import { loginWithMicrosoft, loginWithGoogle } from '../services/oauthService'
 import { useRouter } from 'vue-router'
 import { ref } from 'vue'
+import { useToast } from '@/composables/useToast'
+import { useI18n } from 'vue-i18n'
 
 export function useAuth() {
   const authStore = useAuthStore()
   const router = useRouter()
   const isLoading = ref(false)
   const success = ref(false)
+  const toast = useToast()
+  const { t } = useI18n()
 
   const loginMutation = useMutation({
     mutationFn: login,
     onSuccess: (data) => {
-
       // Handle the new response format with access_token, refresh_token, and user_info
       authStore.login(data, 'user')
+      
       router.push('/')
     },
     onError: (err) => {
+      // Show error toast
+      toast.error(err.message || t('auth.login.failed'))
+      
       return err.message || 'invalid'
     },
   })
@@ -29,10 +36,18 @@ export function useAuth() {
     onSuccess: (data) => {
       // Handle the new response format with access_token, refresh_token, and user_info
       authStore.login(data?.data, 'user', 'microsoft')
+      
+      // Show success toast
+      toast.success(t('auth.login.microsoft_success') || 'Microsoft login successful')
+      
       router.push('/')
     },
     onError: (err) => {
       console.error('Microsoft login error:', err)
+      
+      // Show error toast
+      toast.error(err.message || t('auth.login.microsoft_failed') || 'Microsoft login failed')
+      
       throw new Error(err.message || 'Microsoft login failed')
     },
   })
@@ -40,13 +55,20 @@ export function useAuth() {
   const googleLoginMutation = useMutation({
     mutationFn: loginWithGoogle,
     onSuccess: (data) => {
-      console.log(111, data)
       // Handle the new response format with access_token, refresh_token, and user_info
       authStore.login(data?.data, 'user', 'google')
+      
+      // Show success toast
+      toast.success(t('auth.login.google_success') || 'Google login successful')
+      
       router.push('/')
     },
     onError: (err) => {
       console.error('Google login error:', err)
+      
+      // Show error toast
+      toast.error(err.message || t('auth.login.google_failed') || 'Google login failed')
+      
       throw new Error(err.message || 'Google login failed')
     },
   })
@@ -55,9 +77,16 @@ export function useAuth() {
     mutationFn: forgotPasswordService,
     onSuccess: () => {
       success.value = true
+      
+      // Show success toast
+      toast.success(t('auth.forgot_password.success') || 'Password reset link sent to your email')
     },
     onError: (err) => {
       success.value = false
+      
+      // Show error toast
+      toast.error(err.message || t('auth.forgot_password.failed') || 'Failed to send reset link')
+      
       throw new Error(err.message || 'Failed to send reset link')
     },
   })
@@ -66,6 +95,10 @@ export function useAuth() {
     mutationFn: resetPasswordService,
     onSuccess: () => {
       success.value = true
+      
+      // Show success toast
+      toast.success(t('auth.reset_password.success') || 'Password has been reset successfully')
+      
       // Redirect to login after successful reset
       setTimeout(() => {
         router.push('/login')
@@ -73,6 +106,10 @@ export function useAuth() {
     },
     onError: (err) => {
       success.value = false
+      
+      // Show error toast
+      toast.error(err.message || t('auth.reset_password.failed') || 'Failed to reset password')
+      
       throw new Error(err.message || 'Failed to reset password')
     },
   })
@@ -121,10 +158,16 @@ export function useAuth() {
       // Clear auth store (which will also clear localStorage)
       authStore.logout()
       
+      // Show success toast
+      toast.success(t('auth.logout.success') || 'You have been logged out successfully')
+      
       // Redirect to login
       router.push('/login')
     } catch (error) {
       console.error('Logout error:', error)
+      
+      // Show error toast
+      toast.error(error.message || t('auth.logout.failed') || 'Logout failed')
     }
   }
 

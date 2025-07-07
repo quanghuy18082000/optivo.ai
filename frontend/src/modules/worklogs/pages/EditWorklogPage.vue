@@ -14,10 +14,12 @@ import Select from "@/components/ui/Select.vue";
 import Button from "@/components/ui/Button.vue";
 import { useWorklog } from "../composables/useWorklog";
 import { getProjects, getWorklogById } from "../services/worklogService";
+import { useToast } from "@/composables/useToast";
 
 const router = useRouter();
 const route = useRoute();
 const { t } = useI18n();
+const toast = useToast();
 const worklogId = route.params.id;
 const isLoading = ref(true);
 const isError = ref(false);
@@ -209,10 +211,23 @@ const onSubmit = handleSubmit(async (values) => {
 
   try {
     await updateExistingWorklog(worklogId, worklogToUpdate);
-    alert(t("common.success")); // Or use a toast notification
+
+    // Show success toast
+    toast.success(
+      t("common.worklog_updated") || "Worklog updated successfully"
+    );
+
     router.push("/"); // Redirect to dashboard
   } catch (err) {
     console.error("Failed to update worklog:", err);
+
+    // Show error toast
+    toast.error(
+      err.message ||
+        t("common.worklog_update_failed") ||
+        "Failed to update worklog"
+    );
+
     // Error message is handled by useWorklog composable's error ref
   }
 });

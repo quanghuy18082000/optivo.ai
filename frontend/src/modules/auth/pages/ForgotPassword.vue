@@ -123,27 +123,6 @@ const onSubmit = async (event) => {
           {{ t("auth.forgot.error", { msg: authError || formError }) }}
         </div>
 
-        <!-- Validation errors summary - only shown after form submission -->
-        <div
-          v-if="Object.keys(errors).length > 0"
-          class="text-center text-red-500 text-sm mt-3 p-2 bg-red-50 rounded-md border border-red-200"
-        >
-          <div v-if="errors.email">{{ errors.email }}</div>
-          <div v-if="!errors.email">
-            Please fix the errors above to continue
-          </div>
-        </div>
-
-        <div
-          v-if="success"
-          class="text-center text-green-600 text-sm mt-3 p-2 bg-green-50 rounded-md border border-green-200"
-        >
-          {{
-            t("auth.forgot.success") ||
-            "Password reset link has been sent to your email!"
-          }}
-        </div>
-
         <div class="text-center text-sm mt-4">
           <router-link to="/login" class="text-[#0368FA] hover:underline">
             ← {{ t("auth.forgot.back_to_login") || "Back to login" }}

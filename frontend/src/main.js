@@ -9,6 +9,10 @@ import vue3GoogleLogin from 'vue3-google-login'
 import '@unocss/reset/tailwind.css'
 import 'uno.css'
 
+// Import Vue Toastification
+import Toast from "vue-toastification";
+import "vue-toastification/dist/index.css";
+
 // Import ECharts core and required components
 import * as echarts from 'echarts/core'
 import { LineChart } from 'echarts/charts'
@@ -38,6 +42,23 @@ app.use(VueQueryPlugin)
 app.use(vue3GoogleLogin, {
     clientId: import.meta.env.VITE_GOOGLE_CLIENT_ID,
   })
+
+// Configure and use Vue Toastification
+const toastOptions = {
+  position: "top-right",
+  timeout: 3000,
+  closeOnClick: true,
+  pauseOnFocusLoss: true,
+  pauseOnHover: true,
+  draggable: true,
+  draggablePercent: 0.6,
+  showCloseButtonOnHover: false,
+  hideProgressBar: false,
+  closeButton: "button",
+  icon: true,
+  rtl: false
+}
+app.use(Toast, toastOptions)
 
 // Initialize auth state from localStorage
 const authStore = useAuthStore()
