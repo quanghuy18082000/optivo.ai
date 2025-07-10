@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, watch } from "vue";
 import { useForm, useFieldArray } from "vee-validate";
 import { toTypedSchema } from "@vee-validate/yup";
 import * as yup from "yup";
@@ -13,7 +13,10 @@ import Input from "@/components/ui/Input.vue";
 import Select from "@/components/ui/Select.vue";
 import Button from "@/components/ui/Button.vue";
 import { useWorklog } from "../composables/useWorklog";
-import { getProjects, getWorklogById } from "../services/worklogService";
+import {
+  getProjects,
+  getWorklogDetailsByDate,
+} from "../services/worklogService";
 import { useToast } from "@/composables/useToast";
 
 const router = useRouter();
@@ -21,13 +24,22 @@ const route = useRoute();
 const { t } = useI18n();
 const toast = useToast();
 const worklogId = route.params.id;
+const worklogDate = route.query.date;
 const isLoading = ref(true);
 const isError = ref(false);
 const errorMessage = ref("");
 const worklogData = ref(null);
+const isBatchMode = ref(!!worklogDate); // If date is provided, we're in batch mode
 
 // Use the worklog composable with fetchWorklogs set to false to prevent unnecessary API calls
-const { updateExistingWorklog, isUpdating, updateError } = useWorklog({
+const {
+  updateExistingWorklog,
+  updateBatchWorklogs,
+  isUpdating,
+  isCreating,
+  updateError,
+  createError,
+} = useWorklog({
   fetchWorklogs: false,
 });
 
@@ -37,14 +49,15 @@ const { data: projectsData, isLoading: isLoadingProjects } = useQuery({
   queryFn: getProjects,
 });
 
-// Fetch the specific worklog to edit
+// Fetch the worklog data to edit (either by ID or by date)
 const fetchWorklog = async () => {
   try {
     isLoading.value = true;
 
     // Fetch the worklog from the API
     try {
-      const response = await getWorklogById(worklogId);
+      // Fetch worklogs by date
+      const response = await getWorklogDetailsByDate(worklogDate);
       worklogData.value = response.data;
     } catch (error) {
       console.error("Failed to fetch worklog:", error);
@@ -56,23 +69,86 @@ const fetchWorklog = async () => {
     initializeForm();
   } catch (error) {
     console.error("Failed to fetch worklog:", error);
-    alert("Failed to load worklog data. Please try again.");
+    toast.error("Failed to load worklog data. Please try again.");
     router.push("/");
   } finally {
     isLoading.value = false;
   }
 };
 
-const projectOptions = computed(() => {
+// All available projects
+const allProjectOptions = computed(() => {
+  // Make sure project IDs are strings for the select component
   return (
-    projectsData.value?.data?.map((p) => ({ label: p.name, value: p.id })) || []
+    projectsData.value?.data?.map((p) => ({
+      label: p.name,
+      value: String(p.id),
+    })) || []
   );
 });
+
+// Track selected projects for dropdown filtering
+const selectedProjects = ref(new Map());
+
+// Update the selected projects map when a project is selected
+const updateSelectedProjects = () => {
+  // Clear the current map
+  selectedProjects.value.clear();
+
+  // Rebuild the map with current selections
+  if (worklogGroups.value && worklogGroups.value.length > 0) {
+    worklogGroups.value.forEach((group, index) => {
+      if (group.value.projectId) {
+        selectedProjects.value.set(group.value.projectId, index);
+      }
+    });
+  }
+
+  console.log(
+    "Updated selected projects:",
+    Object.fromEntries(selectedProjects.value)
+  );
+};
+
+// Function to get available project options for a specific group
+const getAvailableProjectOptions = (currentGroupIndex) => {
+  // If there are no worklog groups yet, return all projects
+  if (!worklogGroups.value || worklogGroups.value.length === 0) {
+    return allProjectOptions.value;
+  }
+
+  // Filter out already selected projects
+  const result = allProjectOptions.value.map((option) => {
+    // Check if this project is selected in any group other than the current one
+    const selectedInGroupIndex = selectedProjects.value.get(option.value);
+    const isDisabled =
+      selectedInGroupIndex !== undefined &&
+      selectedInGroupIndex !== currentGroupIndex;
+
+    return {
+      ...option,
+      disabled: isDisabled,
+      // Keep the original label - the Select component will handle showing the disabled state
+      label: option.label,
+    };
+  });
+
+  console.log(
+    `Available options for group ${currentGroupIndex}:`,
+    result.map((o) => ({
+      value: o.value,
+      label: o.label,
+      disabled: o.disabled,
+    }))
+  );
+
+  return result;
+};
 
 // Yup Schemas for validation
 const workEntrySchema = yup
   .object({
-    id: yup.string().required(),
+    id: yup.string().required(), // ID can be a string or number
     description: yup.string().required(t("common.required")),
     hours: yup
       .number()
@@ -92,7 +168,7 @@ const workEntrySchema = yup
   });
 
 const worklogGroupSchema = yup.object({
-  id: yup.string().required(),
+  id: yup.string().required(), // Group ID can be a string or number
   projectId: yup.string().required("Project selection is required"),
   workEntries: yup
     .array()
@@ -115,11 +191,11 @@ const { handleSubmit, errors, resetForm, setValues } = useForm({
   initialValues: {
     worklogGroups: [
       {
-        id: uuidv4(),
+        id: "new_group",
         projectId: null,
         workEntries: [
           {
-            id: uuidv4(),
+            id: "0", // Use "0" for new entries
             description: "",
             hours: 0,
             minutes: 0,
@@ -140,40 +216,90 @@ const { fields: worklogGroups, push, remove } = useFieldArray("worklogGroups");
 const initializeForm = () => {
   if (!worklogData.value) return;
 
-  // Transform the worklog data into the form structure
-  const formData = {
-    worklogGroups: [
-      {
-        id: uuidv4(),
-        projectId: worklogData.value.project_id,
-        workEntries: [
-          {
-            id: uuidv4(),
-            description: worklogData.value.description,
-            hours: worklogData.value.hours,
-            minutes: worklogData.value.minutes,
-          },
-        ],
-      },
-    ],
-  };
+  console.log("Worklog data to initialize form:", worklogData.value);
+  console.log("Available projects:", projectsData.value?.data);
+
+  let formData = { worklogGroups: [] };
+
+  if (isBatchMode.value) {
+    // Handle batch mode data format (multiple projects with multiple entries)
+    // Expected format: [{ project_id, worklog: [{ desc, duration: { hours, minutes } }] }]
+    const batchData = Array.isArray(worklogData.value) ? worklogData.value : [];
+
+    formData.worklogGroups = batchData.map((projectGroup) => {
+      return {
+        id: String(projectGroup.project_id), // Use project_id as the group ID
+        projectId: String(projectGroup.project_id), // Ensure it's a string for the select component
+        workEntries: projectGroup.worklog.map((entry) => {
+          return {
+            id: String(entry.id || 0), // Keep the original ID if it exists
+            description: entry.desc || "",
+            hours: entry.duration?.hours || 0,
+            minutes: entry.duration?.minutes || 0,
+          };
+        }),
+      };
+    });
+
+    // If no data was returned, initialize with an empty group
+    if (formData.worklogGroups.length === 0) {
+      formData.worklogGroups.push({
+        id: "new_group", // Temporary ID for new group
+        projectId: null,
+        workEntries: [{ id: "0", description: "", hours: 0, minutes: 0 }], // Use "0" for new entries
+      });
+    }
+  } else {
+    // Handle single worklog data format
+    formData = {
+      worklogGroups: [
+        {
+          id: String(worklogData.value.project_id || ""),
+          projectId: String(worklogData.value.project_id || ""),
+          workEntries: [
+            {
+              id: String(worklogData.value.id || "0"), // Keep the original ID
+              description: worklogData.value.description || "",
+              hours: worklogData.value.hours || 0,
+              minutes: worklogData.value.minutes || 0,
+            },
+          ],
+        },
+      ],
+    };
+  }
 
   // Set the form values
   setValues(formData);
+
+  // Update the selected projects map
+  updateSelectedProjects();
 };
 
 // Functions to manage form structure
 const addWorklogGroup = () => {
+  // Check if there are any available projects left to select
+  const currentGroupCount = worklogGroups.value.length;
+  const availableProjects = getAvailableProjectOptions(currentGroupCount);
+  const hasAvailableProjects = availableProjects.some((p) => !p.disabled);
+
+  if (!hasAvailableProjects) {
+    toast.warning(
+      "All projects have already been selected. You cannot add more project groups."
+    );
+    return;
+  }
+
   push({
-    id: uuidv4(),
+    id: "new_group_" + Date.now(), // Use timestamp for new groups
     projectId: null,
-    workEntries: [{ id: uuidv4(), description: "", hours: 0, minutes: 0 }],
+    workEntries: [{ id: "0", description: "", hours: 0, minutes: 0 }], // Use "0" for new entries
   });
 };
 
 const addWorkEntry = (groupIndex) => {
   worklogGroups.value[groupIndex].value.workEntries.push({
-    id: uuidv4(),
+    id: "0", // Use "0" for new entries
     description: "",
     hours: 0,
     minutes: 0,
@@ -182,6 +308,8 @@ const addWorkEntry = (groupIndex) => {
 
 const removeWorklogGroup = (index) => {
   remove(index);
+  // Update the selected projects map after removing a group
+  updateSelectedProjects();
 };
 
 const removeWorkEntry = (groupIndex, entryIndex) => {
@@ -196,26 +324,70 @@ const onSubmit = handleSubmit(async (values) => {
   // Set submission attempt flag to true to show validation errors if any
   hasAttemptedSubmit.value = true;
 
-  // For a single worklog update, we'll just use the first entry
-  const firstGroup = values.worklogGroups[0];
-  const firstEntry = firstGroup.workEntries[0];
-
-  const worklogToUpdate = {
-    project_id: firstGroup.projectId,
-    description: firstEntry.description,
-    hours: firstEntry.hours,
-    minutes: firstEntry.minutes,
-    category: worklogData.value?.category || "Work", // Preserve original category or use default
-    date: worklogData.value?.date || new Date().toISOString().split("T")[0], // Preserve original date or use current
-  };
+  console.log("Form values to submit:", values);
 
   try {
-    await updateExistingWorklog(worklogId, worklogToUpdate);
+    if (isBatchMode.value) {
+      // Handle batch mode submission
+      // Transform the form data to match the API format
+      const batchData = values.worklogGroups.map((group) => {
+        return {
+          project_id: Number(group.projectId),
+          worklog: group.workEntries.map((entry) => {
+            // Include the ID if it's not "0" (not a new entry)
+            const worklogEntry = {
+              desc: entry.description,
+              duration: {
+                hours: entry.hours,
+                minutes: entry.minutes,
+              },
+            };
 
-    // Show success toast
-    toast.success(
-      t("common.worklog_updated") || "Worklog updated successfully"
-    );
+            // Only include ID if it's not a new entry (id !== "0")
+            if (entry.id !== "0") {
+              worklogEntry.id = Number(entry.id);
+            }
+
+            return worklogEntry;
+          }),
+        };
+      });
+
+      console.log("Transformed batch data to submit:", batchData);
+
+      // Submit the batch data using PUT update
+      await updateBatchWorklogs(batchData, worklogDate);
+
+      // Show success toast
+      toast.success(
+        t("common.worklogs_updated") || "Worklogs updated successfully"
+      );
+    } else {
+      // Handle single worklog update
+      const firstGroup = values.worklogGroups[0];
+      const firstEntry = firstGroup.workEntries[0];
+
+      const worklogToUpdate = {
+        project_id: Number(firstGroup.projectId),
+        description: firstEntry.description,
+        hours: firstEntry.hours,
+        minutes: firstEntry.minutes,
+        category: worklogData.value?.category || "Work", // Preserve original category or use default
+        date: worklogData.value?.date || new Date().toISOString().split("T")[0], // Preserve original date or use current
+      };
+
+      // Include the ID if it's not a new entry
+      if (firstEntry.id !== "0") {
+        worklogToUpdate.id = Number(firstEntry.id);
+      }
+
+      await updateExistingWorklog(worklogId, worklogToUpdate);
+
+      // Show success toast
+      toast.success(
+        t("common.worklog_updated") || "Worklog updated successfully"
+      );
+    }
 
     router.push("/"); // Redirect to dashboard
   } catch (err) {
@@ -233,12 +405,28 @@ const onSubmit = handleSubmit(async (values) => {
 });
 
 const isFormLoading = computed(
-  () => isLoading.value || isUpdating.value || isLoadingProjects.value
+  () =>
+    isLoading.value ||
+    isUpdating.value ||
+    isCreating.value ||
+    isLoadingProjects.value
+);
+
+// Watch for changes in worklog groups to update available project options
+watch(
+  worklogGroups,
+  () => {
+    console.log("Worklog groups changed, updating available project options");
+    updateSelectedProjects();
+  },
+  { deep: true, immediate: true }
 );
 
 // Fetch worklog data on component mount
 onMounted(() => {
   fetchWorklog();
+  // Initialize the selected projects map
+  updateSelectedProjects();
 });
 </script>
 
@@ -246,8 +434,18 @@ onMounted(() => {
   <MainLayout>
     <template #header-left>
       <div class="flex items-center gap-4">
-        <h1 class="text-2xl font-semibold text-gray-900">Edit Work Log</h1>
-        <span class="text-sm text-gray-500">Update your work record</span>
+        <h1 class="text-2xl font-semibold text-gray-900">
+          {{ isBatchMode ? "Edit Daily Work Logs" : "Edit Work Log" }}
+        </h1>
+        <span class="text-sm text-gray-500">
+          {{
+            isBatchMode
+              ? `Update your work records for ${new Date(
+                  worklogDate
+                ).toLocaleDateString()}`
+              : "Update your work record"
+          }}
+        </span>
       </div>
     </template>
 
@@ -320,7 +518,7 @@ onMounted(() => {
               <Select
                 v-if="entryIndex === 0"
                 v-model="group.value.projectId"
-                :options="projectOptions"
+                :options="getAvailableProjectOptions(groupIndex)"
                 placeholder="Select project"
                 :disabled="isFormLoading"
                 :error="
@@ -333,6 +531,7 @@ onMounted(() => {
                     : ''
                 "
                 class="w-full"
+                @change="updateSelectedProjects"
               />
             </div>
 
@@ -526,8 +725,13 @@ onMounted(() => {
         </div>
 
         <!-- Error message -->
-        <div v-if="updateError" class="text-center text-red-500 text-sm mt-3">
-          {{ t("common.error", { msg: updateError.message }) }}
+        <div
+          v-if="updateError || createError"
+          class="text-center text-red-500 text-sm mt-3"
+        >
+          {{
+            t("common.error", { msg: (updateError || createError)?.message })
+          }}
         </div>
         <div
           v-if="hasAttemptedSubmit && Object.keys(errors).length > 0"
@@ -547,7 +751,7 @@ onMounted(() => {
             Cancel
           </Button>
           <Button type="submit" variant="primary" :loading="isFormLoading">
-            Update Worklog
+            {{ isBatchMode ? "Update Worklogs" : "Update Worklog" }}
           </Button>
         </div>
       </form>

@@ -50,7 +50,7 @@
         </div>
 
         <!-- Category -->
-        <div>
+        <!-- <div>
           <label class="block text-sm font-medium text-gray-700 mb-3"
             >Category</label
           >
@@ -59,7 +59,7 @@
             :options="categoryOptions"
             placeholder="Select category"
           />
-        </div>
+        </div> -->
 
         <!-- Time Period -->
         <div>
@@ -71,7 +71,7 @@
               v-model="selectedTimePeriod"
               :options="timePeriodOptions"
               placeholder="Select time period"
-              @update:modelValue="handleTimePeriodChange"
+              @change="(option) => handleTimePeriodChange(option.value)"
             />
           </div>
         </div>
@@ -88,6 +88,7 @@
                 v-model="localFilters.createdAfter"
                 placeholder="yyyy-mm-dd"
                 type="date"
+                @update:modelValue="saveCustomDateFrom"
               />
             </div>
             <div>
@@ -96,6 +97,7 @@
                 v-model="localFilters.createdBefore"
                 placeholder="yyyy-mm-dd"
                 type="date"
+                @update:modelValue="saveCustomDateTo"
               />
             </div>
           </div>
@@ -199,6 +201,12 @@ const localFilters = ref({
 // Time period selection
 const selectedTimePeriod = ref("today");
 
+// Separate storage for custom date range
+const customDateRange = ref({
+  from: "",
+  to: "",
+});
+
 // Fetch projects from API
 const { data: projectsData, isLoading: isLoadingProjects } = useQuery({
   queryKey: ["projects"],
@@ -206,13 +214,13 @@ const { data: projectsData, isLoading: isLoadingProjects } = useQuery({
 });
 
 // Fetch categories from API
-const { data: categoriesData, isLoading: isLoadingCategories } = useQuery({
-  queryKey: ["categories"],
-  queryFn: getCategories,
-});
+// const { data: categoriesData, isLoading: isLoadingCategories } = useQuery({
+//   queryKey: ["categories"],
+//   queryFn: getCategories,
+// });
 
 const projects = computed(() => projectsData.value?.data || []);
-const categories = computed(() => categoriesData.value?.data || []);
+// const categories = computed(() => categoriesData.value?.data || []);
 
 const projectOptions = computed(() => {
   return projects.value.map((project) => ({
@@ -221,12 +229,12 @@ const projectOptions = computed(() => {
   }));
 });
 
-const categoryOptions = computed(() => {
-  return categories.value.map((category) => ({
-    label: category.name,
-    value: category.name,
-  }));
-});
+// const categoryOptions = computed(() => {
+//   return categories.value.map((category) => ({
+//     label: category.name,
+//     value: category.name,
+//   }));
+// });
 
 const timePeriodOptions = [
   { label: "Today", value: "today" },
@@ -242,10 +250,21 @@ const timePeriodOptions = [
 
 // Function to handle time period changes
 const handleTimePeriodChange = (value) => {
+  // Update the selected time period
+  selectedTimePeriod.value = value;
+
   if (value === "custom") {
-    // For custom, we don't set dates automatically
+    // For custom, restore any saved custom dates or leave empty
+    if (customDateRange.value.from && customDateRange.value.to) {
+      localFilters.value.createdAfter = customDateRange.value.from;
+      localFilters.value.createdBefore = customDateRange.value.to;
+    }
     return;
   }
+
+  // For predefined periods, clear any custom date range
+  customDateRange.value.from = "";
+  customDateRange.value.to = "";
 
   const now = new Date();
   let startDate;
@@ -293,9 +312,9 @@ const handleTimePeriodChange = (value) => {
       break;
   }
 
-  // Format dates for API in UTC ISO format: YYYY-MM-DDTHH:MM:SSZ
-  localFilters.value.createdAfter = startDate.toISOString().split(".")[0] + "Z";
-  localFilters.value.createdBefore = endDate.toISOString().split(".")[0] + "Z";
+  // Format dates for DatePicker in YYYY-MM-DD format
+  localFilters.value.createdAfter = format(startDate, "yyyy-MM-dd");
+  localFilters.value.createdBefore = format(endDate, "yyyy-MM-dd");
 };
 
 const hasActiveFilters = computed(() => {
@@ -327,6 +346,9 @@ const getProjectName = (projectId) => {
 
 // Initialize with today's date range
 onMounted(() => {
+  // Set the default time period
+  selectedTimePeriod.value = "today";
+  // Apply the date range for today
   handleTimePeriodChange("today");
 });
 
@@ -334,6 +356,15 @@ const formatDate = (dateString) => {
   if (!dateString) return "";
   const date = new Date(dateString);
   return format(date, "MMM d, yyyy");
+};
+
+// Save custom date range values
+const saveCustomDateFrom = (value) => {
+  customDateRange.value.from = value;
+};
+
+const saveCustomDateTo = (value) => {
+  customDateRange.value.to = value;
 };
 
 const closePanel = () => {
@@ -347,12 +378,16 @@ const applyFilters = () => {
   // Format dates to UTC format if they exist
   if (filtersToApply.createdAfter) {
     const startDate = new Date(filtersToApply.createdAfter);
-    filtersToApply.createdAfter = startDate.toISOString().split(".")[0] + "Z";
+    // For API submission, convert to ISO format
+    filtersToApply.createdAfter =
+      startOfDay(startDate).toISOString().split(".")[0] + "Z";
   }
 
   if (filtersToApply.createdBefore) {
     const endDate = new Date(filtersToApply.createdBefore);
-    filtersToApply.createdBefore = endDate.toISOString().split(".")[0] + "Z";
+    // For API submission, convert to ISO format
+    filtersToApply.createdBefore =
+      endOfDay(endDate).toISOString().split(".")[0] + "Z";
   }
 
   emit("apply", filtersToApply);
@@ -360,14 +395,28 @@ const applyFilters = () => {
 };
 
 const resetFilters = () => {
+  // First reset the filters
   localFilters.value = {
     projectId: null,
     category: null,
     createdAfter: "",
     createdBefore: "",
   };
+
+  // Reset custom date range
+  customDateRange.value = {
+    from: "",
+    to: "",
+  };
+
+  // Then set the time period to today
   selectedTimePeriod.value = "today";
-  handleTimePeriodChange("today");
+
+  // Apply the date range for today
+  const now = new Date();
+  localFilters.value.createdAfter = format(startOfDay(now), "yyyy-MM-dd");
+  localFilters.value.createdBefore = format(endOfDay(now), "yyyy-MM-dd");
+
   emit("reset");
 };
 
@@ -375,14 +424,67 @@ const resetFilters = () => {
 watch(
   () => props.filters,
   (newFilters) => {
-    localFilters.value = { ...localFilters.value, ...newFilters };
+    // Create a copy of the new filters
+    const processedFilters = { ...newFilters };
+
+    // Convert ISO date strings to YYYY-MM-DD format for DatePicker
+    if (
+      processedFilters.createdAfter &&
+      processedFilters.createdAfter.includes("T")
+    ) {
+      const date = new Date(processedFilters.createdAfter);
+      processedFilters.createdAfter = format(date, "yyyy-MM-dd");
+    }
+
+    if (
+      processedFilters.createdBefore &&
+      processedFilters.createdBefore.includes("T")
+    ) {
+      const date = new Date(processedFilters.createdBefore);
+      processedFilters.createdBefore = format(date, "yyyy-MM-dd");
+    }
+
+    localFilters.value = { ...localFilters.value, ...processedFilters };
 
     // Try to determine the time period based on the dates
     if (newFilters.createdAfter && newFilters.createdBefore) {
-      selectedTimePeriod.value = "custom";
+      // Check if the date range matches any predefined period
+      const startDate = new Date(newFilters.createdAfter);
+      const endDate = new Date(newFilters.createdBefore);
+      const now = new Date();
 
-      // You could add logic here to detect if the date range matches any of the predefined periods
-      // and set selectedTimePeriod accordingly
+      // Default to custom
+      let detectedPeriod = "custom";
+
+      // Check if the date range matches any predefined period
+      if (
+        format(startDate, "yyyy-MM-dd") ===
+          format(startOfDay(now), "yyyy-MM-dd") &&
+        format(endDate, "yyyy-MM-dd") === format(endOfDay(now), "yyyy-MM-dd")
+      ) {
+        detectedPeriod = "today";
+      } else if (
+        format(startDate, "yyyy-MM-dd") ===
+          format(startOfDay(subDays(now, 1)), "yyyy-MM-dd") &&
+        format(endDate, "yyyy-MM-dd") ===
+          format(endOfDay(subDays(now, 1)), "yyyy-MM-dd")
+      ) {
+        detectedPeriod = "yesterday";
+      } else if (
+        format(startDate, "yyyy-MM-dd") ===
+          format(startOfWeek(now, { weekStartsOn: 1 }), "yyyy-MM-dd") &&
+        format(endDate, "yyyy-MM-dd") === format(now, "yyyy-MM-dd")
+      ) {
+        detectedPeriod = "this_week";
+      } else if (
+        format(startDate, "yyyy-MM-dd") ===
+          format(startOfMonth(now), "yyyy-MM-dd") &&
+        format(endDate, "yyyy-MM-dd") === format(now, "yyyy-MM-dd")
+      ) {
+        detectedPeriod = "this_month";
+      }
+
+      selectedTimePeriod.value = detectedPeriod;
     }
   },
   { deep: true }
@@ -391,32 +493,31 @@ watch(
 // Watch for changes in the date filters to update the time period
 watch(
   () => [localFilters.value.createdAfter, localFilters.value.createdBefore],
-  () => {
-    // If dates are manually changed, set to custom
-    if (localFilters.value.createdAfter && localFilters.value.createdBefore) {
-      selectedTimePeriod.value = "custom";
+  ([newAfter, newBefore], [oldAfter, oldBefore]) => {
+    // Only process if we're in custom mode or if the dates were manually changed
+    if (
+      selectedTimePeriod.value === "custom" &&
+      (newAfter !== oldAfter || newBefore !== oldBefore)
+    ) {
+      // Save the custom date range
+      if (newAfter) customDateRange.value.from = newAfter;
+      if (newBefore) customDateRange.value.to = newBefore;
+    }
+  }
+);
 
-      // Convert date strings to UTC ISO format if they're not already
-      if (
-        localFilters.value.createdAfter &&
-        !localFilters.value.createdAfter.includes("T")
-      ) {
-        const startDate = new Date(localFilters.value.createdAfter);
-        // Set to start of day in UTC
-        const utcStartDate = startOfDay(startDate);
-        localFilters.value.createdAfter =
-          utcStartDate.toISOString().split(".")[0] + "Z";
-      }
-
-      if (
-        localFilters.value.createdBefore &&
-        !localFilters.value.createdBefore.includes("T")
-      ) {
-        const endDate = new Date(localFilters.value.createdBefore);
-        // Set to end of day in UTC
-        const utcEndDate = endOfDay(endDate);
-        localFilters.value.createdBefore =
-          utcEndDate.toISOString().split(".")[0] + "Z";
+// Watch for changes in the selected time period
+watch(
+  () => selectedTimePeriod.value,
+  (newValue, oldValue) => {
+    // Only process if this is an actual change (not from our own code)
+    if (newValue && newValue !== oldValue) {
+      if (newValue === "custom") {
+        // If switching to custom, we don't need to call handleTimePeriodChange
+        // as it will be handled by the function itself
+      } else {
+        // For predefined periods, update the date range
+        handleTimePeriodChange(newValue);
       }
     }
   }

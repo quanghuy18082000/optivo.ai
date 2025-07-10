@@ -179,45 +179,6 @@ const onSubmit = async (event) => {
             {{ t("auth.reset_password.reset_button") || "Reset Password" }}
           </span>
         </Button>
-
-        <div
-          v-if="!token || formError"
-          class="text-center text-red-500 text-sm mt-3 p-2 bg-red-50 rounded-md border border-red-200"
-        >
-          {{
-            formError ||
-            "Invalid or missing reset token. Please request a new password reset link."
-          }}
-        </div>
-
-        <div
-          v-if="authError"
-          class="text-center text-red-500 text-sm mt-3 p-2 bg-red-50 rounded-md border border-red-200"
-        >
-          {{ t("common.error", { msg: authError }) }}
-        </div>
-
-        <!-- Validation errors summary - only shown after form submission -->
-        <div
-          v-if="Object.keys(errors).length > 0"
-          class="text-center text-red-500 text-sm mt-3 p-2 bg-red-50 rounded-md border border-red-200"
-        >
-          <div v-if="errors.password">{{ errors.password }}</div>
-          <div v-if="errors.confirmPassword">{{ errors.confirmPassword }}</div>
-          <div v-if="!errors.password && !errors.confirmPassword">
-            Please fix the errors above to continue
-          </div>
-        </div>
-
-        <div
-          v-if="success"
-          class="text-center text-green-500 text-sm mt-3 p-2 bg-green-50 rounded-md border border-green-200"
-        >
-          {{
-            t("auth.reset_password.success_message") ||
-            "Your password has been successfully reset! Redirecting to login..."
-          }}
-        </div>
       </form>
 
       <div class="mt-6 text-center text-sm">

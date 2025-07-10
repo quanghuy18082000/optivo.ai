@@ -42,13 +42,24 @@
       <div
         v-for="option in options"
         :key="option.value"
-        @click="selectOption(option)"
-        class="px-3 py-2 cursor-pointer hover:bg-gray-100 transition-colors duration-150"
+        @click="!option.disabled && selectOption(option)"
+        class="px-3 py-2 transition-colors duration-150"
         :class="{
-          'bg-blue-50 text-blue-600': selectedOption?.value === option.value,
+          'bg-blue-50 text-blue-600':
+            selectedOption?.value === option.value && !option.disabled,
+          'cursor-pointer hover:bg-gray-100': !option.disabled,
+          'cursor-not-allowed text-gray-400 bg-gray-50': option.disabled,
         }"
+        :title="
+          option.disabled
+            ? 'This project is already selected in another group'
+            : ''
+        "
       >
         {{ option.label }}
+        <span v-if="option.disabled" class="ml-1 text-xs text-gray-500">
+          (already selected)
+        </span>
       </div>
       <div v-if="!options.length" class="px-3 py-2 text-gray-500 text-sm">
         No options available
@@ -84,6 +95,7 @@ const props = defineProps({
           option.hasOwnProperty("value")
       );
     },
+    // Note: options can now have a 'disabled' property
   },
   placeholder: {
     type: String,
@@ -122,6 +134,11 @@ const closeDropdown = () => {
 };
 
 const selectOption = (option) => {
+  // Don't select disabled options
+  if (option.disabled) {
+    return;
+  }
+
   emit("update:modelValue", option.value);
   emit("change", option);
   closeDropdown();

@@ -2,7 +2,7 @@ import { get, post, put, del } from '@/utils/requestClient.js'
 
 export const getWorklogs = async (params = {}) => {
   try {  
-    const response = await get('/worklogs/', params)
+    const response = await get('/worklogs/list/grouped-by-date', params)
     return response.data
   } catch (error) {
     console.error('API Error:', error);
@@ -20,9 +20,19 @@ export const getWorklogById = async (id) => {
   }
 }
 
+export const getWorklogDetailsByDate = async (date) => {
+  try {
+    const response = await get('/worklogs/details/by-date', { date })
+    return response.data
+  } catch (error) {
+    console.error('API Error:', error);
+    throw new Error(error.response?.data?.message || error.message || 'Failed to fetch worklog details by date');
+  }
+}
+
 export const getProjects = async () => {
   try {
-    const response = await get('/projects')
+    const response = await get('/projects/')
     return response.data
   } catch (error) {
     console.error('API Error:', error);
@@ -40,23 +50,44 @@ export const getCategories = async () => {
   }
 }
 
-export const createWorklog = async (worklogData) => {
+export const createWorklog = async (worklogData, date) => {
   try {
-    const response = await post('/worklogs', worklogData)
-    return response.data
+    // If date is provided, add it as a query parameter
+    const url = date ? `/worklogs?date=${date}` : '/worklogs';
+    const response = await post(url, worklogData);
+    return response.data;
   } catch (error) {
     console.error('API Error:', error);
-    throw new Error(error.response?.data?.message || error.message || 'Failed to create worklog')
+    throw new Error(error.response?.data?.message || error.message || 'Failed to create worklog');
   }
 }
 
-export const updateWorklog = async (id, worklogData) => {
+export const createWorklogBatch = async (worklogsData, date) => {
   try {
-    const response = await put(`/worklogs/${id}`, worklogData)
-    return response.data
+    // If date is provided, add it as a query parameter
+    const url = date ? `/worklogs/batch?date=${date}` : '/worklogs/batch';
+    const response = await post(url, worklogsData);
+    return response.data;
   } catch (error) {
     console.error('API Error:', error);
-    throw new Error(error.response?.data?.message || error.message || 'Failed to update worklog')
+    throw new Error(error.response?.data?.message || error.message || 'Failed to create batch worklogs');
+  }
+}
+
+export const updateWorklogBatch = async (worklogsData, date) => {
+  try {
+    
+    // If date is provided, add it as a query parameter
+    const url = date ? `/worklogs/batch?date=${date}` : '/worklogs/batch';
+    console.log("API URL for batch update:", url);
+    
+    const response = await put(url, worklogsData);
+    console.log("API response for batch update:", response.data);
+    
+    return response.data;
+  } catch (error) {
+    console.error('API Error:', error);
+    throw new Error(error.response?.data?.message || error.message || 'Failed to update batch worklogs');
   }
 }
 

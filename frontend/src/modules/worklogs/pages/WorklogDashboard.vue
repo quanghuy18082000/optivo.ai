@@ -214,7 +214,6 @@
           <span class="text-gray-600">Loading worklogs...</span>
         </div>
       </div>
-
       <!-- Worklog Table -->
       <WorklogTable v-else :worklogs="worklogs" />
 

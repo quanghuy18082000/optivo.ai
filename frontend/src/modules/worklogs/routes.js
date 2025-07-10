@@ -13,7 +13,7 @@ const worklogRoutes = [
       meta: { requiresAuth: false },
     },
     {
-      path: "/worklog/edit/:id",
+      path: "/worklog/edit",
       name: "edit-worklog",
       component: () => import("./pages/EditWorklogPage.vue"),
       meta: { requiresAuth: false },

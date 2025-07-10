@@ -38,7 +38,6 @@ export function useAuth() {
       authStore.login(data?.data, 'user', 'microsoft')
       
       // Show success toast
-      toast.success(t('auth.login.microsoft_success') || 'Microsoft login successful')
       
       router.push('/')
     },
@@ -46,7 +45,7 @@ export function useAuth() {
       console.error('Microsoft login error:', err)
       
       // Show error toast
-      toast.error(err.message || t('auth.login.microsoft_failed') || 'Microsoft login failed')
+      toast.error(err.message || t('auth.login.failed'))
       
       throw new Error(err.message || 'Microsoft login failed')
     },
@@ -75,17 +74,17 @@ export function useAuth() {
 
   const forgotPasswordMutation = useMutation({
     mutationFn: forgotPasswordService,
-    onSuccess: () => {
+    onSuccess: (data) => {
       success.value = true
       
       // Show success toast
-      toast.success(t('auth.forgot_password.success') || 'Password reset link sent to your email')
+      toast.success(data?.message || t('auth.forgot.success'))
     },
     onError: (err) => {
       success.value = false
       
       // Show error toast
-      toast.error(err.message || t('auth.forgot_password.failed') || 'Failed to send reset link')
+      toast.error(err.message || t('auth.forgot.failed'))
       
       throw new Error(err.message || 'Failed to send reset link')
     },
@@ -93,11 +92,11 @@ export function useAuth() {
 
   const resetPasswordMutation = useMutation({
     mutationFn: resetPasswordService,
-    onSuccess: () => {
+    onSuccess: (data) => {
       success.value = true
       
       // Show success toast
-      toast.success(t('auth.reset_password.success') || 'Password has been reset successfully')
+      toast.success(data.message || t('auth.reset_password.success'))
       
       // Redirect to login after successful reset
       setTimeout(() => {

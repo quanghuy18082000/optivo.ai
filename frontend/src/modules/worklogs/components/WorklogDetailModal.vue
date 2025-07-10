@@ -204,7 +204,7 @@
           <div class="col-span-4">Description</div>
           <div class="col-span-1">Hours</div>
           <div class="col-span-1">Minutes</div>
-          <div class="col-span-2">Actions</div>
+          <!-- <div class="col-span-2">Actions</div> -->
         </div>
       </div>
 
@@ -258,7 +258,7 @@
               </div>
 
               <!-- Actions -->
-              <div class="col-span-2">
+              <!-- <div class="col-span-2">
                 <div class="flex items-center gap-2">
                   <button
                     @click="editEntry(entry.id)"
@@ -299,7 +299,7 @@
                     </svg>
                   </button>
                 </div>
-              </div>
+              </div> -->
             </div>
           </div>
         </div>
@@ -363,7 +363,11 @@ import { ref, computed, watch } from "vue";
 import { useRouter } from "vue-router";
 import Modal from "@/components/ui/Modal.vue";
 import ConfirmModal from "@/components/ui/ConfirmModal.vue";
-import { getWorklogById, deleteWorklogEntry } from "../services/worklogService";
+import {
+  getWorklogById,
+  getWorklogDetailsByDate,
+  deleteWorklogEntry,
+} from "../services/worklogService";
 
 const props = defineProps({
   isOpen: {
@@ -388,13 +392,20 @@ const deleteConfirmMessage = ref("");
 
 const getCategoryStyle = (category) => {
   const styles = {
+    General: "bg-blue-100 text-blue-800",
+    Uncategorized: "bg-gray-100 text-gray-800",
     Meeting: "bg-purple-100 text-purple-800",
-    Development: "bg-blue-100 text-blue-800",
-    "Bug Fix": "bg-red-100 text-red-800",
+    Development: "bg-emerald-100 text-emerald-800",
+    Design: "bg-amber-100 text-amber-800",
+    Research: "bg-pink-100 text-pink-800",
+    Planning: "bg-indigo-100 text-indigo-800",
+    Testing: "bg-red-100 text-red-800",
+    Documentation: "bg-teal-100 text-teal-800",
     Learning: "bg-yellow-100 text-yellow-800",
-    Testing: "bg-green-100 text-green-800",
-    Communication: "bg-indigo-100 text-indigo-800",
+    Communication: "bg-blue-100 text-blue-800",
     Coding: "bg-emerald-100 text-emerald-800",
+    "Bug Fix": "bg-red-100 text-red-800",
+    Other: "bg-gray-100 text-gray-800",
   };
   return styles[category] || "bg-gray-100 text-gray-800";
 };
@@ -446,14 +457,60 @@ const fetchWorklogDetail = async () => {
   isLoading.value = true;
   error.value = null;
 
+  // If worklog ID is in the format we created in the transformer (date-project-category)
+  // then we can extract the date and fetch details from the API
+
   try {
-    const response = await getWorklogById(props.worklogId);
-    worklogDetail.value = response.data;
+    // Use the API endpoint to fetch worklog details by date
+    const response = await getWorklogDetailsByDate(props.worklogId);
+
+    if (response && response.data) {
+      // Transform the API response to match our expected format
+      const entries = [];
+      let totalHours = 0;
+      let totalMinutes = 0;
+
+      // Process each project's worklogs
+      response.data.forEach((project) => {
+        project.worklog.forEach((entry) => {
+          entries.push({
+            id: entry.id,
+            project_name: project.project_name,
+            project_id: project.project_id,
+            category: entry.category || "Uncategorized",
+            description: entry.desc || "Work entry",
+            hours: entry.duration.hours,
+            minutes: entry.duration.minutes,
+          });
+
+          // Add to total time
+          totalHours += entry.duration.hours;
+          totalMinutes += entry.duration.minutes;
+        });
+      });
+
+      // Adjust minutes overflow
+      if (totalMinutes >= 60) {
+        totalHours += Math.floor(totalMinutes / 60);
+        totalMinutes = totalMinutes % 60;
+      }
+
+      // Create the worklog detail object
+      worklogDetail.value = {
+        date: response.date,
+        entries: entries,
+        total_time_logged: `${totalHours}h ${totalMinutes}m`,
+        total_entries: entries.length,
+      };
+
+      isLoading.value = false;
+      return;
+    }
   } catch (apiError) {
-    console.error("Failed to fetch worklog details:", apiError);
-    error.value = apiError.message || "Failed to fetch worklog details";
-  } finally {
+    console.error("Failed to fetch worklog details by date:", apiError);
+    error.value = apiError.message || "Failed to fetch worklog details by date";
     isLoading.value = false;
+    return;
   }
 };
 
@@ -514,14 +571,14 @@ const confirmDeleteEntry = async () => {
   }
 };
 
-const editEntry = (entryId) => {
-  // TODO: Implement edit entry functionality
-  console.log("Edit entry:", entryId);
-  // Could navigate to an edit entry page or open a modal
-};
+// const editEntry = (entryId) => {
+//   // TODO: Implement edit entry functionality
+//   router.push("/worklog/edit/date=" + props.worklogId);
+//   // Could navigate to an edit entry page or open a modal
+// };
 
 const editWorklog = () => {
-  router.push(`/worklog/edit/${props.worklogId}`);
+  router.push(`/worklog/edit?date=${props.worklogId}`);
   closeModal();
 };
 
@@ -544,6 +601,8 @@ watch(
   () => props.isOpen,
   (isOpen) => {
     if (isOpen && props.worklogId) {
+      // Always fetch fresh data when the modal is opened
+      worklogDetail.value = null;
       fetchWorklogDetail();
     }
   }

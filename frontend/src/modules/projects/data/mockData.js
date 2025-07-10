@@ -8,8 +8,8 @@ export const mockProjects = [
         name: "Member name 01",
         position: "Position 01",
         workload: [
-          { month: "Jan/25", quotation: 1.8, plan: 1.5, actual: 1.2 },
-          { month: "Feb/25", quotation: 1.7, plan: 1.4, actual: 1.1 },
+          { month: "Jan/25", quotation: 1, plan: 1, actual: 1 },
+          { month: "Feb/25", quotation: 1, plan: 1, actual: 1 },
           { month: "Mar/25", quotation: 1.9, plan: 1.6, actual: 1.3 },
           { month: "Apr/25", quotation: 1.6, plan: 1.3, actual: 1.0 },
           { month: "May/25", quotation: 1.5, plan: 1.2, actual: 0.9 },

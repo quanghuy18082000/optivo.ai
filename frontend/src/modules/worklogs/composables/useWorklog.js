@@ -1,6 +1,6 @@
 import { ref, computed } from 'vue'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
-import { getWorklogs, createWorklog, updateWorklog, deleteWorklog } from '../services/worklogService'
+import { getWorklogs, createWorklog, createWorklogBatch, updateWorklogBatch, deleteWorklog } from '../services/worklogService'
 import { useAuthStore } from '@/modules/auth/store'
 
 export function useWorklog(options = { fetchWorklogs: true }) {
@@ -71,7 +71,7 @@ export function useWorklog(options = { fetchWorklogs: true }) {
       })
     : { data: ref(null), isLoading: ref(false), error: ref(null), refetch: () => {} }
 
-  const worklogs = computed(() => worklogData.value?.data?.worklog_list_item || [])
+  const worklogs = computed(() => worklogData.value?.data || [])
   const pagination = computed(() => worklogData.value?.data?.pagination || {
     total: 0,
     page: 1,
@@ -81,14 +81,34 @@ export function useWorklog(options = { fetchWorklogs: true }) {
 
   // Mutations
   const createWorklogMutation = useMutation({
-    mutationFn: createWorklog,
+    mutationFn: (args) => {
+      // Extract worklogData and date from the args array
+      const [worklogData, date] = args;
+      return createWorklog(worklogData, date);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(['worklogs'])
+    },
+  })
+  
+  const createWorklogBatchMutation = useMutation({
+    mutationFn: (args) => {
+      // Extract worklogsData and date from the args array
+      const [worklogsData, date] = args;
+      return createWorklogBatch(worklogsData, date);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries(['worklogs'])
     },
   })
 
-  const updateWorklogMutation = useMutation({
-    mutationFn: ({ id, data }) => updateWorklog(id, data),
+  
+  const updateWorklogBatchMutation = useMutation({
+    mutationFn: (args) => {
+      // Extract worklogsData and date from the args array
+      const [worklogsData, date] = args;
+      return updateWorklogBatch(worklogsData, date);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries(['worklogs'])
     },
@@ -123,12 +143,54 @@ export function useWorklog(options = { fetchWorklogs: true }) {
     filters.value.page = page
   }
 
-  const createNewWorklog = (worklogData) => {
-    return createWorklogMutation.mutateAsync(worklogData)
+  const createNewWorklog = (worklogData, date) => {
+    // Pass the worklog data and date separately to the service function
+    return createWorklogMutation.mutateAsync([worklogData, date]);
   }
-
-  const updateExistingWorklog = (id, worklogData) => {
-    return updateWorklogMutation.mutateAsync({ id, data: worklogData })
+  
+  const createBatchWorklogs = (worklogsData, date) => {
+    // Transform the data to match the API format if needed
+    const transformedData = worklogsData.reduce((acc, worklog) => {
+      // Find if there's already an entry for this project
+      const projectIndex = acc.findIndex(item => item.project_id === worklog.project_id);
+      
+      // Create the worklog entry
+      const worklogEntry = {
+        id: worklog.id || 0, // Use provided ID or default to 0 for new entries
+        desc: worklog.description,
+        duration: {
+          hours: worklog.hours || 0,
+          minutes: worklog.minutes || 0
+        },
+      };
+      
+      if (projectIndex >= 0) {
+        // Add to existing project
+        acc[projectIndex].worklog.push(worklogEntry);
+      } else {
+        // Create new project entry
+        acc.push({
+          project_id: worklog.project_id,
+          project_name: worklog.project_name,
+          worklog: [worklogEntry]
+        });
+      }
+      
+      return acc;
+    }, []);
+    
+    // Pass the transformed data and date separately to the service function
+    return createWorklogBatchMutation.mutateAsync([transformedData, date]);
+  }
+  
+  const updateBatchWorklogs = (worklogsData, date) => {
+    console.log("Original worklogsData in updateBatchWorklogs:", worklogsData);
+    
+    // The data is already in the correct format for the API
+    // No need for additional transformation since we're receiving it in the right format
+    
+    // Pass the data and date separately to the service function
+    return updateWorklogBatchMutation.mutateAsync([worklogsData, date]);
   }
 
   const removeWorklog = (id) => {
@@ -143,14 +205,14 @@ export function useWorklog(options = { fetchWorklogs: true }) {
     
     // Loading states
     isLoading,
-    isCreating: createWorklogMutation.isPending,
-    isUpdating: updateWorklogMutation.isPending,
+    isCreating: createWorklogMutation.isPending || createWorklogBatchMutation.isPending,
+    isUpdating: updateWorklogBatchMutation.isPending,
     isDeleting: deleteWorklogMutation.isPending,
     
     // Errors
     error,
-    createError: createWorklogMutation.error,
-    updateError: updateWorklogMutation.error,
+    createError: createWorklogMutation.error || createWorklogBatchMutation.error,
+    updateError:  updateWorklogBatchMutation.error,
     deleteError: deleteWorklogMutation.error,
     
     // Methods
@@ -159,7 +221,8 @@ export function useWorklog(options = { fetchWorklogs: true }) {
     changePage,
     refetch,
     createNewWorklog,
-    updateExistingWorklog,
+    createBatchWorklogs,
+    updateBatchWorklogs,
     removeWorklog,
   }
 }

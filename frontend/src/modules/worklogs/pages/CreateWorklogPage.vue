@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from "vue";
+import { ref, computed, watch, onMounted } from "vue";
 import { useForm, useFieldArray } from "vee-validate";
 import { toTypedSchema } from "@vee-validate/yup";
 import * as yup from "yup";
@@ -17,12 +17,30 @@ import { getProjects } from "../services/worklogService";
 import { useToast } from "@/composables/useToast";
 
 const router = useRouter();
+const route = useRouter().currentRoute.value;
 const { t } = useI18n();
 const toast = useToast();
+
+// Get date from query parameter or use current date
+const selectedDate = ref(
+  route.query.date || new Date().toISOString().split("T")[0]
+);
+
+// Update URL when date changes
+const updateDateInURL = (date) => {
+  router.replace({
+    query: {
+      ...route.query,
+      date,
+    },
+  });
+};
+
 // Use the worklog composable with fetchWorklogs set to false to prevent unnecessary API calls
-const { createNewWorklog, isCreating, createError } = useWorklog({
-  fetchWorklogs: false,
-});
+const { createNewWorklog, createBatchWorklogs, isCreating, createError } =
+  useWorklog({
+    fetchWorklogs: false,
+  });
 
 // Fetch projects only
 const { data: projectsData, isLoading: isLoadingProjects } = useQuery({
@@ -30,11 +48,73 @@ const { data: projectsData, isLoading: isLoadingProjects } = useQuery({
   queryFn: getProjects,
 });
 
-const projectOptions = computed(() => {
+// All available projects
+const allProjectOptions = computed(() => {
   return (
-    projectsData.value?.data?.map((p) => ({ label: p.name, value: p.id })) || []
+    projectsData.value?.data?.map((p) => ({
+      label: p.name,
+      value: String(p.id), // Ensure it's a string for consistent comparison
+    })) || []
   );
 });
+
+// Track selected projects for dropdown filtering
+const selectedProjects = ref(new Map());
+
+// Update the selected projects map when a project is selected
+const updateSelectedProjects = () => {
+  // Clear the current map
+  selectedProjects.value.clear();
+
+  // Rebuild the map with current selections
+  if (worklogGroups.value && worklogGroups.value.length > 0) {
+    worklogGroups.value.forEach((group, index) => {
+      if (group.value.projectId) {
+        selectedProjects.value.set(group.value.projectId, index);
+      }
+    });
+  }
+
+  console.log(
+    "Updated selected projects:",
+    Object.fromEntries(selectedProjects.value)
+  );
+};
+
+// Function to get available project options for a specific group
+const getAvailableProjectOptions = (currentGroupIndex) => {
+  // If there are no worklog groups yet, return all projects
+  if (!worklogGroups.value || worklogGroups.value.length === 0) {
+    return allProjectOptions.value;
+  }
+
+  // Filter out already selected projects
+  const result = allProjectOptions.value.map((option) => {
+    // Check if this project is selected in any group other than the current one
+    const selectedInGroupIndex = selectedProjects.value.get(option.value);
+    const isDisabled =
+      selectedInGroupIndex !== undefined &&
+      selectedInGroupIndex !== currentGroupIndex;
+
+    return {
+      ...option,
+      disabled: isDisabled,
+      // Keep the original label - the Select component will handle showing the disabled state
+      label: option.label,
+    };
+  });
+
+  console.log(
+    `Available options for group ${currentGroupIndex}:`,
+    result.map((o) => ({
+      value: o.value,
+      label: o.label,
+      disabled: o.disabled,
+    }))
+  );
+
+  return result;
+};
 
 // Yup Schemas for validation
 const workEntrySchema = yup
@@ -105,11 +185,26 @@ const { fields: worklogGroups, push, remove } = useFieldArray("worklogGroups");
 
 // Functions to manage form structure
 const addWorklogGroup = () => {
+  // Check if there are any available projects left to select
+  const currentGroupCount = worklogGroups.value.length;
+  const availableProjects = getAvailableProjectOptions(currentGroupCount);
+  const hasAvailableProjects = availableProjects.some((p) => !p.disabled);
+
+  if (!hasAvailableProjects) {
+    toast.warning(
+      "All projects have already been selected. You cannot add more project groups."
+    );
+    return;
+  }
+
   push({
     id: uuidv4(),
     projectId: null,
     workEntries: [{ id: uuidv4(), description: "", hours: 0, minutes: 0 }],
   });
+
+  // Update the selected projects map after adding a new group
+  updateSelectedProjects();
 };
 
 const addWorkEntry = (groupIndex) => {
@@ -123,6 +218,8 @@ const addWorkEntry = (groupIndex) => {
 
 const removeWorklogGroup = (index) => {
   remove(index);
+  // Update the selected projects map after removing a group
+  updateSelectedProjects();
 };
 
 const removeWorkEntry = (groupIndex, entryIndex) => {
@@ -138,18 +235,25 @@ const onSubmit = handleSubmit(async (values) => {
   hasAttemptedSubmit.value = true;
 
   const worklogsToCreate = values.worklogGroups.flatMap((group) =>
-    group.workEntries.map((entry) => ({
-      project_id: group.projectId,
+    group.workEntries?.map((entry) => ({
+      project_id: Number(group.projectId), // Convert to number for API
       description: entry.description,
       hours: entry.hours,
       minutes: entry.minutes,
-      category: "Work", // Default category
-      date: new Date().toISOString().split("T")[0], // Current date in YYYY-MM-DD
+      // Remove date from individual entries as it will be passed separately
     }))
   );
 
   try {
-    await createNewWorklog(worklogsToCreate);
+    // Use the batch API endpoint if there are multiple entries
+    if (worklogsToCreate.length > 1) {
+      await createBatchWorklogs(worklogsToCreate, selectedDate.value);
+    } else if (worklogsToCreate.length === 1) {
+      // Use the single entry API for just one entry
+      await createNewWorklog(worklogsToCreate[0], selectedDate.value);
+    } else {
+      throw new Error("No worklog entries to create");
+    }
 
     // Show success toast
     toast.success(
@@ -176,6 +280,28 @@ const onSubmit = handleSubmit(async (values) => {
 const isFormLoading = computed(
   () => isCreating.value || isLoadingProjects.value
 );
+
+// Watch for date changes and update URL
+watch(selectedDate, (newDate) => {
+  if (newDate) {
+    updateDateInURL(newDate);
+  }
+});
+
+// Watch for changes in worklog groups to update available project options
+watch(
+  worklogGroups,
+  () => {
+    console.log("Worklog groups changed, updating available project options");
+    updateSelectedProjects();
+  },
+  { deep: true, immediate: true }
+);
+
+// Initialize the selected projects map when component is mounted
+onMounted(() => {
+  updateSelectedProjects();
+});
 </script>
 
 <template>
@@ -183,12 +309,33 @@ const isFormLoading = computed(
     <template #header-left>
       <div class="flex items-center gap-4">
         <h1 class="text-2xl font-semibold text-gray-900">Log Work</h1>
-        <span class="text-sm text-gray-500">Record your daily activities</span>
+        <span class="text-sm text-gray-500">
+          Record activities for
+          {{ new Date(selectedDate).toLocaleDateString() }}
+        </span>
       </div>
     </template>
 
     <div class="p-6 bg-white rounded-lg shadow-md w-full mx-auto">
       <form @submit.prevent="onSubmit" class="space-y-8">
+        <!-- Date Selection -->
+        <div class="mb-6">
+          <label
+            for="worklog-date"
+            class="block text-sm font-medium text-gray-700 mb-1"
+          >
+            Worklog Date
+          </label>
+          <Input
+            id="worklog-date"
+            v-model="selectedDate"
+            type="date"
+            class="w-full sm:w-64"
+            :disabled="isFormLoading"
+            @update:modelValue="updateDateInURL"
+          />
+        </div>
+
         <!-- Form Header -->
         <div class="grid grid-cols-12 gap-4 text-sm font-medium text-gray-500">
           <div class="col-span-3">Project</div>
@@ -216,7 +363,7 @@ const isFormLoading = computed(
               <Select
                 v-if="entryIndex === 0"
                 v-model="group.value.projectId"
-                :options="projectOptions"
+                :options="getAvailableProjectOptions(groupIndex)"
                 placeholder="Select project"
                 :disabled="isFormLoading"
                 :error="
@@ -229,6 +376,7 @@ const isFormLoading = computed(
                     : ''
                 "
                 class="w-full"
+                @change="updateSelectedProjects"
               />
             </div>
 
