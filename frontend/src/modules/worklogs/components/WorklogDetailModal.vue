@@ -1,7 +1,7 @@
 <template>
   <Modal
     :is-open="isOpen"
-    :title="`Worklog Details - ${formatDate(worklogDetail?.date)}`"
+    :title="`Worklog Details - ${formatDate(date)}`"
     subtitle="Detailed view of logged work entries for this date"
     size="large"
     @close="closeModal"
@@ -230,7 +230,6 @@
               <div class="col-span-2">
                 <div
                   class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium"
-                  :class="getCategoryStyle(entry.category)"
                 >
                   {{ entry.category }}
                 </div>
@@ -258,27 +257,8 @@
               </div>
 
               <!-- Actions -->
-              <!-- <div class="col-span-2">
+              <div class="col-span-2">
                 <div class="flex items-center gap-2">
-                  <button
-                    @click="editEntry(entry.id)"
-                    class="p-2 text-blue-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                    title="Edit entry"
-                  >
-                    <svg
-                      class="w-5 h-5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                      />
-                    </svg>
-                  </button>
                   <button
                     @click="deleteEntry(entry.id)"
                     class="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
@@ -299,7 +279,7 @@
                     </svg>
                   </button>
                 </div>
-              </div> -->
+              </div>
             </div>
           </div>
         </div>
@@ -364,10 +344,10 @@ import { useRouter } from "vue-router";
 import Modal from "@/components/ui/Modal.vue";
 import ConfirmModal from "@/components/ui/ConfirmModal.vue";
 import {
-  getWorklogById,
   getWorklogDetailsByDate,
   deleteWorklogEntry,
 } from "../services/worklogService";
+import { useToast } from "@/composables/useToast";
 
 const props = defineProps({
   isOpen: {
@@ -378,10 +358,14 @@ const props = defineProps({
     type: [String, Number],
     default: null,
   },
+  date: {
+    type: String,
+    default: "",
+  },
 });
 
 const emit = defineEmits(["close", "refresh"]);
-
+const toast = useToast();
 const router = useRouter();
 const isLoading = ref(false);
 const error = ref(null);
@@ -390,25 +374,25 @@ const showDeleteConfirmation = ref(false);
 const entryToDelete = ref(null);
 const deleteConfirmMessage = ref("");
 
-const getCategoryStyle = (category) => {
-  const styles = {
-    General: "bg-blue-100 text-blue-800",
-    Uncategorized: "bg-gray-100 text-gray-800",
-    Meeting: "bg-purple-100 text-purple-800",
-    Development: "bg-emerald-100 text-emerald-800",
-    Design: "bg-amber-100 text-amber-800",
-    Research: "bg-pink-100 text-pink-800",
-    Planning: "bg-indigo-100 text-indigo-800",
-    Testing: "bg-red-100 text-red-800",
-    Documentation: "bg-teal-100 text-teal-800",
-    Learning: "bg-yellow-100 text-yellow-800",
-    Communication: "bg-blue-100 text-blue-800",
-    Coding: "bg-emerald-100 text-emerald-800",
-    "Bug Fix": "bg-red-100 text-red-800",
-    Other: "bg-gray-100 text-gray-800",
-  };
-  return styles[category] || "bg-gray-100 text-gray-800";
-};
+// const getCategoryStyle = (category) => {
+//   const styles = {
+//     General: "bg-blue-100 text-blue-800",
+//     Uncategorized: "bg-gray-100 text-gray-800",
+//     Meeting: "bg-purple-100 text-purple-800",
+//     Development: "bg-emerald-100 text-emerald-800",
+//     Design: "bg-amber-100 text-amber-800",
+//     Research: "bg-pink-100 text-pink-800",
+//     Planning: "bg-indigo-100 text-indigo-800",
+//     Testing: "bg-red-100 text-red-800",
+//     Documentation: "bg-teal-100 text-teal-800",
+//     Learning: "bg-yellow-100 text-yellow-800",
+//     Communication: "bg-blue-100 text-blue-800",
+//     Coding: "bg-emerald-100 text-emerald-800",
+//     "Bug Fix": "bg-red-100 text-red-800",
+//     Other: "bg-gray-100 text-gray-800",
+//   };
+//   return styles[category] || "bg-gray-100 text-gray-800";
+// };
 
 const formatDate = (dateString) => {
   if (!dateString) return "";
@@ -464,6 +448,8 @@ const fetchWorklogDetail = async () => {
     // Use the API endpoint to fetch worklog details by date
     const response = await getWorklogDetailsByDate(props.worklogId);
 
+    console.log(response);
+
     if (response && response.data) {
       // Transform the API response to match our expected format
       const entries = [];
@@ -513,10 +499,11 @@ const fetchWorklogDetail = async () => {
     return;
   }
 };
-
+const projectId = ref("");
 const deleteEntry = (entryId) => {
   // Find the entry to delete
   const entry = worklogDetail.value.entries.find((e) => e.id === entryId);
+  projectId.value = entry.project_id;
   if (!entry) return;
 
   // Set the entry to delete and show confirmation
@@ -537,7 +524,7 @@ const confirmDeleteEntry = async () => {
 
   try {
     // Call the API to delete the entry
-    await deleteWorklogEntry(props.worklogId, entryToDelete.value);
+    await deleteWorklogEntry(entryToDelete.value, projectId.value);
 
     // Update the UI by removing the entry from the current data
     const entryIndex = worklogDetail.value.entries.findIndex(
@@ -564,10 +551,10 @@ const confirmDeleteEntry = async () => {
     entryToDelete.value = null;
 
     // Notify parent component to refresh data
+    toast.success("Worklog deleted successfully");
     emit("refresh");
   } catch (error) {
-    console.error("Failed to delete entry:", error);
-    alert("Failed to delete entry. Please try again.");
+    toast.error("Failed to delete entry. Please try again.");
   }
 };
 

@@ -33,7 +33,6 @@ const isBatchMode = ref(!!worklogDate); // If date is provided, we're in batch m
 
 // Use the worklog composable with fetchWorklogs set to false to prevent unnecessary API calls
 const {
-  updateExistingWorklog,
   updateBatchWorklogs,
   isUpdating,
   isCreating,
@@ -103,11 +102,6 @@ const updateSelectedProjects = () => {
       }
     });
   }
-
-  console.log(
-    "Updated selected projects:",
-    Object.fromEntries(selectedProjects.value)
-  );
 };
 
 // Function to get available project options for a specific group
@@ -132,15 +126,6 @@ const getAvailableProjectOptions = (currentGroupIndex) => {
       label: option.label,
     };
   });
-
-  console.log(
-    `Available options for group ${currentGroupIndex}:`,
-    result.map((o) => ({
-      value: o.value,
-      label: o.label,
-      disabled: o.disabled,
-    }))
-  );
 
   return result;
 };
@@ -215,9 +200,6 @@ const { fields: worklogGroups, push, remove } = useFieldArray("worklogGroups");
 // Initialize form with worklog data
 const initializeForm = () => {
   if (!worklogData.value) return;
-
-  console.log("Worklog data to initialize form:", worklogData.value);
-  console.log("Available projects:", projectsData.value?.data);
 
   let formData = { worklogGroups: [] };
 
@@ -324,81 +306,43 @@ const onSubmit = handleSubmit(async (values) => {
   // Set submission attempt flag to true to show validation errors if any
   hasAttemptedSubmit.value = true;
 
-  console.log("Form values to submit:", values);
-
   try {
-    if (isBatchMode.value) {
-      // Handle batch mode submission
-      // Transform the form data to match the API format
-      const batchData = values.worklogGroups.map((group) => {
-        return {
-          project_id: Number(group.projectId),
-          worklog: group.workEntries.map((entry) => {
-            // Include the ID if it's not "0" (not a new entry)
-            const worklogEntry = {
-              desc: entry.description,
-              duration: {
-                hours: entry.hours,
-                minutes: entry.minutes,
-              },
-            };
+    // Handle batch mode submission
+    // Transform the form data to match the API format
+    const batchData = values.worklogGroups.map((group) => {
+      return {
+        project_id: Number(group.projectId),
+        worklog: group.workEntries.map((entry) => {
+          // Include the ID if it's not "0" (not a new entry)
+          const worklogEntry = {
+            desc: entry.description,
+            duration: {
+              hours: entry.hours,
+              minutes: entry.minutes,
+            },
+          };
 
-            // Only include ID if it's not a new entry (id !== "0")
-            if (entry.id !== "0") {
-              worklogEntry.id = Number(entry.id);
-            }
+          // Only include ID if it's not a new entry (id !== "0")
+          if (entry.id !== "0") {
+            worklogEntry.id = Number(entry.id);
+          }
 
-            return worklogEntry;
-          }),
-        };
-      });
-
-      console.log("Transformed batch data to submit:", batchData);
-
-      // Submit the batch data using PUT update
-      await updateBatchWorklogs(batchData, worklogDate);
-
-      // Show success toast
-      toast.success(
-        t("common.worklogs_updated") || "Worklogs updated successfully"
-      );
-    } else {
-      // Handle single worklog update
-      const firstGroup = values.worklogGroups[0];
-      const firstEntry = firstGroup.workEntries[0];
-
-      const worklogToUpdate = {
-        project_id: Number(firstGroup.projectId),
-        description: firstEntry.description,
-        hours: firstEntry.hours,
-        minutes: firstEntry.minutes,
-        category: worklogData.value?.category || "Work", // Preserve original category or use default
-        date: worklogData.value?.date || new Date().toISOString().split("T")[0], // Preserve original date or use current
+          return worklogEntry;
+        }),
       };
+    });
 
-      // Include the ID if it's not a new entry
-      if (firstEntry.id !== "0") {
-        worklogToUpdate.id = Number(firstEntry.id);
-      }
+    // Submit the batch data using PUT update
+    await updateBatchWorklogs(batchData, worklogDate);
 
-      await updateExistingWorklog(worklogId, worklogToUpdate);
-
-      // Show success toast
-      toast.success(
-        t("common.worklog_updated") || "Worklog updated successfully"
-      );
-    }
-
+    // Show success toast
+    toast.success("Worklogs updated successfully");
     router.push("/"); // Redirect to dashboard
   } catch (err) {
     console.error("Failed to update worklog:", err);
 
     // Show error toast
-    toast.error(
-      err.message ||
-        t("common.worklog_update_failed") ||
-        "Failed to update worklog"
-    );
+    toast.error(err.message || "Failed to update worklog");
 
     // Error message is handled by useWorklog composable's error ref
   }
@@ -416,7 +360,6 @@ const isFormLoading = computed(
 watch(
   worklogGroups,
   () => {
-    console.log("Worklog groups changed, updating available project options");
     updateSelectedProjects();
   },
   { deep: true, immediate: true }

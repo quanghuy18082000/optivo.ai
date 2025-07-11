@@ -3025,7 +3025,6 @@ function openInEditor(options = {}) {
       fetch(`${_baseUrl}__open-in-editor?file=${encodeURI(file)}`).then((response) => {
         if (!response.ok) {
           const msg = `Opening component ${fileName} failed`;
-          console.log(`%c${msg}`, "color:red");
         }
       });
     } else if (devtoolsState.vitePluginDetected) {
@@ -5303,7 +5302,6 @@ function acceptHMRUpdate(initialUseStore, hot) {
         }
         const existingStore = pinia._s.get(id);
         if (!existingStore) {
-          console.log(`[Pinia]: skipping hmr because store doesn't exist yet`);
           return;
         }
         useStore(pinia, existingStore);

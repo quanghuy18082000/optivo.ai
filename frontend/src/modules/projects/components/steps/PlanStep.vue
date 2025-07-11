@@ -27,11 +27,33 @@
         <div
           v-for="(plan, index) in formData.plans"
           :key="plan.id"
-          class="px-6 py-4"
+          :class="['px-6 py-4']"
         >
           <div class="grid grid-cols-5 gap-6 items-start">
             <div>
+              <!-- Show disabled select for continuation rows -->
+              <div
+                v-if="plan.isContinuation"
+                :class="[
+                  'flex items-center h-10 px-3 border rounded-md',
+                  errors[`plans.${index}.memberId`]
+                    ? 'border-red-500 bg-red-50'
+                    : 'border-gray-300 bg-gray-50',
+                ]"
+              >
+                <span class="text-gray-700">
+                  {{ getMemberName(plan.memberId) }}
+                </span>
+                <span
+                  v-if="errors[`plans.${index}.memberId`]"
+                  class="text-sm text-red-500 ml-2"
+                >
+                  {{ errors[`plans.${index}.memberId`] }}
+                </span>
+              </div>
+              <!-- Show normal select for non-continuation rows -->
               <Select
+                v-else
                 v-model="plan.memberId"
                 :options="memberOptions"
                 placeholder="Select team member"
@@ -220,6 +242,12 @@ const emit = defineEmits([
   "cloneFromQuotation",
 ]);
 
+// Helper function to get member name from ID
+const getMemberName = (memberId) => {
+  const member = props.members.find((m) => m.id === memberId);
+  return member ? member.name : "Unknown Member";
+};
+
 const onPrevious = () => {
   emit("previous");
 };
@@ -274,6 +302,7 @@ const addPlanForSamePerson = (index) => {
     allocationRate: currentPlan.allocationRate || 0.5,
     startDate: newStartDate,
     endDate: newEndDate,
+    isContinuation: true, // Mark as continuation of the same member
   });
 };
 
@@ -300,6 +329,7 @@ const addNewPlan = () => {
     allocationRate: 1,
     startDate: projectStartDate,
     endDate: projectEndDate,
+    isContinuation: false, // Explicitly mark as not a continuation
   });
 };
 </script>

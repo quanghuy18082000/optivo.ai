@@ -34,7 +34,7 @@
               <Select
                 v-if="!quotation.isContinuation"
                 v-model="quotation.position"
-                :options="positionOptions"
+                :options="getAvailablePositionsForRow(index)"
                 placeholder="Select position"
                 :error="!!errors[`quotations.${index}.position`]"
                 :error-message="errors[`quotations.${index}.position`]"
@@ -123,7 +123,18 @@
       <div class="px-6 py-4 border-t border-gray-200 bg-gray-50">
         <button
           @click="addNewQuotation"
-          class="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-md transition-colors"
+          :disabled="areAllPositionsSelected"
+          :class="[
+            'flex items-center gap-2 px-4 py-2 rounded-md transition-colors',
+            areAllPositionsSelected
+              ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+              : 'bg-blue-50 text-blue-600 hover:bg-blue-100 cursor-pointer',
+          ]"
+          :title="
+            areAllPositionsSelected
+              ? 'All available positions have already been selected'
+              : ''
+          "
         >
           <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
             <path
@@ -192,6 +203,25 @@ const props = defineProps({
 
 const emit = defineEmits(["next", "previous"]);
 
+// Get available positions for each row, excluding positions already selected in other rows
+const getAvailablePositionsForRow = (currentIndex) => {
+  // Get all selected positions except for the current row and continuations
+  const selectedPositions = props.formData.quotations
+    .filter(
+      (q, idx) =>
+        idx !== currentIndex &&
+        !q.isContinuation && // Don't count continuations as they're the same position
+        q.position // Only include if position is selected
+    )
+    .map((q) => q.position);
+
+  // Filter out positions that are already selected
+  return props.positionOptions.map((option) => ({
+    ...option,
+    disabled: selectedPositions.includes(option.value),
+  }));
+};
+
 const onNext = () => {
   emit("next");
 };
@@ -247,7 +277,28 @@ const removeQuotation = (index) => {
   }
 };
 
+// Check if all positions are already selected
+const areAllPositionsSelected = computed(() => {
+  // Count unique positions that are not continuations
+  const uniqueSelectedPositions = new Set(
+    props.formData.quotations
+      .filter((q) => !q.isContinuation && q.position)
+      .map((q) => q.position)
+  );
+
+  // If all positions are selected, return true
+  return uniqueSelectedPositions.size >= props.positionOptions.length;
+});
+
 const addNewQuotation = () => {
+  // Don't add new quotation if all positions are already selected
+  if (areAllPositionsSelected.value) {
+    alert(
+      "All available positions have already been selected. You cannot add more positions."
+    );
+    return;
+  }
+
   // Get project dates as defaults
   const projectStartDate =
     props.formData.startDate || new Date().toISOString().split("T")[0];

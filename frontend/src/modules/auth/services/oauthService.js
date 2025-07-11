@@ -28,7 +28,6 @@ export const loginWithMicrosoft = async () => {
     }
 
         const response = await msalInstance.loginPopup(loginRequest)
-        console.log('Microsoft OAuth response:', response)
     
     if (response && response.account) {
       // Send OAuth data to backend

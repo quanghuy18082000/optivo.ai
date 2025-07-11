@@ -79,10 +79,8 @@ export const updateWorklogBatch = async (worklogsData, date) => {
     
     // If date is provided, add it as a query parameter
     const url = date ? `/worklogs/batch?date=${date}` : '/worklogs/batch';
-    console.log("API URL for batch update:", url);
     
     const response = await put(url, worklogsData);
-    console.log("API response for batch update:", response.data);
     
     return response.data;
   } catch (error) {
@@ -101,12 +99,11 @@ export const deleteWorklog = async (id) => {
   }
 }
 
-export const deleteWorklogEntry = async (worklogId, entryId) => {
+export const deleteWorklogEntry = async (worklogId, projectId) => {
   try {
-    const response = await del(`/worklogs/${worklogId}/entries/${entryId}`)
+    const response = await del(`/worklogs/${worklogId}/project/${projectId}`)
     return response.data
   } catch (error) {
-    console.error('API Error:', error);
     throw new Error(error.response?.data?.message || error.message || 'Failed to delete worklog entry')
   }
 }

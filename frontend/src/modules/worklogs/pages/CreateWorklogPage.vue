@@ -74,11 +74,6 @@ const updateSelectedProjects = () => {
       }
     });
   }
-
-  console.log(
-    "Updated selected projects:",
-    Object.fromEntries(selectedProjects.value)
-  );
 };
 
 // Function to get available project options for a specific group
@@ -103,15 +98,6 @@ const getAvailableProjectOptions = (currentGroupIndex) => {
       label: option.label,
     };
   });
-
-  console.log(
-    `Available options for group ${currentGroupIndex}:`,
-    result.map((o) => ({
-      value: o.value,
-      label: o.label,
-      disabled: o.disabled,
-    }))
-  );
 
   return result;
 };
@@ -246,19 +232,9 @@ const onSubmit = handleSubmit(async (values) => {
 
   try {
     // Use the batch API endpoint if there are multiple entries
-    if (worklogsToCreate.length > 1) {
-      await createBatchWorklogs(worklogsToCreate, selectedDate.value);
-    } else if (worklogsToCreate.length === 1) {
-      // Use the single entry API for just one entry
-      await createNewWorklog(worklogsToCreate[0], selectedDate.value);
-    } else {
-      throw new Error("No worklog entries to create");
-    }
+    await createBatchWorklogs(worklogsToCreate, selectedDate.value);
 
-    // Show success toast
-    toast.success(
-      t("common.worklog_created") || "Worklog created successfully"
-    );
+    toast.success("Worklog created successfully");
 
     resetForm(); // Clear the form
     hasAttemptedSubmit.value = false; // Reset submission attempt flag
@@ -267,11 +243,7 @@ const onSubmit = handleSubmit(async (values) => {
     console.error("Failed to create worklog:", err);
 
     // Show error toast
-    toast.error(
-      err.message ||
-        t("common.worklog_create_failed") ||
-        "Failed to create worklog"
-    );
+    toast.error(err.message || "Failed to create worklog");
 
     // Error message is handled by useWorklog composable's error ref
   }
@@ -292,7 +264,6 @@ watch(selectedDate, (newDate) => {
 watch(
   worklogGroups,
   () => {
-    console.log("Worklog groups changed, updating available project options");
     updateSelectedProjects();
   },
   { deep: true, immediate: true }

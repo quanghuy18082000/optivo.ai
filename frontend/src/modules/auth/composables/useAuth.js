@@ -57,8 +57,6 @@ export function useAuth() {
       // Handle the new response format with access_token, refresh_token, and user_info
       authStore.login(data?.data, 'user', 'google')
       
-      // Show success toast
-      toast.success(t('auth.login.google_success') || 'Google login successful')
       
       router.push('/')
     },

@@ -25,8 +25,10 @@ export function useWorklog(options = { fetchWorklogs: true }) {
 
   const queryParams = computed(() => {
     const params = {}
+
+    // Add user_id parameter with the current user ID
+    params.user_id = userId.value
   
-    
     // Add project_id if selected
     if (filters.value.projectId) {
       params.project_id = filters.value.projectId
@@ -184,7 +186,6 @@ export function useWorklog(options = { fetchWorklogs: true }) {
   }
   
   const updateBatchWorklogs = (worklogsData, date) => {
-    console.log("Original worklogsData in updateBatchWorklogs:", worklogsData);
     
     // The data is already in the correct format for the API
     // No need for additional transformation since we're receiving it in the right format

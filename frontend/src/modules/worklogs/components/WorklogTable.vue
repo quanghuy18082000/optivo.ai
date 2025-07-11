@@ -83,7 +83,7 @@
           <div class="col-span-2">
             <div class="flex justify-end">
               <button
-                @click="viewWorklog(worklog.id)"
+                @click="viewWorklog(worklog)"
                 class="p-2 text-blue-500 hover:text-blue-700 transition-colors rounded-lg hover:bg-blue-100"
                 title="View day details"
               >
@@ -132,10 +132,6 @@
             </div>
             <div class="col-span-2">
               <div class="flex items-center gap-2">
-                <div
-                  class="w-3 h-3 rounded-full"
-                  :style="{ backgroundColor: getCategoryColor(entry.category) }"
-                ></div>
                 <span class="text-sm text-gray-700">{{ entry.category }}</span>
               </div>
             </div>
@@ -185,6 +181,7 @@
     <WorklogDetailModal
       :is-open="showDetailModal"
       :worklog-id="selectedWorklogId"
+      :date="selectedWorklogDate"
       @close="closeDetailModal"
       @refresh="$emit('refresh')"
     />
@@ -220,6 +217,7 @@ const transformedData = ref([]);
 const activeActionMenu = ref(null);
 const showDetailModal = ref(false);
 const selectedWorklogId = ref(null);
+const selectedWorklogDate = ref("");
 const showDeleteConfirmation = ref(false);
 const worklogToDelete = ref(null);
 const deleteConfirmMessage = ref("");
@@ -248,24 +246,24 @@ const formatDate = (dateString) => {
 };
 
 // Category color mapping
-const getCategoryColor = (category) => {
-  const colors = {
-    General: "#3B82F6",
-    Uncategorized: "#6B7280",
-    Meeting: "#8B5CF6",
-    Development: "#10B981",
-    Design: "#F59E0B",
-    Research: "#EC4899",
-    Planning: "#6366F1",
-    Testing: "#EF4444",
-    Documentation: "#14B8A6",
-    Learning: "#8B5CF6",
-    Communication: "#3B82F6",
-    Coding: "#10B981",
-    Other: "#9CA3AF",
-  };
-  return colors[category] || "#6B7280";
-};
+// const getCategoryColor = (category) => {
+//   const colors = {
+//     General: "#3B82F6",
+//     Uncategorized: "#6B7280",
+//     Meeting: "#8B5CF6",
+//     Development: "#10B981",
+//     Design: "#F59E0B",
+//     Research: "#EC4899",
+//     Planning: "#6366F1",
+//     Testing: "#EF4444",
+//     Documentation: "#14B8A6",
+//     Learning: "#8B5CF6",
+//     Communication: "#3B82F6",
+//     Coding: "#10B981",
+//     Other: "#9CA3AF",
+//   };
+//   return colors[category] || "#6B7280";
+// };
 
 // Progress color mapping
 const getProgressColor = (progress) => {
@@ -345,7 +343,7 @@ const transformStandardWorklogData = (worklogs) => {
       progress: worklog.progress
         ? Math.round(worklog.progress * 100)
         : percentOfDay,
-      color: getCategoryColor(worklog.category || "Uncategorized"),
+      // color: getCategoryColor(worklog.category || "Uncategorized"),
     };
 
     // Add entry to the date group
@@ -452,7 +450,7 @@ const transformNestedWorklogData = (data) => {
                 durationInMinutes
               )})`,
               progress: progress,
-              color: getCategoryColor(categoryName),
+              // color: getCategoryColor(categoryName),
             };
 
             // Add entry to the date group
@@ -513,8 +511,9 @@ const transformNestedWorklogData = (data) => {
   return result.sort((a, b) => new Date(b.date) - new Date(a.date));
 };
 
-const viewWorklog = (worklogId) => {
-  selectedWorklogId.value = worklogId;
+const viewWorklog = (worklog) => {
+  selectedWorklogId.value = worklog.id;
+  selectedWorklogDate.value = worklog.date;
   showDetailModal.value = true;
   activeActionMenu.value = null;
 };
