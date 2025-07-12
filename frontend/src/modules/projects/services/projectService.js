@@ -1,5 +1,16 @@
 import { post } from '@/utils/requestClient.js'
+import { get } from '@/utils/requestClient.js'
 import { getMockProjects } from "../data/mockData" // Import mock data
+
+export const getWorklogs = async (params = {}) => {
+  try {
+    const response = await get('/worklogs/list/grouped-by-date', params)
+    return response.data
+  } catch (error) {
+    console.error('API Error:', error);
+    throw new Error(error.response?.data?.message || error.message || 'Failed to fetch worklogs');
+  }
+}
 
 export const getProjects = async (params = {}) => {
   // For now, use mock data. In a real app, this would be an API call.
