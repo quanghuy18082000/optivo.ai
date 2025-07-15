@@ -1,9 +1,32 @@
 <template>
   <div class="w-full">
     <div class="mb-8">
-      <h2 class="text-2xl font-bold text-gray-900 mb-2">
-        {{ title }}
-      </h2>
+      <div class="flex justify-between items-center mb-2">
+        <h2 class="text-2xl font-bold text-gray-900">
+          {{ title }}
+        </h2>
+        <button
+          @click="fetchUsers"
+          class="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1 px-3 py-1 border border-blue-300 rounded-md hover:bg-blue-50 transition-colors"
+          :disabled="isLoadingUsers"
+          type="button"
+        >
+          <svg
+            class="w-4 h-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+            />
+          </svg>
+          {{ isLoadingUsers ? "Loading..." : "Refresh Users" }}
+        </button>
+      </div>
       <p class="text-gray-600">
         {{ description }}
       </p>
@@ -27,39 +50,20 @@
         <div
           v-for="(plan, index) in formData.plans"
           :key="plan.id"
-          :class="['px-6 py-4']"
+          class="px-6 py-4"
         >
           <div class="grid grid-cols-5 gap-6 items-start">
             <div>
-              <!-- Show disabled select for continuation rows -->
-              <div
-                v-if="plan.isContinuation"
-                :class="[
-                  'flex items-center h-10 px-3 border rounded-md',
-                  errors[`plans.${index}.memberId`]
-                    ? 'border-red-500 bg-red-50'
-                    : 'border-gray-300 bg-gray-50',
-                ]"
-              >
-                <span class="text-gray-700">
-                  {{ getMemberName(plan.memberId) }}
-                </span>
-                <span
-                  v-if="errors[`plans.${index}.memberId`]"
-                  class="text-sm text-red-500 ml-2"
-                >
-                  {{ errors[`plans.${index}.memberId`] }}
-                </span>
+              <div>
+                <Select
+                  v-model="plan.memberId"
+                  :options="combinedMemberOptions"
+                  placeholder="Select team member"
+                  :error="!!errors[`plans.${index}.memberId`]"
+                  :error-message="errors[`plans.${index}.memberId`]"
+                  :disabled="isLoadingUsers"
+                />
               </div>
-              <!-- Show normal select for non-continuation rows -->
-              <Select
-                v-else
-                v-model="plan.memberId"
-                :options="memberOptions"
-                placeholder="Select team member"
-                :error="!!errors[`plans.${index}.memberId`]"
-                :error-message="errors[`plans.${index}.memberId`]"
-              />
             </div>
             <div>
               <Select
@@ -68,7 +72,11 @@
                 placeholder="Select position"
                 :error="!!errors[`plans.${index}.position`]"
                 :error-message="errors[`plans.${index}.position`]"
+                :disabled="props.isLoadingPositions"
               />
+              <div v-if="props.positionError" class="text-red-500 text-sm mt-1">
+                {{ props.positionError }}
+              </div>
             </div>
             <div>
               <Input
@@ -156,7 +164,11 @@
 
     <!-- Timeline Visualization -->
     <div class="mt-8 timeline-container">
-      <PlanTimeline :plans="formData.plans" :members="members" />
+      <PlanTimeline
+        :plans="formData.plans"
+        :members="members"
+        :positions="positionOptions"
+      />
     </div>
 
     <!-- Action Buttons -->
@@ -193,12 +205,14 @@
 </template>
 
 <script setup>
+import { ref, onMounted, computed } from "vue";
 import { v4 as uuidv4 } from "uuid";
 import Input from "@/components/ui/Input.vue";
 import Select from "@/components/ui/Select.vue";
 import DatePicker from "@/components/ui/DatePicker.vue";
 import Button from "@/components/ui/Button.vue";
 import PlanTimeline from "../PlanTimeline.vue";
+import { getUsers } from "@/services/userService.js";
 
 const props = defineProps({
   formData: {
@@ -233,6 +247,14 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  isLoadingPositions: {
+    type: Boolean,
+    default: false,
+  },
+  positionError: {
+    type: String,
+    default: null,
+  },
 });
 
 const emit = defineEmits([
@@ -242,11 +264,46 @@ const emit = defineEmits([
   "cloneFromQuotation",
 ]);
 
-// Helper function to get member name from ID
-const getMemberName = (memberId) => {
-  const member = props.members.find((m) => m.id === memberId);
-  return member ? member.name : "Unknown Member";
+// State for API users
+const apiUsers = ref([]);
+const isLoadingUsers = ref(false);
+const userError = ref(null);
+
+// Fetch users from the API
+const fetchUsers = async () => {
+  isLoadingUsers.value = true;
+  userError.value = null;
+
+  try {
+    const response = await getUsers();
+    if (response && Array.isArray(response.data)) {
+      // Transform the API response to the format expected by the Select component
+      apiUsers.value = response.data.map((user) => ({
+        label: user.name,
+        value: user.user_id.toString(), // Convert to string to match the expected format
+      }));
+    } else {
+      console.error("Unexpected API response format:", response);
+      userError.value = "Failed to load users: Invalid response format";
+    }
+  } catch (error) {
+    console.error("Error fetching users:", error);
+    userError.value = error.message || "Failed to load users";
+  } finally {
+    isLoadingUsers.value = false;
+  }
 };
+
+// Computed property to combine API users with mock users
+const combinedMemberOptions = computed(() => {
+  // If we have API users, use them, otherwise fall back to the provided memberOptions
+  return apiUsers.value.length > 0 ? apiUsers.value : props.memberOptions;
+});
+
+// Fetch users when component is mounted
+onMounted(() => {
+  fetchUsers();
+});
 
 const onPrevious = () => {
   emit("previous");
@@ -302,7 +359,6 @@ const addPlanForSamePerson = (index) => {
     allocationRate: currentPlan.allocationRate || 0.5,
     startDate: newStartDate,
     endDate: newEndDate,
-    isContinuation: true, // Mark as continuation of the same member
   });
 };
 
@@ -329,7 +385,6 @@ const addNewPlan = () => {
     allocationRate: 1,
     startDate: projectStartDate,
     endDate: projectEndDate,
-    isContinuation: false, // Explicitly mark as not a continuation
   });
 };
 </script>

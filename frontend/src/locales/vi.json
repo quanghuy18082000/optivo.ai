@@ -13,7 +13,9 @@
     "email": "Email",
     "name": "Tên",
     "username": "Tên đăng nhập",
-    "password": "Mật khẩu"
+    "password": "Mật khẩu",
+    "backToHome": "Trở về trang chủ",
+    "retry": "Thử lại"
   },
   "auth": {
     "login": {
@@ -52,5 +54,15 @@
     },
     "password_mismatch": "Mật khẩu không khớp",
     "password_complexity": "Mật khẩu phải chứa ít nhất một chữ hoa, một chữ thường, một số và một ký tự đặc biệt"
+  },
+  "errors": {
+    "pageNotFound": "Không tìm thấy trang",
+    "pageNotFoundMessage": "Trang bạn đang tìm kiếm không tồn tại hoặc đã được di chuyển.",
+    "somethingWentWrong": "Đã xảy ra lỗi",
+    "errorMessage": "Chúng tôi rất tiếc, nhưng đã xảy ra lỗi. Vui lòng thử lại hoặc liên hệ với bộ phận hỗ trợ nếu vấn đề vẫn tiếp diễn.",
+    "serverError": "Lỗi máy chủ",
+    "serverErrorMessage": "Đã xảy ra sự cố với máy chủ. Vui lòng thử lại sau.",
+    "networkError": "Lỗi mạng",
+    "networkErrorMessage": "Không thể kết nối đến máy chủ. Vui lòng kiểm tra kết nối internet của bạn."
   }
 }

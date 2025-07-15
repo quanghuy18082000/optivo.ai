@@ -1,6 +1,7 @@
 <template>
-  <div class="relative">
+  <div class="relative" ref="containerRef">
     <button
+      type="button"
       @click="toggleDropdown"
       class="w-full px-3 py-2 text-left bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
       :class="[
@@ -37,7 +38,9 @@
     <!-- Dropdown -->
     <div
       v-if="isOpen"
-      class="fixed z-50 min-w-xs max-w-md mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto"
+      ref="dropdownRef"
+      :style="dropdownStyles"
+      class="fixed z-50 min-w-xs max-w-md mt-1 bg-white border border-gray-300 rounded-md shadow-lg overflow-auto"
     >
       <div
         v-for="option in options"
@@ -77,7 +80,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, onUnmounted } from "vue";
+import { ref, computed, onMounted, onUnmounted, nextTick } from "vue";
 
 const props = defineProps({
   modelValue: {
@@ -95,7 +98,6 @@ const props = defineProps({
           option.hasOwnProperty("value")
       );
     },
-    // Note: options can now have a 'disabled' property
   },
   placeholder: {
     type: String,
@@ -118,6 +120,9 @@ const props = defineProps({
 const emit = defineEmits(["update:modelValue", "change"]);
 
 const isOpen = ref(false);
+const dropdownStyles = ref({});
+const containerRef = ref(null);
+const dropdownRef = ref(null);
 
 const selectedOption = computed(() => {
   return props.options.find((option) => option.value === props.modelValue);
@@ -126,6 +131,24 @@ const selectedOption = computed(() => {
 const toggleDropdown = () => {
   if (!props.disabled) {
     isOpen.value = !isOpen.value;
+
+    if (isOpen.value) {
+      nextTick(() => {
+        const container = containerRef.value;
+        const dropdown = dropdownRef.value;
+
+        if (container && dropdown) {
+          const containerRect = container.getBoundingClientRect();
+          const spaceBelow = window.innerHeight - containerRect.bottom;
+          const maxHeight = Math.min(spaceBelow - 20, 240); // set a max height with a small buffer
+
+          dropdownStyles.value = {
+            width: `${containerRect.width}px`,
+            maxHeight: `${maxHeight}px`,
+          };
+        }
+      });
+    }
   }
 };
 
@@ -135,9 +158,7 @@ const closeDropdown = () => {
 
 const selectOption = (option) => {
   // Don't select disabled options
-  if (option.disabled) {
-    return;
-  }
+  if (option.disabled) return;
 
   emit("update:modelValue", option.value);
   emit("change", option);

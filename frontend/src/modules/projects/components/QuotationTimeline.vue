@@ -58,10 +58,13 @@
 
 <script setup>
 import { computed } from "vue";
-import { mockPositions } from "../data/mockData";
 
 const props = defineProps({
   quotations: {
+    type: Array,
+    default: () => [],
+  },
+  positions: {
     type: Array,
     default: () => [],
   },
@@ -93,8 +96,21 @@ const validQuotations = computed(() => {
 
 // Get position name from ID
 const getPositionName = (positionId) => {
-  const position = mockPositions.find((p) => p.id === positionId);
-  return position ? position.name : "Unknown Position";
+  // First try to find the position in the positions prop
+  const position = props.positions.find((p) => p.value === positionId);
+  if (position) {
+    return position.label;
+  }
+
+  // If not found, check if we have a raw position object with id and name
+  const rawPosition = props.positions.find(
+    (p) => p.id && p.id.toString() === positionId
+  );
+  if (rawPosition) {
+    return rawPosition.name;
+  }
+
+  return "Unknown Position";
 };
 
 // Calculate timeline bar position and width

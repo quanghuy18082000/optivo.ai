@@ -13,7 +13,9 @@
     "email": "Email",
     "name": "Name",
     "username": "Username",
-    "password": "Password"
+    "password": "Password",
+    "backToHome": "Back to Home",
+    "retry": "Try Again"
   },
   "auth": {
     "login": {
@@ -53,5 +55,15 @@
     },
     "password_mismatch": "Passwords do not match",
     "password_complexity": "Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character"
+  },
+  "errors": {
+    "pageNotFound": "Page Not Found",
+    "pageNotFoundMessage": "The page you are looking for doesn't exist or has been moved.",
+    "somethingWentWrong": "Something Went Wrong",
+    "errorMessage": "We're sorry, but an error has occurred. Please try again or contact support if the problem persists.",
+    "serverError": "Server Error",
+    "serverErrorMessage": "There was a problem with the server. Please try again later.",
+    "networkError": "Network Error",
+    "networkErrorMessage": "Unable to connect to the server. Please check your internet connection."
   }
 }

@@ -368,19 +368,16 @@ const handleChangePage = (page) => {
 };
 
 const logWorkToday = () => {
-  router.push("/worklog/create"); // Navigate to create worklog page
+  router.push("/worklog/create");
 };
 
-// Handle escape key to close profile menu
 const handleEscKey = (e) => {
   if (e.key === "Escape" && showProfileMenu.value) {
     showProfileMenu.value = false;
   }
 };
 
-// Lifecycle
 onMounted(() => {
-  // The useWorklog composable automatically fetches data when mounted
   document.addEventListener("keydown", handleEscKey);
   document.addEventListener("click", handleClickOutside);
 });
@@ -389,6 +386,4 @@ onBeforeUnmount(() => {
   document.removeEventListener("keydown", handleEscKey);
   document.removeEventListener("click", handleClickOutside);
 });
-
-// In Vue 3 setup script, directives are automatically registered when defined in the script
 </script>

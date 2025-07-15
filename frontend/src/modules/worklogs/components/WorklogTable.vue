@@ -533,7 +533,6 @@ const confirmDeleteWorklog = async () => {
     emit("refresh");
   } catch (error) {
     console.error("Failed to delete worklog:", error);
-    alert("Failed to delete worklog. Please try again.");
   }
 };
 

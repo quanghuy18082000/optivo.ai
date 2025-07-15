@@ -39,21 +39,57 @@
       <div class="p-6 space-y-6 overflow-y-auto h-full pb-24">
         <!-- Project Name Filter -->
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-3"
-            >Project Name</label
-          >
+          <label class="block text-sm font-medium text-gray-700 mb-3">
+            Project Name
+          </label>
           <Input
             v-model="localFilters.projectName"
             placeholder="Search by project name"
           />
         </div>
 
-        <!-- Add more filter options here as needed -->
-        <!-- Example: Member Name Filter -->
-        <!-- <div>
-            <label class="block text-sm font-medium text-gray-700 mb-3">Member Name</label>
-            <Input v-model="localFilters.memberName" placeholder="Search by member name" />
-          </div> -->
+        <!-- Member Name Filter -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-3">
+            Team Member
+          </label>
+          <Input
+            v-model="localFilters.memberName"
+            placeholder="Search by team member name"
+          />
+        </div>
+
+        <!-- Status Filter -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-3">
+            Project Status
+          </label>
+          <Select
+            v-model="localFilters.status"
+            :options="statusOptions"
+            placeholder="Select status"
+          />
+        </div>
+
+        <!-- Date Range Filters -->
+        <div class="space-y-4">
+          <label class="block text-sm font-medium text-gray-700">
+            Date Range
+          </label>
+
+          <div>
+            <label class="block text-xs text-gray-500 mb-1"> Start Date </label>
+            <DatePicker
+              v-model="localFilters.startDate"
+              placeholder="From date"
+            />
+          </div>
+
+          <div>
+            <label class="block text-xs text-gray-500 mb-1"> End Date </label>
+            <DatePicker v-model="localFilters.endDate" placeholder="To date" />
+          </div>
+        </div>
       </div>
 
       <!-- Footer Actions -->
@@ -89,7 +125,18 @@
 <script setup>
 import { ref, watch } from "vue";
 import Input from "@/components/ui/Input.vue";
+import Select from "@/components/ui/Select.vue";
+import DatePicker from "@/components/ui/DatePicker.vue";
 import Button from "@/components/ui/Button.vue";
+
+// Status options for the dropdown
+const statusOptions = [
+  { label: "All", value: "" },
+  { label: "Active", value: "active" },
+  { label: "Completed", value: "completed" },
+  { label: "On Hold", value: "on_hold" },
+  { label: "Cancelled", value: "cancelled" },
+];
 
 const props = defineProps({
   isOpen: {
@@ -106,6 +153,10 @@ const emit = defineEmits(["close", "apply", "reset"]);
 
 const localFilters = ref({
   projectName: "",
+  memberName: "",
+  status: "",
+  startDate: "",
+  endDate: "",
   ...props.filters,
 });
 
@@ -121,6 +172,10 @@ const applyFilters = () => {
 const resetFilters = () => {
   localFilters.value = {
     projectName: "",
+    memberName: "",
+    status: "",
+    startDate: "",
+    endDate: "",
   };
   emit("reset");
 };

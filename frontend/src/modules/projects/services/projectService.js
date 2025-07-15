@@ -1,25 +1,24 @@
-import { post } from '@/utils/requestClient.js'
-import { getMockProjects } from "../data/mockData" // Import mock data
+import { get, post, del } from '@/utils/requestClient.js'
+import { useToast } from '@/composables/useToast'
+
+const toast = useToast()
 
 export const getProjects = async (params = {}) => {
-  // For now, use mock data. In a real app, this would be an API call.
-  // try {
-  //   const response = await get('/projects', params)
-  //   return response.data
-  // } catch (error) {
-  //   throw new Error(error.response?.data?.message || error.message || 'Failed to fetch projects')
-  // }
-
-  // Simulate API delay
-  await new Promise((resolve) => setTimeout(resolve, 500))
-  return getMockProjects(params)
+  try {
+    // Use the real API endpoint
+    const response = await get('/projects/', params)
+    return response.data
+  } catch (error) {
+    console.error('API Error:', error);
+    
+  }
 }
 
 export const createProject = async (projectData) => {
   try {
     
     // Use the real API endpoint
-    const response = await post('/projects', projectData)
+    const response = await post('/projects/', projectData)
     return response.data
   } catch (error) {
     console.error('API Error:', error);
@@ -27,4 +26,20 @@ export const createProject = async (projectData) => {
   }
 }
 
-// You can add more project-related services here, e.g., updateProject, deleteProject
+/**
+ * Delete a project by ID
+ * @param {string|number} projectId - The ID of the project to delete
+ * @returns {Promise<Object>} - The response data
+ */
+export const deleteProject = async (projectId) => {
+  try {
+    // Use the real API endpoint
+    const response = await del(`/projects/${projectId}`)
+    return response.data
+  } catch (error) {
+    console.error('API Error:', error);
+    toast.error("Failed to delete project. Please try again.")
+    // Rethrow the error so it can be caught by the calling function
+    throw new Error(error.response?.data?.message || error.message || 'Failed to delete project')
+  }
+}

@@ -43,6 +43,23 @@ app.use(vue3GoogleLogin, {
     clientId: import.meta.env.VITE_GOOGLE_CLIENT_ID,
   })
 
+// Global error handler
+app.config.errorHandler = (err, instance, info) => {
+  console.error('Global error:', err)
+  console.error('Error info:', info)
+  
+  // You can use the toast notification system to show errors
+  const toast = app.config.globalProperties.$toast
+  if (toast) {
+    toast.error(i18n.global.t('errors.somethingWentWrong'))
+  }
+  
+  // For network errors, you might want to handle them differently
+  if (err.name === 'NetworkError' || (err.response && err.response.status >= 500)) {
+    router.push({ name: 'ServerError' })
+  }
+}
+
 // Configure and use Vue Toastification
 const toastOptions = {
   position: "top-right",

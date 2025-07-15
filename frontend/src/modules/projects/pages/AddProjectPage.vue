@@ -48,8 +48,11 @@
       :title="stepDescriptions[1].title"
       :description="stepDescriptions[1].description"
       :positionOptions="positionOptions"
+      :isLoadingPositions="isLoadingPositions"
+      :positionError="positionError"
       @next="nextStep"
       @previous="previousStep"
+      @refreshPositions="fetchPositions"
     />
 
     <!-- Step 3: Plan Input -->
@@ -63,6 +66,8 @@
       :memberOptions="memberOptions"
       :members="mockMembers"
       :isSubmitting="isSubmitting"
+      :isLoadingPositions="isLoadingPositions"
+      :positionError="positionError"
       @previous="previousStep"
       @submit="submitProject"
       @skipAndSubmit="skipAndSubmit"
@@ -77,14 +82,16 @@ import { useRouter } from "vue-router";
 import { v4 as uuidv4 } from "uuid";
 import MainLayout from "@/layouts/MainLayout.vue";
 import { createProject } from "../services/projectService";
-import { mockMembers, mockPositions } from "../data/mockData";
+import { mockMembers } from "../data/mockData";
 import StepIndicator from "../components/StepIndicator.vue";
 import BasicInformationStep from "../components/steps/BasicInformationStep.vue";
 import QuotationStep from "../components/steps/QuotationStep.vue";
 import PlanStep from "../components/steps/PlanStep.vue";
+import { useToast } from "@/composables/useToast";
+import { getPositions } from "@/services/systemConfigService.js";
 
 const router = useRouter();
-
+const toast = useToast();
 // Current step state
 const currentStep = ref(1);
 const isSubmitting = ref(false);
@@ -137,11 +144,42 @@ const stepDescriptions = [
   },
 ];
 
+// State for API positions
+const apiPositions = ref([]);
+const isLoadingPositions = ref(false);
+const positionError = ref(null);
+
+// Fetch positions from the API
+const fetchPositions = async () => {
+  isLoadingPositions.value = true;
+  positionError.value = null;
+
+  try {
+    const response = await getPositions();
+    if (response && Array.isArray(response.data)) {
+      apiPositions.value = response.data;
+    } else {
+      console.error("Unexpected API response format:", response);
+      positionError.value = "Failed to load positions: Invalid response format";
+    }
+  } catch (error) {
+    console.error("Error fetching positions:", error);
+    positionError.value = error.message || "Failed to load positions";
+  } finally {
+    isLoadingPositions.value = false;
+  }
+};
+
+// Fetch positions when component is mounted
+onMounted(() => {
+  fetchPositions();
+});
+
 // Options for dropdowns
 const positionOptions = computed(() =>
-  mockPositions.map((position) => ({
+  apiPositions.value.map((position) => ({
     label: position.name,
-    value: position.id,
+    value: position.id.toString(), // Convert to string to match expected format
   }))
 );
 
@@ -376,27 +414,11 @@ const validateStep3 = () => {
     // Member validation
     if (!plan.memberId && !plan.isContinuation) {
       newErrors[`plans.${index}.memberId`] = "Team member is required";
-    } else if (plan.memberId) {
-      // Verify member exists in options
-      const memberExists = memberOptions.value.some(
-        (m) => m.value === plan.memberId
-      );
-      if (!memberExists) {
-        newErrors[`plans.${index}.memberId`] = "Invalid team member selected";
-      }
     }
 
     // Position validation
     if (!plan.position) {
       newErrors[`plans.${index}.position`] = "Position is required";
-    } else {
-      // Verify position exists in options
-      const positionExists = positionOptions.value.some(
-        (p) => p.value === plan.position
-      );
-      if (!positionExists) {
-        newErrors[`plans.${index}.position`] = "Invalid position selected";
-      }
     }
 
     // Allocation rate validation
@@ -575,10 +597,6 @@ const nextStep = () => {
   if (isValid && currentStep.value < 3) {
     currentStep.value++;
     errors.value = {}; // Clear errors when moving to next step
-  } else if (isValid && currentStep.value === 3) {
-    // If we're on step 3 and validation passes, we could auto-submit
-    // or just show a success message
-    alert("All validations passed! You can now submit the project.");
   }
 };
 
@@ -617,13 +635,11 @@ const skipAndSubmit = async () => {
 
   // Validate step 1 and step 2 before skipping to submit
   if (!validateStep1()) {
-    alert("Please fix the errors in the basic information section");
     currentStep.value = 1;
     return;
   }
 
   if (!validateStep2()) {
-    alert("Please fix the errors in the quotation section");
     currentStep.value = 2;
     return;
   }
@@ -637,20 +653,17 @@ const submitProject = async (skipPlan = false) => {
 
   // Always validate step 1 and step 2
   if (!validateStep1()) {
-    alert("Please fix the errors in the basic information section");
     currentStep.value = 1;
     return;
   }
 
   if (!validateStep2()) {
-    alert("Please fix the errors in the quotation section");
     currentStep.value = 2;
     return;
   }
 
   // Validate step 3 if not skipping
   if (!skipPlan && !validateStep3()) {
-    alert("Please fix the errors in the team allocation section");
     return;
   }
 
@@ -691,11 +704,11 @@ const submitProject = async (skipPlan = false) => {
     await createProject(projectData);
 
     // Show success message and redirect
-    alert("Project created successfully!");
+    toast.success("Project created successfully");
     router.push("/projects");
   } catch (error) {
     console.error("Error creating project:", error);
-    alert(`Error creating project: ${error.message}`);
+    toast.error("Failed to create project. Please try again.");
   } finally {
     isSubmitting.value = false;
   }

@@ -1,5 +1,5 @@
 <template>
-  <div class="relative">
+  <div class="relative" ref="containerRef">
     <button
       @click="toggleDropdown"
       class="w-full px-3 py-2 text-left bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
@@ -15,7 +15,6 @@
     >
       <div class="flex items-center justify-between">
         <div class="flex-1 min-w-0">
-          <!-- Selected items display -->
           <div v-if="selectedOptions.length > 0" class="flex flex-wrap gap-1">
             <span
               v-for="option in selectedOptions.slice(0, maxDisplayItems)"
@@ -52,7 +51,6 @@
           <span v-else class="text-gray-500">{{ placeholder }}</span>
         </div>
         <div class="flex items-center gap-2 ml-2">
-          <!-- Clear all button -->
           <button
             v-if="selectedOptions.length > 0 && !disabled"
             @click.stop="clearAll"
@@ -72,7 +70,6 @@
               />
             </svg>
           </button>
-          <!-- Dropdown arrow -->
           <svg
             class="w-5 h-5 text-gray-400 transition-transform duration-200"
             :class="{ 'rotate-180': isOpen }"
@@ -91,12 +88,12 @@
       </div>
     </button>
 
-    <!-- Dropdown -->
     <div
       v-if="isOpen"
-      class="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-hidden"
+      ref="dropdownRef"
+      :style="dropdownStyles"
+      class="absolute z-50 mt-1 bg-white border border-gray-300 rounded-md shadow-lg overflow-auto"
     >
-      <!-- Search input -->
       <div v-if="searchable" class="p-2 border-b border-gray-200">
         <input
           v-model="searchQuery"
@@ -107,7 +104,6 @@
         />
       </div>
 
-      <!-- Select All option -->
       <div
         v-if="showSelectAll && filteredOptions.length > 0"
         @click="toggleSelectAll"
@@ -125,8 +121,7 @@
         </div>
       </div>
 
-      <!-- Options list -->
-      <div class="max-h-48 overflow-y-auto">
+      <div>
         <div
           v-for="option in filteredOptions"
           :key="option.value"
@@ -152,70 +147,36 @@
       </div>
     </div>
 
-    <!-- Error message -->
     <span v-if="error" class="text-sm text-red-500 mt-1 block">
       {{ errorMessage }}
     </span>
   </div>
 
-  <!-- Click outside to close -->
   <div v-if="isOpen" class="fixed inset-0 z-40" @click="closeDropdown"></div>
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, onUnmounted } from "vue";
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from "vue";
 
 const props = defineProps({
-  modelValue: {
-    type: Array,
-    default: () => [],
-  },
-  options: {
-    type: Array,
-    default: () => [],
-    validator: (options) => {
-      return options.every(
-        (option) =>
-          typeof option === "object" &&
-          option.hasOwnProperty("label") &&
-          option.hasOwnProperty("value")
-      );
-    },
-  },
-  placeholder: {
-    type: String,
-    default: "Select options",
-  },
-  disabled: {
-    type: Boolean,
-    default: false,
-  },
-  error: {
-    type: Boolean,
-    default: false,
-  },
-  errorMessage: {
-    type: String,
-    default: "This field has an error",
-  },
-  searchable: {
-    type: Boolean,
-    default: true,
-  },
-  showSelectAll: {
-    type: Boolean,
-    default: true,
-  },
-  maxDisplayItems: {
-    type: Number,
-    default: 2,
-  },
+  modelValue: Array,
+  options: Array,
+  placeholder: String,
+  disabled: Boolean,
+  error: Boolean,
+  errorMessage: String,
+  searchable: Boolean,
+  showSelectAll: Boolean,
+  maxDisplayItems: Number,
 });
 
 const emit = defineEmits(["update:modelValue", "change"]);
 
 const isOpen = ref(false);
 const searchQuery = ref("");
+const dropdownStyles = ref({});
+const containerRef = ref(null);
+const dropdownRef = ref(null);
 
 const selectedOptions = computed(() => {
   return props.options.filter((option) =>
@@ -248,11 +209,28 @@ const isIndeterminate = computed(() => {
 });
 
 const toggleDropdown = () => {
-  if (!props.disabled) {
-    isOpen.value = !isOpen.value;
-    if (isOpen.value) {
-      searchQuery.value = "";
-    }
+  if (props.disabled) return;
+
+  isOpen.value = !isOpen.value;
+
+  if (isOpen.value) {
+    searchQuery.value = "";
+
+    nextTick(() => {
+      const container = containerRef.value;
+      const dropdown = dropdownRef.value;
+
+      if (container && dropdown) {
+        const rect = container.getBoundingClientRect();
+        const spaceBelow = window.innerHeight - rect.bottom;
+        const height = Math.min(spaceBelow - 20, 240); // 240px max height with buffer
+
+        dropdownStyles.value = {
+          width: `${rect.width}px`,
+          maxHeight: `${height}px`,
+        };
+      }
+    });
   }
 };
 
@@ -261,26 +239,22 @@ const closeDropdown = () => {
   searchQuery.value = "";
 };
 
-const isSelected = (option) => {
-  return props.modelValue.includes(option.value);
-};
+const isSelected = (option) => props.modelValue.includes(option.value);
 
 const toggleOption = (option) => {
   const newValue = [...props.modelValue];
   const index = newValue.indexOf(option.value);
-
   if (index > -1) {
     newValue.splice(index, 1);
   } else {
     newValue.push(option.value);
   }
-
   emit("update:modelValue", newValue);
   emit("change", newValue, selectedOptions.value);
 };
 
 const removeOption = (option) => {
-  const newValue = props.modelValue.filter((value) => value !== option.value);
+  const newValue = props.modelValue.filter((v) => v !== option.value);
   emit("update:modelValue", newValue);
   emit("change", newValue, selectedOptions.value);
 };
@@ -292,14 +266,12 @@ const clearAll = () => {
 
 const toggleSelectAll = () => {
   if (isAllSelected.value) {
-    // Deselect all filtered options
     const newValue = props.modelValue.filter(
       (value) => !filteredOptions.value.some((option) => option.value === value)
     );
     emit("update:modelValue", newValue);
     emit("change", newValue, selectedOptions.value);
   } else {
-    // Select all filtered options
     const newValue = [
       ...new Set([
         ...props.modelValue,
@@ -311,9 +283,12 @@ const toggleSelectAll = () => {
   }
 };
 
-// Close dropdown when clicking outside
 const handleClickOutside = (event) => {
-  if (isOpen.value && !event.target.closest(".relative")) {
+  if (
+    isOpen.value &&
+    containerRef.value &&
+    !containerRef.value.contains(event.target)
+  ) {
     closeDropdown();
   }
 };

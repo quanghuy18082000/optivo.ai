@@ -1,9 +1,32 @@
 <template>
   <div class="w-full">
     <div class="mb-8">
-      <h2 class="text-2xl font-bold text-gray-900 mb-2">
-        {{ title }}
-      </h2>
+      <div class="flex justify-between items-center mb-2">
+        <h2 class="text-2xl font-bold text-gray-900">
+          {{ title }}
+        </h2>
+        <button
+          @click="$emit('refreshPositions')"
+          class="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1 px-3 py-1 border border-blue-300 rounded-md hover:bg-blue-50 transition-colors"
+          :disabled="props.isLoadingPositions"
+          type="button"
+        >
+          <svg
+            class="w-4 h-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+            />
+          </svg>
+          {{ props.isLoadingPositions ? "Loading..." : "Refresh Positions" }}
+        </button>
+      </div>
       <p class="text-gray-600">
         {{ description }}
       </p>
@@ -38,10 +61,15 @@
                 placeholder="Select position"
                 :error="!!errors[`quotations.${index}.position`]"
                 :error-message="errors[`quotations.${index}.position`]"
+                :disabled="props.isLoadingPositions"
               />
+              <div v-if="props.positionError" class="text-red-500 text-sm mt-1">
+                {{ props.positionError }}
+              </div>
               <!-- Show position name for continuation items -->
               <div
-                v-else
+                v-if="quotation.isContinuation"
+                :key="quotation.id"
                 class="flex items-center h-10 px-3 border border-gray-300 rounded-md bg-gray-50"
               >
                 <span class="text-gray-700">
@@ -150,7 +178,10 @@
 
     <!-- Timeline Visualization -->
     <div class="mt-8 timeline-container">
-      <QuotationTimeline :quotations="formData.quotations" />
+      <QuotationTimeline
+        :quotations="formData.quotations"
+        :positions="props.positionOptions"
+      />
     </div>
 
     <!-- Navigation Buttons -->
@@ -199,9 +230,17 @@ const props = defineProps({
     type: Array,
     required: true,
   },
+  isLoadingPositions: {
+    type: Boolean,
+    default: false,
+  },
+  positionError: {
+    type: String,
+    default: null,
+  },
 });
 
-const emit = defineEmits(["next", "previous"]);
+const emit = defineEmits(["next", "previous", "refreshPositions"]);
 
 // Get available positions for each row, excluding positions already selected in other rows
 const getAvailablePositionsForRow = (currentIndex) => {
@@ -292,12 +331,6 @@ const areAllPositionsSelected = computed(() => {
 
 const addNewQuotation = () => {
   // Don't add new quotation if all positions are already selected
-  if (areAllPositionsSelected.value) {
-    alert(
-      "All available positions have already been selected. You cannot add more positions."
-    );
-    return;
-  }
 
   // Get project dates as defaults
   const projectStartDate =
