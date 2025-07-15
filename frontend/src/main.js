@@ -82,3 +82,10 @@ const authStore = useAuthStore()
 authStore.initializeAuth()
 
 app.mount('#app')
+
+import { vPermission, vAnyPermission, vAllPermissions, vProjectPermission } from './directives/permission'
+
+app.directive('permission', vPermission)
+app.directive('any-permission', vAnyPermission)
+app.directive('all-permissions', vAllPermissions)
+app.directive('project-permission', vProjectPermission)

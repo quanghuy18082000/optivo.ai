@@ -63,8 +63,7 @@
       :title="stepDescriptions[2].title"
       :description="stepDescriptions[2].description"
       :positionOptions="positionOptions"
-      :memberOptions="memberOptions"
-      :members="mockMembers"
+      :memberOptions="[]"
       :isSubmitting="isSubmitting"
       :isLoadingPositions="isLoadingPositions"
       :positionError="positionError"
@@ -82,7 +81,7 @@ import { useRouter } from "vue-router";
 import { v4 as uuidv4 } from "uuid";
 import MainLayout from "@/layouts/MainLayout.vue";
 import { createProject } from "../services/projectService";
-import { mockMembers } from "../data/mockData";
+// Xóa dòng import mockMembers
 import StepIndicator from "../components/StepIndicator.vue";
 import BasicInformationStep from "../components/steps/BasicInformationStep.vue";
 import QuotationStep from "../components/steps/QuotationStep.vue";
@@ -183,12 +182,13 @@ const positionOptions = computed(() =>
   }))
 );
 
-const memberOptions = computed(() =>
-  mockMembers.map((member) => ({
-    label: member.name,
-    value: member.id,
-  }))
-);
+// Xóa đoạn code này
+// const memberOptions = computed(() =>
+//   mockMembers.map((member) => ({
+//     label: member.name,
+//     value: member.id,
+//   }))
+// );
 
 // Validation functions
 const validateStep1 = () => {

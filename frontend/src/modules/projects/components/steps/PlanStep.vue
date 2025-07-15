@@ -165,9 +165,9 @@
     <!-- Timeline Visualization -->
     <div class="mt-8 timeline-container">
       <PlanTimeline
-        :plans="formData.plans"
-        :members="members"
-        :positions="positionOptions"
+        :plans="props.formData.plans"
+        :members="timelineMembers"
+        :positions="props.positionOptions"
       />
     </div>
 
@@ -237,12 +237,9 @@ const props = defineProps({
   },
   memberOptions: {
     type: Array,
-    required: true,
+    default: () => [],
   },
-  members: {
-    type: Array,
-    required: true,
-  },
+  // Xóa prop members vì không cần thiết nữa
   isSubmitting: {
     type: Boolean,
     default: false,
@@ -294,10 +291,14 @@ const fetchUsers = async () => {
   }
 };
 
-// Computed property to combine API users with mock users
+// Computed property to use API users only
 const combinedMemberOptions = computed(() => {
-  // If we have API users, use them, otherwise fall back to the provided memberOptions
-  return apiUsers.value.length > 0 ? apiUsers.value : props.memberOptions;
+  return apiUsers.value;
+});
+
+// Computed property for PlanTimeline to use real users
+const timelineMembers = computed(() => {
+  return apiUsers.value;
 });
 
 // Fetch users when component is mounted

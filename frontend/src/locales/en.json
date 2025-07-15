@@ -64,6 +64,8 @@
     "serverError": "Server Error",
     "serverErrorMessage": "There was a problem with the server. Please try again later.",
     "networkError": "Network Error",
-    "networkErrorMessage": "Unable to connect to the server. Please check your internet connection."
+    "networkErrorMessage": "Unable to connect to the server. Please check your internet connection.",
+    "unauthorized": "Access Denied",
+    "unauthorizedMessage": "You don't have permission to access this page. Please contact your administrator if you believe this is an error."
   }
 }
