@@ -20,7 +20,9 @@
       >
         <!-- Position Label -->
         <div class="text-sm font-medium text-gray-700 mb-2">
-          {{ getPositionName(quotation.position) }} ({{ quotation.quantity }})
+          {{ getPositionName(quotation.position_id) }} ({{
+            quotation.quantity
+          }})
         </div>
 
         <!-- Timeline Bar -->
@@ -91,7 +93,9 @@ const months = computed(() => {
 
 // Filter out quotations with valid dates
 const validQuotations = computed(() => {
-  return props.quotations.filter((q) => q.startDate && q.endDate && q.position);
+  return props.quotations.filter(
+    (q) => q.startDate && q.endDate && q.position_id
+  );
 });
 
 // Get position name from ID

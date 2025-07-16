@@ -56,11 +56,11 @@
               <!-- Show position dropdown for first item or if it's not a continuation -->
               <Select
                 v-if="!quotation.isContinuation"
-                v-model="quotation.position"
+                v-model="quotation.position_id"
                 :options="getAvailablePositionsForRow(index)"
                 placeholder="Select position"
-                :error="!!errors[`quotations.${index}.position`]"
-                :error-message="errors[`quotations.${index}.position`]"
+                :error="!!errors[`quotations.${index}.position_id`]"
+                :error-message="errors[`quotations.${index}.position_id`]"
                 :disabled="props.isLoadingPositions"
               />
               <div v-if="props.positionError" class="text-red-500 text-sm mt-1">
@@ -74,8 +74,9 @@
               >
                 <span class="text-gray-700">
                   {{
-                    positionOptions.find((p) => p.value === quotation.position)
-                      ?.label || "Same position"
+                    positionOptions.find(
+                      (p) => p.value === quotation.position_id
+                    )?.label || "Same position"
                   }}
                 </span>
               </div>
@@ -125,8 +126,8 @@
           <!-- Add allocation for same position - only show for the last allocation of each position -->
           <div
             v-if="
-              quotation.position &&
-              isLastAllocationForPosition(index, quotation.position)
+              quotation.position_id &&
+              isLastAllocationForPosition(index, quotation.position_id)
             "
             class="mt-3 border-t border-gray-200 pt-3 flex justify-end pr-6"
           >
@@ -250,9 +251,9 @@ const getAvailablePositionsForRow = (currentIndex) => {
       (q, idx) =>
         idx !== currentIndex &&
         !q.isContinuation && // Don't count continuations as they're the same position
-        q.position // Only include if position is selected
+        q.position_id // Only include if position is selected
     )
-    .map((q) => q.position);
+    .map((q) => q.position_id);
 
   // Filter out positions that are already selected
   return props.positionOptions.map((option) => ({
@@ -270,10 +271,10 @@ const onPrevious = () => {
 };
 
 // Helper method to check if this is the last allocation for a position
-const isLastAllocationForPosition = (index, position) => {
+const isLastAllocationForPosition = (index, position_id) => {
   // Check if there are any quotations after this one with the same position
   for (let i = index + 1; i < props.formData.quotations.length; i++) {
-    if (props.formData.quotations[i].position === position) {
+    if (props.formData.quotations[i].position_id === position_id) {
       return false;
     }
   }
@@ -302,7 +303,7 @@ const addQuotationForSamePosition = (index) => {
   // Insert new quotation with isContinuation flag
   props.formData.quotations.splice(index + 1, 0, {
     id: uuidv4(),
-    position: currentQuotation.position,
+    position_id: currentQuotation.position_id,
     quantity: currentQuotation.quantity || 0.5,
     startDate: newStartDate,
     endDate: newEndDate,
@@ -321,8 +322,8 @@ const areAllPositionsSelected = computed(() => {
   // Count unique positions that are not continuations
   const uniqueSelectedPositions = new Set(
     props.formData.quotations
-      .filter((q) => !q.isContinuation && q.position)
-      .map((q) => q.position)
+      .filter((q) => !q.isContinuation && q.position_id)
+      .map((q) => q.position_id)
   );
 
   // If all positions are selected, return true
@@ -343,7 +344,7 @@ const addNewQuotation = () => {
 
   props.formData.quotations.push({
     id: uuidv4(),
-    position: "",
+    position_id: "",
     quantity: 1,
     startDate: projectStartDate,
     endDate: projectEndDate,

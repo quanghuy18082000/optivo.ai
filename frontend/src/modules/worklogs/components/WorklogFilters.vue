@@ -199,7 +199,7 @@ const localFilters = ref({
 });
 
 // Time period selection
-const selectedTimePeriod = ref("today");
+const selectedTimePeriod = ref(null);
 
 // Separate storage for custom date range
 const customDateRange = ref({
@@ -327,6 +327,9 @@ const hasActiveFilters = computed(() => {
 
 // Function to get the label for the selected time period
 const getTimePeriodLabel = () => {
+  if (!selectedTimePeriod.value) {
+    return "Select time period";
+  }
   if (selectedTimePeriod.value === "custom") {
     return `${formatDate(localFilters.value.createdAfter)} to ${formatDate(
       localFilters.value.createdBefore
@@ -344,12 +347,9 @@ const getProjectName = (projectId) => {
   return project ? project.name : projectId;
 };
 
-// Initialize with today's date range
+// Initialize without default time period
 onMounted(() => {
-  // Set the default time period
-  selectedTimePeriod.value = "today";
-  // Apply the date range for today
-  handleTimePeriodChange("today");
+  // No default time period - user must select one
 });
 
 const formatDate = (dateString) => {
@@ -409,13 +409,12 @@ const resetFilters = () => {
     to: "",
   };
 
-  // Then set the time period to today
-  selectedTimePeriod.value = "today";
+  // Reset time period to no selection
+  selectedTimePeriod.value = null;
 
-  // Apply the date range for today
-  const now = new Date();
-  localFilters.value.createdAfter = format(startOfDay(now), "yyyy-MM-dd");
-  localFilters.value.createdBefore = format(endOfDay(now), "yyyy-MM-dd");
+  // Clear date filters
+  localFilters.value.createdAfter = "";
+  localFilters.value.createdBefore = "";
 
   emit("reset");
 };

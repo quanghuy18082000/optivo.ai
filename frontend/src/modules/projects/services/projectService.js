@@ -1,4 +1,4 @@
-import { get, post, del } from '@/utils/requestClient.js'
+import { get, post, put, del } from '@/utils/requestClient.js'
 import { useToast } from '@/composables/useToast'
 
 const toast = useToast()
@@ -17,7 +17,7 @@ export const getProjects = async (params = {}) => {
 export const getProjectById = async (projectId) => {
   try {
     // Use the real API endpoint
-    const response = await get(`/projects/${projectId}/`)
+    const response = await get(`/projects/${projectId}`)
     return response.data
   } catch (error) {
     console.error('API Error:', error);
@@ -39,7 +39,7 @@ export const createProject = async (projectData) => {
 export const updateProject = async (projectId, projectData) => {
   try {
     // Use the real API endpoint
-    const response = await put(`/projects/${projectId}/`, projectData)
+    const response = await put(`/projects/${projectId}`, projectData)
     return response.data
   } catch (error) {
     console.error('API Error:', error);

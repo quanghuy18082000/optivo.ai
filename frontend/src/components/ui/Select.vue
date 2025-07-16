@@ -125,7 +125,9 @@ const containerRef = ref(null);
 const dropdownRef = ref(null);
 
 const selectedOption = computed(() => {
-  return props.options.find((option) => option.value === props.modelValue);
+  return props.options.find(
+    (option) => String(option.value) === String(props.modelValue)
+  );
 });
 
 const toggleDropdown = () => {

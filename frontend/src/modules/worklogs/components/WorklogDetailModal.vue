@@ -448,8 +448,6 @@ const fetchWorklogDetail = async () => {
     // Use the API endpoint to fetch worklog details by date
     const response = await getWorklogDetailsByDate(props.worklogId);
 
-    console.log(response);
-
     if (response && response.data) {
       // Transform the API response to match our expected format
       const entries = [];

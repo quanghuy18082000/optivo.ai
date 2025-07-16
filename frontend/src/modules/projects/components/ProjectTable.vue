@@ -118,7 +118,6 @@
                   </button>
                 </template>
 
-                <PopupMenuItem>Project Actions</PopupMenuItem>
                 <PopupMenuItem @click="editProject(project)">
                   <template #icon>
                     <svg

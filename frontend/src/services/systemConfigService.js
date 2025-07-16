@@ -6,7 +6,7 @@ import { get } from '@/utils/requestClient.js'
  */
 export const getPositions = async () => {
   try {  
-    const response = await get('/system-config/positions/')
+    const response = await get('/system-config/positions')
     
     // The API returns { data: [{ id: 0, name: "string", description: "string" }] }
     return response.data || { data: [] }

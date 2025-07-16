@@ -67,11 +67,11 @@
             </div>
             <div>
               <Select
-                v-model="plan.position"
+                v-model="plan.position_id"
                 :options="positionOptions"
                 placeholder="Select position"
-                :error="!!errors[`plans.${index}.position`]"
-                :error-message="errors[`plans.${index}.position`]"
+                :error="!!errors[`plans.${index}.position_id`]"
+                :error-message="errors[`plans.${index}.position_id`]"
                 :disabled="props.isLoadingPositions"
               />
               <div v-if="props.positionError" class="text-red-500 text-sm mt-1">
@@ -165,10 +165,14 @@
     <!-- Timeline Visualization -->
     <div class="mt-8 timeline-container">
       <PlanTimeline
+        v-if="!isLoadingUsers"
         :plans="props.formData.plans"
         :members="timelineMembers"
         :positions="props.positionOptions"
       />
+      <div v-else class="text-center py-8 text-gray-500">
+        Loading timeline...
+      </div>
     </div>
 
     <!-- Action Buttons -->
@@ -277,7 +281,7 @@ const fetchUsers = async () => {
       // Transform the API response to the format expected by the Select component
       apiUsers.value = response.data.map((user) => ({
         label: user.name,
-        value: user.user_id.toString(), // Convert to string to match the expected format
+        value: user.id.toString(), // Convert to string to match the expected format
       }));
     } else {
       console.error("Unexpected API response format:", response);
@@ -356,7 +360,7 @@ const addPlanForSamePerson = (index) => {
   props.formData.plans.splice(index + 1, 0, {
     id: uuidv4(),
     memberId: currentPlan.memberId,
-    position: currentPlan.position,
+    position_id: currentPlan.position_id,
     allocationRate: currentPlan.allocationRate || 0.5,
     startDate: newStartDate,
     endDate: newEndDate,
@@ -382,7 +386,7 @@ const addNewPlan = () => {
   props.formData.plans.push({
     id: uuidv4(),
     memberId: "",
-    position: "",
+    position_id: "",
     allocationRate: 1,
     startDate: projectStartDate,
     endDate: projectEndDate,

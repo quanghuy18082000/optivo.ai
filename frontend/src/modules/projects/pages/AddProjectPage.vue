@@ -81,7 +81,6 @@ import { useRouter } from "vue-router";
 import { v4 as uuidv4 } from "uuid";
 import MainLayout from "@/layouts/MainLayout.vue";
 import { createProject } from "../services/projectService";
-// Xóa dòng import mockMembers
 import StepIndicator from "../components/StepIndicator.vue";
 import BasicInformationStep from "../components/steps/BasicInformationStep.vue";
 import QuotationStep from "../components/steps/QuotationStep.vue";
@@ -105,7 +104,7 @@ const formData = ref({
   quotations: [
     {
       id: uuidv4(),
-      position: "",
+      position_id: "",
       quantity: 1,
       startDate: "",
       endDate: "",
@@ -116,7 +115,7 @@ const formData = ref({
     {
       id: uuidv4(),
       memberId: "",
-      position: "",
+      position_id: "",
       allocationRate: 1,
       startDate: "",
       endDate: "",
@@ -178,17 +177,9 @@ onMounted(() => {
 const positionOptions = computed(() =>
   apiPositions.value.map((position) => ({
     label: position.name,
-    value: position.id.toString(), // Convert to string to match expected format
+    value: String(position.id), // Convert to string to match expected format
   }))
 );
-
-// Xóa đoạn code này
-// const memberOptions = computed(() =>
-//   mockMembers.map((member) => ({
-//     label: member.name,
-//     value: member.id,
-//   }))
-// );
 
 // Validation functions
 const validateStep1 = () => {
@@ -271,15 +262,16 @@ const validateStep2 = () => {
   // Validate each quotation
   formData.value.quotations.forEach((quotation, index) => {
     // Position validation
-    if (!quotation.position && !quotation.isContinuation) {
-      newErrors[`quotations.${index}.position`] = "Position is required";
-    } else if (quotation.position) {
+    if (!quotation.position_id && !quotation.isContinuation) {
+      newErrors[`quotations.${index}.position_id`] = "Position is required";
+    } else if (quotation.position_id) {
       // Verify position exists in options
       const positionExists = positionOptions.value.some(
-        (p) => p.value === quotation.position
+        (p) => p.value === quotation.position_id
       );
       if (!positionExists) {
-        newErrors[`quotations.${index}.position`] = "Invalid position selected";
+        newErrors[`quotations.${index}.position_id`] =
+          "Invalid position selected";
       }
     }
 
@@ -357,9 +349,12 @@ const validateStep2 = () => {
   // Check for overlapping allocations for the same position
   const positionAllocations = {};
   formData.value.quotations.forEach((quotation, index) => {
-    if (quotation.position && !newErrors[`quotations.${index}.position`]) {
-      if (!positionAllocations[quotation.position]) {
-        positionAllocations[quotation.position] = [];
+    if (
+      quotation.position_id &&
+      !newErrors[`quotations.${index}.position_id`]
+    ) {
+      if (!positionAllocations[quotation.position_id]) {
+        positionAllocations[quotation.position_id] = [];
       }
 
       if (
@@ -368,7 +363,7 @@ const validateStep2 = () => {
         !newErrors[`quotations.${index}.startDate`] &&
         !newErrors[`quotations.${index}.endDate`]
       ) {
-        positionAllocations[quotation.position].push({
+        positionAllocations[quotation.position_id].push({
           index,
           start: new Date(quotation.startDate),
           end: new Date(quotation.endDate),
@@ -417,8 +412,8 @@ const validateStep3 = () => {
     }
 
     // Position validation
-    if (!plan.position) {
-      newErrors[`plans.${index}.position`] = "Position is required";
+    if (!plan.position_id) {
+      newErrors[`plans.${index}.position_id`] = "Position is required";
     }
 
     // Allocation rate validation
@@ -617,7 +612,7 @@ const cloneFromQuotation = () => {
   const newPlans = formData.value.quotations.map((quotation) => ({
     id: uuidv4(),
     memberId: "", // This will need to be filled in by the user
-    position: quotation.position,
+    position_id: quotation.position_id,
     // If quantity is greater than 1, we need to adjust the allocation rate
     // as allocation_rate should be between 0 and 1
     allocationRate: Math.min(1, parseFloat(quotation.quantity)),
@@ -679,9 +674,9 @@ const submitProject = async (skipPlan = false) => {
 
       // Format quotation data according to API requirements
       quotation: formData.value.quotations
-        .filter((q) => q.position) // Only include quotations with a position
+        .filter((q) => q.position_id) // Only include quotations with a position
         .map((q) => ({
-          position: q.position,
+          position_id: q.position_id,
           quantity: parseFloat(q.quantity),
           start_date: q.startDate,
           end_date: q.endDate,
@@ -691,10 +686,10 @@ const submitProject = async (skipPlan = false) => {
       plan: skipPlan
         ? []
         : formData.value.plans
-            .filter((p) => p.memberId && p.position) // Only include plans with member and position
+            .filter((p) => p.memberId && p.position_id) // Only include plans with member and position
             .map((p) => ({
               user_id: Number(p.memberId), // Convert to number as API expects
-              position: p.position,
+              position_id: p.position_id,
               allocation_rate: parseFloat(p.allocationRate),
               start_date: p.startDate,
               end_date: p.endDate,

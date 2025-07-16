@@ -47,7 +47,6 @@ export function usePermissions() {
   const extractAllPermissionNames = (data) => {
     const permissionSet = new Set()
 
-    console.log(1111, data)
   
     // Add permissions from global_roles (instead of roles)
     if (data.global_roles && Array.isArray(data.global_roles)) {

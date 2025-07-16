@@ -17,7 +17,7 @@
         <!-- Member Label -->
         <div class="text-sm font-medium text-gray-700 mb-2">
           {{ getMemberName(plan.memberId) }} -
-          {{ getPositionName(plan.position) }} ({{ plan.allocationRate }})
+          {{ getPositionName(plan.position_id) }} ({{ plan.allocationRate }})
         </div>
 
         <!-- Timeline Bar -->
@@ -92,15 +92,24 @@ const months = computed(() => {
 
 // Filter out plans with valid dates
 const validPlans = computed(() => {
-  return props.plans.filter(
-    (p) => p.startDate && p.endDate && p.memberId && p.position
+  const filtered = props.plans.filter(
+    (p) => p.startDate && p.endDate && p.memberId && p.position_id
   );
+  return filtered;
 });
 
 // Get member name from ID
 const getMemberName = (memberId) => {
-  const member = props.members.find((m) => m.id === memberId);
-  return member ? member.name : "Unknown Member";
+  // Handle both string and number IDs
+  const member = props.members.find(
+    (m) =>
+      m.value === memberId ||
+      m.value === memberId.toString() ||
+      m.id === memberId ||
+      m.id === parseInt(memberId)
+  );
+
+  return member ? member.label || member.name : "Unknown Member";
 };
 
 // Get position name from ID

@@ -6,12 +6,23 @@
           @click="goBack"
           class="p-2 text-gray-500 hover:text-gray-700 transition-colors rounded-lg hover:bg-gray-100"
         >
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+          <svg
+            class="w-5 h-5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M15 19l-7-7 7-7"
+            />
           </svg>
         </button>
         <h1 class="text-xl font-semibold text-gray-900">
-          Edit Project - {{ stepDescriptions[currentStep - 1].title }} (Step {{ currentStep }} of 3)
+          Edit Project - {{ stepDescriptions[currentStep - 1].title }} (Step
+          {{ currentStep }} of 3)
         </h1>
       </div>
     </template>
@@ -131,7 +142,10 @@ import { ref, computed, onMounted, watch } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { v4 as uuidv4 } from "uuid";
 import MainLayout from "@/layouts/MainLayout.vue";
-import { getProjectById, updateProject } from "../services/projectService";
+import {
+  getProjectById,
+  updateProject as updateProjectAPI,
+} from "../services/projectService";
 import StepIndicator from "../components/StepIndicator.vue";
 import BasicInformationStep from "../components/steps/BasicInformationStep.vue";
 import QuotationStep from "../components/steps/QuotationStep.vue";
@@ -167,7 +181,8 @@ const formData = ref({
 const stepDescriptions = [
   {
     title: "Basic Information",
-    description: "Update the basic details of your project including name and timeline.",
+    description:
+      "Update the basic details of your project including name and timeline.",
   },
   {
     title: "Quotation Input",
@@ -175,7 +190,8 @@ const stepDescriptions = [
   },
   {
     title: "Team Allocation",
-    description: "Update team member assignments and their allocation percentages.",
+    description:
+      "Update team member assignments and their allocation percentages.",
   },
 ];
 
@@ -206,12 +222,14 @@ const fetchPositions = async () => {
 };
 
 // Options for dropdowns
-const positionOptions = computed(() =>
-  apiPositions.value.map((position) => ({
+const positionOptions = computed(() => {
+  const options = apiPositions.value.map((position) => ({
     label: position.name,
-    value: position.id.toString(),
-  }))
-);
+    value: String(position.id),
+  }));
+  console.log("EditProject - positionOptions:", options);
+  return options;
+});
 
 // Fetch project details
 const fetchProjectDetails = async () => {
@@ -236,7 +254,7 @@ const fetchProjectDetails = async () => {
     if (formData.value.quotations.length === 0) {
       formData.value.quotations.push({
         id: uuidv4(),
-        position: "",
+        position_id: "",
         quantity: 1,
         startDate: formData.value.startDate,
         endDate: formData.value.endDate,
@@ -249,7 +267,7 @@ const fetchProjectDetails = async () => {
       formData.value.plans.push({
         id: uuidv4(),
         memberId: "",
-        position: "",
+        position_id: "",
         allocationRate: 1,
         startDate: formData.value.startDate,
         endDate: formData.value.endDate,
@@ -272,26 +290,44 @@ const formatDateForInput = (dateString) => {
 
 // Transform quotations from API format to form format
 const transformQuotations = (quotations) => {
-  return quotations.map((q) => ({
+  console.log("EditProject - transformQuotations input:", quotations);
+  const transformed = quotations.map((q) => ({
     id: q.id ? q.id.toString() : uuidv4(),
-    position: q.position ? q.position.toString() : "",
+    position_id: q.position_id
+      ? String(q.position_id)
+      : q.position && q.position.id
+      ? String(q.position.id)
+      : "",
     quantity: q.quantity || 1,
     startDate: formatDateForInput(q.start_date),
     endDate: formatDateForInput(q.end_date),
     isContinuation: false,
   }));
+  console.log("EditProject - transformQuotations output:", transformed);
+  return transformed;
 };
 
 // Transform plans from API format to form format
 const transformPlans = (plans) => {
-  return plans.map((p) => ({
+  console.log("EditProject - transformPlans input:", plans);
+  const transformed = plans.map((p) => ({
     id: p.id ? p.id.toString() : uuidv4(),
-    memberId: p.user?.id ? p.user.id.toString() : (p.user_id ? p.user_id.toString() : ""),
-    position: p.position ? p.position.toString() : "",
+    memberId: p.user?.id
+      ? p.user.id.toString()
+      : p.user_id
+      ? p.user_id.toString()
+      : "",
+    position_id: p.position_id
+      ? String(p.position_id)
+      : p.position && p.position.id
+      ? String(p.position.id)
+      : "",
     allocationRate: p.allocation_rate || 1,
     startDate: formatDateForInput(p.start_date),
     endDate: formatDateForInput(p.end_date),
   }));
+  console.log("EditProject - transformPlans output:", transformed);
+  return transformed;
 };
 
 // Validation functions (reuse from AddProjectPage)
@@ -346,8 +382,8 @@ const validateStep2 = () => {
   }
 
   formData.value.quotations.forEach((quotation, index) => {
-    if (!quotation.position && !quotation.isContinuation) {
-      newErrors[`quotations.${index}.position`] = "Position is required";
+    if (!quotation.position_id && !quotation.isContinuation) {
+      newErrors[`quotations.${index}.position_id`] = "Position is required";
     }
 
     if (quotation.quantity === undefined || quotation.quantity === null) {
@@ -356,7 +392,8 @@ const validateStep2 = () => {
       isNaN(parseFloat(quotation.quantity)) ||
       parseFloat(quotation.quantity) <= 0
     ) {
-      newErrors[`quotations.${index}.quantity`] = "Allocation must be greater than 0";
+      newErrors[`quotations.${index}.quantity`] =
+        "Allocation must be greater than 0";
     }
 
     if (!quotation.startDate) {
@@ -377,7 +414,8 @@ const validateStep2 = () => {
       const endDate = new Date(quotation.endDate);
 
       if (startDate >= endDate) {
-        newErrors[`quotations.${index}.endDate`] = "End date must be after start date";
+        newErrors[`quotations.${index}.endDate`] =
+          "End date must be after start date";
       }
     }
   });
@@ -400,8 +438,8 @@ const validateStep3 = () => {
       newErrors[`plans.${index}.memberId`] = "Team member is required";
     }
 
-    if (!plan.position) {
-      newErrors[`plans.${index}.position`] = "Position is required";
+    if (!plan.position_id) {
+      newErrors[`plans.${index}.position_id`] = "Position is required";
     }
 
     if (plan.allocationRate === undefined || plan.allocationRate === null) {
@@ -410,7 +448,8 @@ const validateStep3 = () => {
       isNaN(parseFloat(plan.allocationRate)) ||
       parseFloat(plan.allocationRate) <= 0
     ) {
-      newErrors[`plans.${index}.allocationRate`] = "Allocation must be greater than 0";
+      newErrors[`plans.${index}.allocationRate`] =
+        "Allocation must be greater than 0";
     }
 
     if (!plan.startDate) {
@@ -431,7 +470,8 @@ const validateStep3 = () => {
       const endDate = new Date(plan.endDate);
 
       if (startDate >= endDate) {
-        newErrors[`plans.${index}.endDate`] = "End date must be after start date";
+        newErrors[`plans.${index}.endDate`] =
+          "End date must be after start date";
       }
     }
   });
@@ -476,7 +516,7 @@ const cloneFromQuotation = () => {
   const newPlans = formData.value.quotations.map((quotation) => ({
     id: uuidv4(),
     memberId: "",
-    position: quotation.position,
+    position_id: quotation.position_id,
     allocationRate: Math.min(1, parseFloat(quotation.quantity)),
     startDate: quotation.startDate,
     endDate: quotation.endDate,
@@ -529,9 +569,9 @@ const updateProject = async (skipPlan = false) => {
       end_time: formData.value.endDate,
 
       quotation: formData.value.quotations
-        .filter((q) => q.position)
+        .filter((q) => q.position_id)
         .map((q) => ({
-          position: q.position,
+          position_id: q.position_id,
           quantity: parseFloat(q.quantity),
           start_date: q.startDate,
           end_date: q.endDate,
@@ -540,17 +580,17 @@ const updateProject = async (skipPlan = false) => {
       plan: skipPlan
         ? []
         : formData.value.plans
-            .filter((p) => p.memberId && p.position)
+            .filter((p) => p.memberId && p.position_id)
             .map((p) => ({
               user_id: Number(p.memberId),
-              position: p.position,
+              position_id: p.position_id,
               allocation_rate: parseFloat(p.allocationRate),
               start_date: p.startDate,
               end_date: p.endDate,
             })),
     };
 
-    await updateProject(projectId, projectData);
+    await updateProjectAPI(projectId, projectData);
 
     toast.success("Project updated successfully");
     router.push("/projects");

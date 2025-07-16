@@ -228,7 +228,6 @@ const addNewProject = () => {
 const toast = useToast();
 
 const handleProjectDeleted = (project) => {
-  console.log(`Project deleted: ${project.name} (ID: ${project.id})`);
   toast.success(`Project "${project.name}" was successfully deleted`);
 };
 
