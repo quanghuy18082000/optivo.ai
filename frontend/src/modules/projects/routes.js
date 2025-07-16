@@ -17,6 +17,15 @@ const projectRoutes = [
       requiredPermissions: ['project.create']  // Dựa trên data: project.create
     },
   },
+  {
+    path: "/projects/edit/:id",
+    name: "edit-project",
+    component: () => import("./pages/EditProjectPage.vue"),
+    meta: { 
+      requiresAuth: true,
+      requiredPermissions: ['project.update']  // Based on project update permission
+    },
+  },
 ]
 
 export default projectRoutes

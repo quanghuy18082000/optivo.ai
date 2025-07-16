@@ -14,6 +14,16 @@ export const getProjects = async (params = {}) => {
   }
 }
 
+export const getProjectById = async (projectId) => {
+  try {
+    // Use the real API endpoint
+    const response = await get(`/projects/${projectId}/`)
+    return response.data
+  } catch (error) {
+    console.error('API Error:', error);
+    throw new Error(error.response?.data?.message || error.message || 'Failed to fetch project details')
+  }
+}
 export const createProject = async (projectData) => {
   try {
     
@@ -26,6 +36,16 @@ export const createProject = async (projectData) => {
   }
 }
 
+export const updateProject = async (projectId, projectData) => {
+  try {
+    // Use the real API endpoint
+    const response = await put(`/projects/${projectId}/`, projectData)
+    return response.data
+  } catch (error) {
+    console.error('API Error:', error);
+    throw new Error(error.response?.data?.message || error.message || 'Failed to update project')
+  }
+}
 /**
  * Delete a project by ID
  * @param {string|number} projectId - The ID of the project to delete

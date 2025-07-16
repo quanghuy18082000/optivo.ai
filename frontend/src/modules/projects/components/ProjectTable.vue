@@ -119,7 +119,24 @@
                 </template>
 
                 <PopupMenuItem>Project Actions</PopupMenuItem>
-                <PopupMenuItem>Edit</PopupMenuItem>
+                <PopupMenuItem @click="editProject(project)">
+                  <template #icon>
+                    <svg
+                      class="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                      />
+                    </svg>
+                  </template>
+                  Edit Project
+                </PopupMenuItem>
                 <PopupMenuItem
                   variant="danger"
                   @click="confirmDeleteProject(project)"
@@ -319,6 +336,7 @@ import ConfirmDialog from "@/components/ui/ConfirmDialog.vue";
 import PopupMenu from "@/components/ui/PopupMenu.vue";
 import PopupMenuItem from "@/components/ui/PopupMenuItem.vue";
 import { useProjects } from "../composables/useProjects";
+import { useRouter } from "vue-router";
 
 const props = defineProps({
   projects: {
@@ -328,6 +346,8 @@ const props = defineProps({
 });
 
 const emit = defineEmits(["project-deleted", "refresh-projects"]);
+
+const router = useRouter();
 
 const months = [
   "Jan/25",
@@ -432,6 +452,19 @@ const closeMemberWorklogModal = () => {
   showMemberWorklogModal.value = false;
   selectedMember.value = null;
   selectedProject.value = null;
+};
+
+const editProject = (project) => {
+  // Close all menus
+  Object.keys(memberMenus.value).forEach((id) => {
+    memberMenus.value[id] = false;
+  });
+  Object.keys(projectMenus.value).forEach((id) => {
+    projectMenus.value[id] = false;
+  });
+
+  // Navigate to edit page
+  router.push(`/projects/edit/${project.id}`);
 };
 
 // Delete project methods
