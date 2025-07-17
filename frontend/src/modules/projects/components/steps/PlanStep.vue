@@ -5,27 +5,6 @@
         <h2 class="text-2xl font-bold text-gray-900">
           {{ title }}
         </h2>
-        <button
-          @click="fetchUsers"
-          class="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1 px-3 py-1 border border-blue-300 rounded-md hover:bg-blue-50 transition-colors"
-          :disabled="isLoadingUsers"
-          type="button"
-        >
-          <svg
-            class="w-4 h-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-            />
-          </svg>
-          {{ isLoadingUsers ? "Loading..." : "Refresh Users" }}
-        </button>
       </div>
       <p class="text-gray-600">
         {{ description }}
@@ -92,16 +71,16 @@
             </div>
             <div>
               <DatePicker
-                v-model="plan.startDate"
-                :error="!!errors[`plans.${index}.startDate`]"
-                :error-message="errors[`plans.${index}.startDate`]"
+                v-model="plan.start_date"
+                :error="!!errors[`plans.${index}.start_date`]"
+                :error-message="errors[`plans.${index}.start_date`]"
               />
             </div>
             <div class="flex items-start gap-2">
               <DatePicker
-                v-model="plan.endDate"
-                :error="!!errors[`plans.${index}.endDate`]"
-                :error-message="errors[`plans.${index}.endDate`]"
+                v-model="plan.end_date"
+                :error="!!errors[`plans.${index}.end_date`]"
+                :error-message="errors[`plans.${index}.end_date`]"
                 class="flex-1"
               />
               <button
@@ -344,9 +323,9 @@ const addPlanForSamePerson = (index) => {
   let newStartDate = "";
   let newEndDate = "";
 
-  if (currentPlan.endDate) {
+  if (currentPlan.end_date) {
     // Start the new allocation the day after the current one ends
-    const newStart = new Date(currentPlan.endDate);
+    const newStart = new Date(currentPlan.end_date);
     newStart.setDate(newStart.getDate() + 1);
     newStartDate = newStart.toISOString().split("T")[0];
 
@@ -362,8 +341,8 @@ const addPlanForSamePerson = (index) => {
     memberId: currentPlan.memberId,
     position_id: currentPlan.position_id,
     allocationRate: currentPlan.allocationRate || 0.5,
-    startDate: newStartDate,
-    endDate: newEndDate,
+    start_date: newStartDate,
+    end_date: newEndDate,
   });
 };
 
@@ -374,22 +353,13 @@ const removePlan = (index) => {
 };
 
 const addNewPlan = () => {
-  // Get project dates as defaults
-  const projectStartDate =
-    props.formData.startDate || new Date().toISOString().split("T")[0];
-  const projectEndDate =
-    props.formData.endDate ||
-    new Date(new Date().setMonth(new Date().getMonth() + 1))
-      .toISOString()
-      .split("T")[0];
-
   props.formData.plans.push({
     id: uuidv4(),
     memberId: "",
     position_id: "",
     allocationRate: 1,
-    startDate: projectStartDate,
-    endDate: projectEndDate,
+    start_date: "",
+    end_date: "",
   });
 };
 </script>

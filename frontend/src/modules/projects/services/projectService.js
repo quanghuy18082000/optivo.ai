@@ -5,12 +5,141 @@ const toast = useToast()
 
 export const getProjects = async (params = {}) => {
   try {
-    // Use the real API endpoint
-    const response = await get('/projects/', params)
-    return response.data
+    // // Use the real API endpoint
+    // const response = await get('/projects/', params)
+    // return response.data
+
+    return [
+      {
+        "project_id": 1,
+        "project_name": "Project 1",
+        "workload_member_detail": [
+          {
+            "member": {
+              "id": 1,
+              "user_name": "Tan",
+              "position": {
+                "id": 1,
+                "name": "Dev Backend"
+              }
+            },
+            "plan": [
+              {
+                "start_date": "2025-07-10",
+                "end_date": "2025-08-10",
+                "allocation_rate": 0.3
+              }
+            ],
+            "quotation": [
+              {
+                "start_date": "2025-06-10",
+                "end_date": "2025-09-10",
+                "allocation_rate": 0.5
+              }
+            ],
+            "actual": [
+              {
+                "start_date": "2025-07-14",
+                "end_date": "2025-07-20",
+                "allocation_rate": 0.5
+              },
+              {
+                "start_date": "2025-07-21",
+                "end_date": "2025-07-27",
+                "allocation_rate": 0.5
+              },
+              {
+                "start_date": "2025-07-28",
+                "end_date": "2025-08-03",
+                "allocation_rate": 0.5
+              },
+              {
+                "start_date": "2025-08-04",
+                "end_date": "2025-08-10",
+                "allocation_rate": 0.5
+              }
+            ]
+          },
+          {
+            "member": {
+              "id": 1,
+              "user_name": "Tan",
+              "position": {
+                "id": 2,
+                "name": "Dev Frontend"
+              }
+            },
+            "plan": [
+              {
+                "start_date": "2025-07-10",
+                "end_date": "2025-08-10",
+                "allocation_rate": 0.3
+              }
+            ],
+            "quotation": [
+              {
+                "start_date": "2025-06-10",
+                "end_date": "2025-06-10",
+                "allocation_rate": 0.5
+              }
+            ],
+            "actual": [
+              {
+                "start_date": "2025-07-14",
+                "end_date": "2025-07-20",
+                "allocation_rate": 0.5
+              }
+            ]
+          },
+          {
+            "member": {
+              "id": 2,
+              "user_name": "Linh",
+              "position": {
+                "id": 3,
+                "name": "UI/UX Designer"
+              }
+            },
+            "plan": [
+              {
+                "start_date": "2025-07-15",
+                "end_date": "2025-08-20",
+                "allocation_rate": 0.4
+              },
+              {
+                "start_date": "2025-08-21",
+                "end_date": "2025-09-10",
+                "allocation_rate": 0.2
+              }
+            ],
+            "quotation": [
+              {
+                "start_date": "2025-06-12",
+                "end_date": "2025-06-18",
+                "allocation_rate": 0.6
+              },
+              {
+                "start_date": "2025-06-19",
+                "end_date": "2025-06-25",
+                "allocation_rate": 0.4
+              }
+            ],
+            "actual": [
+              {
+                "start_date": "2025-07-14",
+                "end_date": "2025-07-20",
+                "allocation_rate": 0.5
+              }
+            ]
+          }
+        ]
+      }
+    ];
   } catch (error) {
     console.error('API Error:', error);
     
+    // Return mock data for testing
+
   }
 }
 

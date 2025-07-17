@@ -5,27 +5,6 @@
         <h2 class="text-2xl font-bold text-gray-900">
           {{ title }}
         </h2>
-        <button
-          @click="$emit('refreshPositions')"
-          class="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1 px-3 py-1 border border-blue-300 rounded-md hover:bg-blue-50 transition-colors"
-          :disabled="props.isLoadingPositions"
-          type="button"
-        >
-          <svg
-            class="w-4 h-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-            />
-          </svg>
-          {{ props.isLoadingPositions ? "Loading..." : "Refresh Positions" }}
-        </button>
       </div>
       <p class="text-gray-600">
         {{ description }}
@@ -95,16 +74,16 @@
             </div>
             <div>
               <DatePicker
-                v-model="quotation.startDate"
-                :error="!!errors[`quotations.${index}.startDate`]"
-                :error-message="errors[`quotations.${index}.startDate`]"
+                v-model="quotation.start_date"
+                :error="!!errors[`quotations.${index}.start_date`]"
+                :error-message="errors[`quotations.${index}.start_date`]"
               />
             </div>
             <div class="flex items-start gap-2">
               <DatePicker
-                v-model="quotation.endDate"
-                :error="!!errors[`quotations.${index}.endDate`]"
-                :error-message="errors[`quotations.${index}.endDate`]"
+                v-model="quotation.end_date"
+                :error="!!errors[`quotations.${index}.end_date`]"
+                :error-message="errors[`quotations.${index}.end_date`]"
                 class="flex-1"
               />
               <button
@@ -288,9 +267,9 @@ const addQuotationForSamePosition = (index) => {
   let newStartDate = "";
   let newEndDate = "";
 
-  if (currentQuotation.endDate) {
+  if (currentQuotation.end_date) {
     // Start the new allocation the day after the current one ends
-    const newStart = new Date(currentQuotation.endDate);
+    const newStart = new Date(currentQuotation.end_date);
     newStart.setDate(newStart.getDate() + 1);
     newStartDate = newStart.toISOString().split("T")[0];
 
@@ -305,8 +284,8 @@ const addQuotationForSamePosition = (index) => {
     id: uuidv4(),
     position_id: currentQuotation.position_id,
     quantity: currentQuotation.quantity || 0.5,
-    startDate: newStartDate,
-    endDate: newEndDate,
+    start_date: newStartDate,
+    end_date: newEndDate,
     isContinuation: true, // Mark as continuation of the same position
   });
 };
@@ -333,21 +312,12 @@ const areAllPositionsSelected = computed(() => {
 const addNewQuotation = () => {
   // Don't add new quotation if all positions are already selected
 
-  // Get project dates as defaults
-  const projectStartDate =
-    props.formData.startDate || new Date().toISOString().split("T")[0];
-  const projectEndDate =
-    props.formData.endDate ||
-    new Date(new Date().setMonth(new Date().getMonth() + 1))
-      .toISOString()
-      .split("T")[0];
-
   props.formData.quotations.push({
     id: uuidv4(),
     position_id: "",
     quantity: 1,
-    startDate: projectStartDate,
-    endDate: projectEndDate,
+    start_date: "",
+    end_date: "",
     isContinuation: false,
   });
 };

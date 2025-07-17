@@ -56,16 +56,16 @@
       <div class="grid grid-cols-2 gap-6">
         <div>
           <label
-            for="startDate"
+            for="start_date"
             class="block text-sm font-medium text-gray-700 mb-2"
           >
             Start Date
           </label>
           <DatePicker
-            id="startDate"
-            v-model="formData.startDate"
-            :error="!!errors.startDate || !!localErrors.startDate"
-            :error-message="errors.startDate || localErrors.startDate"
+            id="start_date"
+            v-model="formData.start_date"
+            :error="!!errors.start_date || !!localErrors.start_date"
+            :error-message="errors.start_date || localErrors.start_date"
             required
           />
         </div>
@@ -78,9 +78,9 @@
           </label>
           <DatePicker
             id="endDate"
-            v-model="formData.endDate"
-            :error="!!errors.endDate || !!localErrors.endDate"
-            :error-message="errors.endDate || localErrors.endDate"
+            v-model="formData.end_date"
+            :error="!!errors.end_date || !!localErrors.end_date"
+            :error-message="errors.end_date || localErrors.end_date"
             required
           />
         </div>
@@ -130,9 +130,9 @@ const localErrors = ref({});
 // Set default dates on component mount
 // onMounted(() => {
 //   // Only set default dates if they're not already set
-//   if (!props.formData.startDate) {
+//   if (!props.formData.start_date) {
 //     const today = new Date();
-//     props.formData.startDate = formatDate(today);
+//     props.formData.start_date = formatDate(today);
 //   }
 
 //   if (!props.formData.endDate) {
@@ -177,24 +177,24 @@ const validateForm = () => {
   }
 
   // Start date validation
-  if (!props.formData.startDate) {
-    localErrors.value.startDate = "Start date is required";
+  if (!props.formData.start_date) {
+    localErrors.value.start_date = "Start date is required";
     isValid = false;
   }
 
   // End date validation
-  if (!props.formData.endDate) {
-    localErrors.value.endDate = "End date is required";
+  if (!props.formData.end_date) {
+    localErrors.value.end_date = "End date is required";
     isValid = false;
   }
 
   // Compare dates if both are valid
-  if (props.formData.startDate && props.formData.endDate) {
-    const startDate = new Date(props.formData.startDate);
-    const endDate = new Date(props.formData.endDate);
+  if (props.formData.start_date && props.formData.end_date) {
+    const start_date = new Date(props.formData.start_date);
+    const end_date = new Date(props.formData.end_date);
 
-    if (startDate >= endDate) {
-      localErrors.value.endDate = "End date must be after start date";
+    if (start_date >= end_date) {
+      localErrors.value.end_date = "End date must be after start date";
       isValid = false;
     }
   }

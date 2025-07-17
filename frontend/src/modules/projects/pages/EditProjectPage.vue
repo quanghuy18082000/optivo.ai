@@ -171,8 +171,8 @@ const errors = ref({});
 const formData = ref({
   projectName: "",
   description: "",
-  startDate: "",
-  endDate: "",
+  start_date: "",
+  end_date: "",
   quotations: [],
   plans: [],
 });
@@ -244,8 +244,8 @@ const fetchProjectDetails = async () => {
     formData.value = {
       projectName: project.name || project.project_name || "",
       description: project.description || "",
-      startDate: formatDateForInput(project.start_time || project.start_date),
-      endDate: formatDateForInput(project.end_time || project.end_date),
+      start_date: formatDateForInput(project.startDate || project.start_date),
+      end_date: formatDateForInput(project.endDate || project.end_date),
       quotations: transformQuotations(project.quotation || []),
       plans: transformPlans(project.plan || []),
     };
@@ -256,8 +256,8 @@ const fetchProjectDetails = async () => {
         id: uuidv4(),
         position_id: "",
         quantity: 1,
-        startDate: formData.value.startDate,
-        endDate: formData.value.endDate,
+        start_date: formData.value.start_date,
+        end_date: formData.value.end_date,
         isContinuation: false,
       });
     }
@@ -269,8 +269,8 @@ const fetchProjectDetails = async () => {
         memberId: "",
         position_id: "",
         allocationRate: 1,
-        startDate: formData.value.startDate,
-        endDate: formData.value.endDate,
+        start_date: formData.value.start_date,
+        end_date: formData.value.end_date,
       });
     }
   } catch (error) {
@@ -299,8 +299,8 @@ const transformQuotations = (quotations) => {
       ? String(q.position.id)
       : "",
     quantity: q.quantity || 1,
-    startDate: formatDateForInput(q.start_date),
-    endDate: formatDateForInput(q.end_date),
+    start_date: formatDateForInput(q.start_date),
+    end_date: formatDateForInput(q.end_date),
     isContinuation: false,
   }));
   console.log("EditProject - transformQuotations output:", transformed);
@@ -323,8 +323,8 @@ const transformPlans = (plans) => {
       ? String(p.position.id)
       : "",
     allocationRate: p.allocation_rate || 1,
-    startDate: formatDateForInput(p.start_date),
-    endDate: formatDateForInput(p.end_date),
+    start_date: formatDateForInput(p.start_date),
+    end_date: formatDateForInput(p.end_date),
   }));
   console.log("EditProject - transformPlans output:", transformed);
   return transformed;
@@ -346,25 +346,25 @@ const validateStep1 = () => {
     newErrors.description = "Description must be less than 500 characters";
   }
 
-  if (!formData.value.startDate) {
-    newErrors.startDate = "Start date is required";
+  if (!formData.value.start_date) {
+    newErrors.start_date = "Start date is required";
   }
 
-  if (!formData.value.endDate) {
-    newErrors.endDate = "End date is required";
+  if (!formData.value.end_date) {
+    newErrors.end_date = "End date is required";
   }
 
   if (
-    formData.value.startDate &&
-    formData.value.endDate &&
-    !newErrors.startDate &&
-    !newErrors.endDate
+    formData.value.start_date &&
+    formData.value.end_date &&
+    !newErrors.start_date &&
+    !newErrors.end_date
   ) {
-    const startDate = new Date(formData.value.startDate);
-    const endDate = new Date(formData.value.endDate);
+    const startDate = new Date(formData.value.start_date);
+    const endDate = new Date(formData.value.end_date);
 
     if (startDate >= endDate) {
-      newErrors.endDate = "End date must be after start date";
+      newErrors.end_date = "End date must be after start date";
     }
   }
 
@@ -396,25 +396,25 @@ const validateStep2 = () => {
         "Allocation must be greater than 0";
     }
 
-    if (!quotation.startDate) {
-      newErrors[`quotations.${index}.startDate`] = "Start date is required";
+    if (!quotation.start_date) {
+      newErrors[`quotations.${index}.start_date`] = "Start date is required";
     }
 
-    if (!quotation.endDate) {
-      newErrors[`quotations.${index}.endDate`] = "End date is required";
+    if (!quotation.end_date) {
+      newErrors[`quotations.${index}.end_date`] = "End date is required";
     }
 
     if (
-      quotation.startDate &&
-      quotation.endDate &&
-      !newErrors[`quotations.${index}.startDate`] &&
-      !newErrors[`quotations.${index}.endDate`]
+      quotation.start_date &&
+      quotation.end_date &&
+      !newErrors[`quotations.${index}.start_date`] &&
+      !newErrors[`quotations.${index}.end_date`]
     ) {
-      const startDate = new Date(quotation.startDate);
-      const endDate = new Date(quotation.endDate);
+      const startDate = new Date(quotation.start_date);
+      const endDate = new Date(quotation.end_date);
 
       if (startDate >= endDate) {
-        newErrors[`quotations.${index}.endDate`] =
+        newErrors[`quotations.${index}.end_date`] =
           "End date must be after start date";
       }
     }
@@ -452,25 +452,25 @@ const validateStep3 = () => {
         "Allocation must be greater than 0";
     }
 
-    if (!plan.startDate) {
-      newErrors[`plans.${index}.startDate`] = "Start date is required";
+    if (!plan.start_date) {
+      newErrors[`plans.${index}.start_date`] = "Start date is required";
     }
 
-    if (!plan.endDate) {
-      newErrors[`plans.${index}.endDate`] = "End date is required";
+    if (!plan.end_date) {
+      newErrors[`plans.${index}.end_date`] = "End date is required";
     }
 
     if (
-      plan.startDate &&
-      plan.endDate &&
-      !newErrors[`plans.${index}.startDate`] &&
-      !newErrors[`plans.${index}.endDate`]
+      plan.start_date &&
+      plan.end_date &&
+      !newErrors[`plans.${index}.start_date`] &&
+      !newErrors[`plans.${index}.end_date`]
     ) {
-      const startDate = new Date(plan.startDate);
-      const endDate = new Date(plan.endDate);
+      const startDate = new Date(plan.start_date);
+      const endDate = new Date(plan.end_date);
 
       if (startDate >= endDate) {
-        newErrors[`plans.${index}.endDate`] =
+        newErrors[`plans.${index}.end_date`] =
           "End date must be after start date";
       }
     }
@@ -518,8 +518,8 @@ const cloneFromQuotation = () => {
     memberId: "",
     position_id: quotation.position_id,
     allocationRate: Math.min(1, parseFloat(quotation.quantity)),
-    startDate: quotation.startDate,
-    endDate: quotation.endDate,
+    start_date: quotation.start_date,
+    end_date: quotation.end_date,
   }));
 
   formData.value.plans = newPlans;
@@ -563,18 +563,18 @@ const updateProject = async (skipPlan = false) => {
 
   try {
     const projectData = {
-      project_name: formData.value.projectName.trim(),
+      name: formData.value.projectName.trim(),
       description: formData.value.description || "",
-      start_time: formData.value.startDate,
-      end_time: formData.value.endDate,
+      start_date: formData.value.start_date,
+      end_date: formData.value.end_date,
 
       quotation: formData.value.quotations
         .filter((q) => q.position_id)
         .map((q) => ({
           position_id: q.position_id,
           quantity: parseFloat(q.quantity),
-          start_date: q.startDate,
-          end_date: q.endDate,
+          start_date: q.start_date,
+          end_date: q.end_date,
         })),
 
       plan: skipPlan
@@ -585,8 +585,8 @@ const updateProject = async (skipPlan = false) => {
               user_id: Number(p.memberId),
               position_id: p.position_id,
               allocation_rate: parseFloat(p.allocationRate),
-              start_date: p.startDate,
-              end_date: p.endDate,
+              start_date: p.start_date,
+              end_date: p.end_date,
             })),
     };
 
@@ -610,17 +610,17 @@ onMounted(async () => {
 
 // Watch for changes in project dates and propagate to quotations and plans
 watch(
-  () => [formData.value.startDate, formData.value.endDate],
+  () => [formData.value.start_date, formData.value.end_date],
   ([newStartDate, newEndDate]) => {
     if (newStartDate && newEndDate) {
       formData.value.quotations.forEach((quotation) => {
-        if (!quotation.startDate) quotation.startDate = newStartDate;
-        if (!quotation.endDate) quotation.endDate = newEndDate;
+        if (!quotation.start_date) quotation.start_date = newStartDate;
+        if (!quotation.end_date) quotation.end_date = newEndDate;
       });
 
       formData.value.plans.forEach((plan) => {
-        if (!plan.startDate) plan.startDate = newStartDate;
-        if (!plan.endDate) plan.endDate = newEndDate;
+        if (!plan.start_date) plan.start_date = newStartDate;
+        if (!plan.end_date) plan.end_date = newEndDate;
       });
     }
   },

@@ -93,7 +93,7 @@ const months = computed(() => {
 // Filter out plans with valid dates
 const validPlans = computed(() => {
   const filtered = props.plans.filter(
-    (p) => p.startDate && p.endDate && p.memberId && p.position_id
+    (p) => p.start_date && p.end_date && p.memberId && p.position_id
   );
   return filtered;
 });
@@ -133,8 +133,8 @@ const getPositionName = (positionId) => {
 
 // Calculate timeline bar position and width
 const getTimelineStyle = (plan) => {
-  const startDate = new Date(plan.startDate);
-  const endDate = new Date(plan.endDate);
+  const start_date = new Date(plan.start_date);
+  const end_date = new Date(plan.end_date);
 
   // Calculate the timeline range (12 months)
   const currentYear = new Date().getFullYear();
@@ -145,11 +145,11 @@ const getTimelineStyle = (plan) => {
   const totalDuration = timelineEnd.getTime() - timelineStart.getTime();
   const startOffset = Math.max(
     0,
-    startDate.getTime() - timelineStart.getTime()
+    start_date.getTime() - timelineStart.getTime()
   );
   const duration =
-    Math.min(endDate.getTime(), timelineEnd.getTime()) -
-    Math.max(startDate.getTime(), timelineStart.getTime());
+    Math.min(end_date.getTime(), timelineEnd.getTime()) -
+    Math.max(start_date.getTime(), timelineStart.getTime());
 
   const leftPercent = (startOffset / totalDuration) * 100;
   const widthPercent = (duration / totalDuration) * 100;

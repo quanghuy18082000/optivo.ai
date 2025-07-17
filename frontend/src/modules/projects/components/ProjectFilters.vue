@@ -80,14 +80,14 @@
           <div>
             <label class="block text-xs text-gray-500 mb-1"> Start Date </label>
             <DatePicker
-              v-model="localFilters.startDate"
+              v-model="localFilters.start_date"
               placeholder="From date"
             />
           </div>
 
           <div>
             <label class="block text-xs text-gray-500 mb-1"> End Date </label>
-            <DatePicker v-model="localFilters.endDate" placeholder="To date" />
+            <DatePicker v-model="localFilters.end_date" placeholder="To date" />
           </div>
         </div>
       </div>
@@ -155,7 +155,7 @@ const localFilters = ref({
   projectName: "",
   memberName: "",
   status: "",
-  startDate: "",
+  start_date: "",
   endDate: "",
   ...props.filters,
 });
@@ -174,7 +174,7 @@ const resetFilters = () => {
     projectName: "",
     memberName: "",
     status: "",
-    startDate: "",
+    start_date: "",
     endDate: "",
   };
   emit("reset");

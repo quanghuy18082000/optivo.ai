@@ -28,12 +28,12 @@ export function useProjects() {
     }
     
     // If we have date range filters:
-    if (filters.value.startDate) {
-      params.start_date = filters.value.startDate
+    if (filters.value.start_date) {
+      params.start_date = filters.value.start_date
     }
     
-    if (filters.value.endDate) {
-      params.end_date = filters.value.endDate
+    if (filters.value.end_date) {
+      params.end_date = filters.value.end_date
     }
     
     // If we have member name filter:

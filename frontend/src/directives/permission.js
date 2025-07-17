@@ -1,49 +1,135 @@
-import { usePermissions } from '@/composables/usePermissions'
+import { usePermissionHelpers } from '@/composables/usePermissionHelpers'
+
+// Helper function to safely remove element
+const removeElement = (el) => {
+  if (el.parentNode) {
+    el.parentNode.removeChild(el)
+  }
+}
+
+// Helper function to hide element instead of removing (alternative approach)
+const hideElement = (el) => {
+  el.style.display = 'none'
+}
 
 export const vPermission = {
   mounted(el, binding) {
-    const { hasPermission } = usePermissions()
+    const { hasPermission } = usePermissionHelpers()
     const permission = binding.value
     
     if (!hasPermission(permission)) {
-      // Remove element if user doesn't have permission
-      el.parentNode && el.parentNode.removeChild(el)
+      removeElement(el)
+    }
+  },
+  updated(el, binding) {
+    const { hasPermission } = usePermissionHelpers()
+    const permission = binding.value
+    
+    if (!hasPermission(permission)) {
+      removeElement(el)
     }
   }
 }
 
 export const vAnyPermission = {
   mounted(el, binding) {
-    const { hasAnyPermission } = usePermissions()
+    const { hasAnyPermission } = usePermissionHelpers()
     const permissions = binding.value
     
     if (!hasAnyPermission(permissions)) {
-      // Remove element if user doesn't have any of the permissions
-      el.parentNode && el.parentNode.removeChild(el)
+      removeElement(el)
+    }
+  },
+  updated(el, binding) {
+    const { hasAnyPermission } = usePermissionHelpers()
+    const permissions = binding.value
+    
+    if (!hasAnyPermission(permissions)) {
+      removeElement(el)
     }
   }
 }
 
 export const vAllPermissions = {
   mounted(el, binding) {
-    const { hasAllPermissions } = usePermissions()
+    const { hasAllPermissions } = usePermissionHelpers()
     const permissions = binding.value
     
     if (!hasAllPermissions(permissions)) {
-      // Remove element if user doesn't have all permissions
-      el.parentNode && el.parentNode.removeChild(el)
+      removeElement(el)
+    }
+  },
+  updated(el, binding) {
+    const { hasAllPermissions } = usePermissionHelpers()
+    const permissions = binding.value
+    
+    if (!hasAllPermissions(permissions)) {
+      removeElement(el)
     }
   }
 }
 
 export const vProjectPermission = {
   mounted(el, binding) {
-    const { hasProjectPermission } = usePermissions()
+    const { hasProjectPermission } = usePermissionHelpers()
     const { projectId, permission } = binding.value
     
     if (!hasProjectPermission(projectId, permission)) {
-      // Remove element if user doesn't have project permission
-      el.parentNode && el.parentNode.removeChild(el)
+      removeElement(el)
+    }
+  },
+  updated(el, binding) {
+    const { hasProjectPermission } = usePermissionHelpers()
+    const { projectId, permission } = binding.value
+    
+    if (!hasProjectPermission(projectId, permission)) {
+      removeElement(el)
+    }
+  }
+}
+
+// New directive for role-based visibility
+export const vRole = {
+  mounted(el, binding) {
+    const { isAdmin, isProjectManager, isBasicUser } = usePermissionHelpers()
+    const role = binding.value
+    
+    let hasRole = false
+    switch (role) {
+      case 'admin':
+        hasRole = isAdmin.value
+        break
+      case 'project_manager':
+        hasRole = isProjectManager.value
+        break
+      case 'user':
+        hasRole = isBasicUser.value
+        break
+    }
+    
+    if (!hasRole) {
+      removeElement(el)
+    }
+  },
+  updated(el, binding) {
+    const { isAdmin, isProjectManager, isBasicUser } = usePermissionHelpers()
+    const role = binding.value
+    
+    let hasRole = false
+    switch (role) {
+      case 'admin':
+        hasRole = isAdmin.value
+        break
+      case 'project_manager':
+        hasRole = isProjectManager.value
+        break
+      case 'user':
+        hasRole = isBasicUser.value
+        break
+    }
+    
+    if (!hasRole) {
+      removeElement(el)
     }
   }
 }

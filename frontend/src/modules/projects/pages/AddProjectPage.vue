@@ -99,15 +99,15 @@ const errors = ref({});
 const formData = ref({
   projectName: "",
   description: "", // Added description field for API
-  startDate: "",
-  endDate: "",
+  start_date: "",
+  end_date: "",
   quotations: [
     {
       id: uuidv4(),
       position_id: "",
       quantity: 1,
-      startDate: "",
-      endDate: "",
+      start_date: "",
+      end_date: "",
       isContinuation: false,
     },
   ],
@@ -117,8 +117,8 @@ const formData = ref({
       memberId: "",
       position_id: "",
       allocationRate: 1,
-      startDate: "",
-      endDate: "",
+      start_date: "",
+      end_date: "",
     },
   ],
 });
@@ -200,48 +200,48 @@ const validateStep1 = () => {
   }
 
   // Date validation
-  if (!formData.value.startDate) {
-    newErrors.startDate = "Start date is required";
+  if (!formData.value.start_date) {
+    newErrors.start_date = "Start date is required";
   } else {
     // Validate date format
     const startDateValid =
-      /^\d{4}-\d{2}-\d{2}$/.test(formData.value.startDate) &&
-      !isNaN(new Date(formData.value.startDate).getTime());
+      /^\d{4}-\d{2}-\d{2}$/.test(formData.value.start_date) &&
+      !isNaN(new Date(formData.value.start_date).getTime());
     if (!startDateValid) {
-      newErrors.startDate = "Invalid date format";
+      newErrors.start_date = "Invalid date format";
     }
   }
 
-  if (!formData.value.endDate) {
-    newErrors.endDate = "End date is required";
+  if (!formData.value.end_date) {
+    newErrors.end_date = "End date is required";
   } else {
     // Validate date format
     const endDateValid =
-      /^\d{4}-\d{2}-\d{2}$/.test(formData.value.endDate) &&
-      !isNaN(new Date(formData.value.endDate).getTime());
+      /^\d{4}-\d{2}-\d{2}$/.test(formData.value.end_date) &&
+      !isNaN(new Date(formData.value.end_date).getTime());
     if (!endDateValid) {
-      newErrors.endDate = "Invalid date format";
+      newErrors.end_date = "Invalid date format";
     }
   }
 
   // Compare dates only if both are valid
   if (
-    formData.value.startDate &&
-    formData.value.endDate &&
-    !newErrors.startDate &&
-    !newErrors.endDate
+    formData.value.start_date &&
+    formData.value.end_date &&
+    !newErrors.start_date &&
+    !newErrors.end_date
   ) {
-    const startDate = new Date(formData.value.startDate);
-    const endDate = new Date(formData.value.endDate);
+    const startDate = new Date(formData.value.start_date);
+    const endDate = new Date(formData.value.end_date);
 
     if (startDate >= endDate) {
-      newErrors.endDate = "End date must be after start date";
+      newErrors.end_date = "End date must be after start date";
     }
 
     // Check if project duration is reasonable (e.g., not more than 5 years)
     const fiveYearsInMs = 5 * 365 * 24 * 60 * 60 * 1000;
     if (endDate - startDate > fiveYearsInMs) {
-      newErrors.endDate = "Project duration cannot exceed 5 years";
+      newErrors.end_date = "Project duration cannot exceed 5 years";
     }
   }
 
@@ -289,41 +289,41 @@ const validateStep2 = () => {
     }
 
     // Date validation
-    if (!quotation.startDate) {
-      newErrors[`quotations.${index}.startDate`] = "Start date is required";
+    if (!quotation.start_date) {
+      newErrors[`quotations.${index}.start_date`] = "Start date is required";
     } else {
       // Validate date format
       const startDateValid =
-        /^\d{4}-\d{2}-\d{2}$/.test(quotation.startDate) &&
-        !isNaN(new Date(quotation.startDate).getTime());
+        /^\d{4}-\d{2}-\d{2}$/.test(quotation.start_date) &&
+        !isNaN(new Date(quotation.start_date).getTime());
       if (!startDateValid) {
-        newErrors[`quotations.${index}.startDate`] = "Invalid date format";
-      } else if (formData.value.startDate) {
+        newErrors[`quotations.${index}.start_date`] = "Invalid date format";
+      } else if (formData.value.start_date) {
         // Check if quotation start date is within project date range
-        const projectStart = new Date(formData.value.startDate);
-        const quotationStart = new Date(quotation.startDate);
+        const projectStart = new Date(formData.value.start_date);
+        const quotationStart = new Date(quotation.start_date);
         if (quotationStart < projectStart) {
-          newErrors[`quotations.${index}.startDate`] =
+          newErrors[`quotations.${index}.start_date`] =
             "Cannot be before project start date";
         }
       }
     }
 
-    if (!quotation.endDate) {
-      newErrors[`quotations.${index}.endDate`] = "End date is required";
+    if (!quotation.end_date) {
+      newErrors[`quotations.${index}.end_date`] = "End date is required";
     } else {
       // Validate date format
       const endDateValid =
-        /^\d{4}-\d{2}-\d{2}$/.test(quotation.endDate) &&
-        !isNaN(new Date(quotation.endDate).getTime());
+        /^\d{4}-\d{2}-\d{2}$/.test(quotation.end_date) &&
+        !isNaN(new Date(quotation.end_date).getTime());
       if (!endDateValid) {
-        newErrors[`quotations.${index}.endDate`] = "Invalid date format";
-      } else if (formData.value.endDate) {
+        newErrors[`quotations.${index}.end_date`] = "Invalid date format";
+      } else if (formData.value.end_date) {
         // Check if quotation end date is within project date range
-        const projectEnd = new Date(formData.value.endDate);
-        const quotationEnd = new Date(quotation.endDate);
+        const projectEnd = new Date(formData.value.end_date);
+        const quotationEnd = new Date(quotation.end_date);
         if (quotationEnd > projectEnd) {
-          newErrors[`quotations.${index}.endDate`] =
+          newErrors[`quotations.${index}.end_date`] =
             "Cannot be after project end date";
         }
       }
@@ -331,16 +331,16 @@ const validateStep2 = () => {
 
     // Compare dates only if both are valid
     if (
-      quotation.startDate &&
-      quotation.endDate &&
-      !newErrors[`quotations.${index}.startDate`] &&
-      !newErrors[`quotations.${index}.endDate`]
+      quotation.start_date &&
+      quotation.end_date &&
+      !newErrors[`quotations.${index}.start_date`] &&
+      !newErrors[`quotations.${index}.end_date`]
     ) {
-      const startDate = new Date(quotation.startDate);
-      const endDate = new Date(quotation.endDate);
+      const startDate = new Date(quotation.start_date);
+      const endDate = new Date(quotation.end_date);
 
       if (startDate >= endDate) {
-        newErrors[`quotations.${index}.endDate`] =
+        newErrors[`quotations.${index}.end_date`] =
           "End date must be after start date";
       }
     }
@@ -358,15 +358,15 @@ const validateStep2 = () => {
       }
 
       if (
-        quotation.startDate &&
-        quotation.endDate &&
-        !newErrors[`quotations.${index}.startDate`] &&
-        !newErrors[`quotations.${index}.endDate`]
+        quotation.start_date &&
+        quotation.end_date &&
+        !newErrors[`quotations.${index}.start_date`] &&
+        !newErrors[`quotations.${index}.end_date`]
       ) {
         positionAllocations[quotation.position_id].push({
           index,
-          start: new Date(quotation.startDate),
-          end: new Date(quotation.endDate),
+          start: new Date(quotation.start_date),
+          end: new Date(quotation.end_date),
         });
       }
     }
@@ -383,7 +383,7 @@ const validateStep2 = () => {
         if (allocations[i].end > allocations[i + 1].start) {
           // Overlap detected
           const index = allocations[i + 1].index;
-          newErrors[`quotations.${index}.startDate`] =
+          newErrors[`quotations.${index}.start_date`] =
             "Overlaps with another allocation for this position";
         }
       }
@@ -431,41 +431,41 @@ const validateStep3 = () => {
     }
 
     // Date validation
-    if (!plan.startDate) {
-      newErrors[`plans.${index}.startDate`] = "Start date is required";
+    if (!plan.start_date) {
+      newErrors[`plans.${index}.start_date`] = "Start date is required";
     } else {
       // Validate date format
       const startDateValid =
-        /^\d{4}-\d{2}-\d{2}$/.test(plan.startDate) &&
-        !isNaN(new Date(plan.startDate).getTime());
+        /^\d{4}-\d{2}-\d{2}$/.test(plan.start_date) &&
+        !isNaN(new Date(plan.start_date).getTime());
       if (!startDateValid) {
-        newErrors[`plans.${index}.startDate`] = "Invalid date format";
-      } else if (formData.value.startDate) {
+        newErrors[`plans.${index}.start_date`] = "Invalid date format";
+      } else if (formData.value.start_date) {
         // Check if plan start date is within project date range
-        const projectStart = new Date(formData.value.startDate);
-        const planStart = new Date(plan.startDate);
+        const projectStart = new Date(formData.value.start_date);
+        const planStart = new Date(plan.start_date);
         if (planStart < projectStart) {
-          newErrors[`plans.${index}.startDate`] =
+          newErrors[`plans.${index}.start_date`] =
             "Cannot be before project start date";
         }
       }
     }
 
-    if (!plan.endDate) {
-      newErrors[`plans.${index}.endDate`] = "End date is required";
+    if (!plan.end_date) {
+      newErrors[`plans.${index}.end_date`] = "End date is required";
     } else {
       // Validate date format
       const endDateValid =
-        /^\d{4}-\d{2}-\d{2}$/.test(plan.endDate) &&
-        !isNaN(new Date(plan.endDate).getTime());
+        /^\d{4}-\d{2}-\d{2}$/.test(plan.end_date) &&
+        !isNaN(new Date(plan.end_date).getTime());
       if (!endDateValid) {
-        newErrors[`plans.${index}.endDate`] = "Invalid date format";
-      } else if (formData.value.endDate) {
+        newErrors[`plans.${index}.end_date`] = "Invalid date format";
+      } else if (formData.value.end_date) {
         // Check if plan end date is within project date range
-        const projectEnd = new Date(formData.value.endDate);
-        const planEnd = new Date(plan.endDate);
+        const projectEnd = new Date(formData.value.end_date);
+        const planEnd = new Date(plan.end_date);
         if (planEnd > projectEnd) {
-          newErrors[`plans.${index}.endDate`] =
+          newErrors[`plans.${index}.end_date`] =
             "Cannot be after project end date";
         }
       }
@@ -473,16 +473,16 @@ const validateStep3 = () => {
 
     // Compare dates only if both are valid
     if (
-      plan.startDate &&
-      plan.endDate &&
-      !newErrors[`plans.${index}.startDate`] &&
-      !newErrors[`plans.${index}.endDate`]
+      plan.start_date &&
+      plan.end_date &&
+      !newErrors[`plans.${index}.start_date`] &&
+      !newErrors[`plans.${index}.end_date`]
     ) {
-      const startDate = new Date(plan.startDate);
-      const endDate = new Date(plan.endDate);
+      const startDate = new Date(plan.start_date);
+      const endDate = new Date(plan.end_date);
 
       if (startDate >= endDate) {
-        newErrors[`plans.${index}.endDate`] =
+        newErrors[`plans.${index}.end_date`] =
           "End date must be after start date";
       }
     }
@@ -497,15 +497,15 @@ const validateStep3 = () => {
       }
 
       if (
-        plan.startDate &&
-        plan.endDate &&
-        !newErrors[`plans.${index}.startDate`] &&
-        !newErrors[`plans.${index}.endDate`]
+        plan.start_date &&
+        plan.end_date &&
+        !newErrors[`plans.${index}.start_date`] &&
+        !newErrors[`plans.${index}.end_date`]
       ) {
         memberAllocations[plan.memberId].push({
           index,
-          start: new Date(plan.startDate),
-          end: new Date(plan.endDate),
+          start: new Date(plan.start_date),
+          end: new Date(plan.end_date),
           rate: parseFloat(plan.allocationRate) || 0,
         });
       }
@@ -616,8 +616,8 @@ const cloneFromQuotation = () => {
     // If quantity is greater than 1, we need to adjust the allocation rate
     // as allocation_rate should be between 0 and 1
     allocationRate: Math.min(1, parseFloat(quotation.quantity)),
-    startDate: quotation.startDate,
-    endDate: quotation.endDate,
+    start_date: quotation.start_date,
+    end_date: quotation.end_date,
   }));
 
   formData.value.plans = newPlans;
@@ -669,8 +669,8 @@ const submitProject = async (skipPlan = false) => {
     const projectData = {
       name: formData.value.projectName.trim(),
       description: formData.value.description || "", // Add description field if needed
-      start_time: formData.value.startDate,
-      end_time: formData.value.endDate,
+      start_date: formData.value.start_date,
+      end_date: formData.value.end_date,
 
       // Format quotation data according to API requirements
       quotation: formData.value.quotations
@@ -678,8 +678,8 @@ const submitProject = async (skipPlan = false) => {
         .map((q) => ({
           position_id: q.position_id,
           quantity: parseFloat(q.quantity),
-          start_date: q.startDate,
-          end_date: q.endDate,
+          start_date: q.start_date,
+          end_date: q.end_date,
         })),
 
       // Format plan data according to API requirements
@@ -691,8 +691,8 @@ const submitProject = async (skipPlan = false) => {
               user_id: Number(p.memberId), // Convert to number as API expects
               position_id: p.position_id,
               allocation_rate: parseFloat(p.allocationRate),
-              start_date: p.startDate,
-              end_date: p.endDate,
+              start_date: p.start_date,
+              end_date: p.end_date,
             })),
     };
 
@@ -715,24 +715,13 @@ onMounted(() => {
   // and then propagate them to quotations and plans when they're available
 
   // We'll set up a watcher to update quotation and plan dates when project dates change
+  // Note: We don't set default dates anymore, let users fill them manually
   watch(
-    () => [formData.value.startDate, formData.value.endDate],
+    () => [formData.value.start_date, formData.value.end_date],
     ([newStartDate, newEndDate]) => {
-      if (newStartDate && newEndDate) {
-        // Set default dates for quotations
-        formData.value.quotations.forEach((quotation) => {
-          if (!quotation.startDate) quotation.startDate = newStartDate;
-          if (!quotation.endDate) quotation.endDate = newEndDate;
-        });
-
-        // Set default dates for plans
-        formData.value.plans.forEach((plan) => {
-          if (!plan.startDate) plan.startDate = newStartDate;
-          if (!plan.endDate) plan.endDate = newEndDate;
-        });
-      }
+      // Watcher is kept for potential future use but doesn't set defaults
     },
-    { immediate: true } // Run immediately if values are already set
+    { immediate: true }
   );
 });
 </script>

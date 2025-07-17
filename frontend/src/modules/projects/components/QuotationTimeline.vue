@@ -94,7 +94,7 @@ const months = computed(() => {
 // Filter out quotations with valid dates
 const validQuotations = computed(() => {
   return props.quotations.filter(
-    (q) => q.startDate && q.endDate && q.position_id
+    (q) => q.start_date && q.end_date && q.position_id
   );
 });
 
@@ -119,8 +119,8 @@ const getPositionName = (positionId) => {
 
 // Calculate timeline bar position and width
 const getTimelineStyle = (quotation) => {
-  const startDate = new Date(quotation.startDate);
-  const endDate = new Date(quotation.endDate);
+  const start_date = new Date(quotation.start_date);
+  const end_date = new Date(quotation.end_date);
 
   // Calculate the timeline range (12 months)
   const currentYear = new Date().getFullYear();
@@ -131,11 +131,11 @@ const getTimelineStyle = (quotation) => {
   const totalDuration = timelineEnd.getTime() - timelineStart.getTime();
   const startOffset = Math.max(
     0,
-    startDate.getTime() - timelineStart.getTime()
+    start_date.getTime() - timelineStart.getTime()
   );
   const duration =
-    Math.min(endDate.getTime(), timelineEnd.getTime()) -
-    Math.max(startDate.getTime(), timelineStart.getTime());
+    Math.min(end_date.getTime(), timelineEnd.getTime()) -
+    Math.max(start_date.getTime(), timelineStart.getTime());
 
   const leftPercent = (startOffset / totalDuration) * 100;
   const widthPercent = (duration / totalDuration) * 100;

@@ -171,7 +171,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from "vue";
+import { ref, onMounted, onBeforeUnmount, computed } from "vue";
 import MainLayout from "@/layouts/MainLayout.vue";
 import Button from "@/components/ui/Button.vue";
 import ProjectTable from "../components/ProjectTable.vue";
@@ -180,12 +180,13 @@ import { useProjects } from "../composables/useProjects";
 import { useAuthStore } from "@/modules/auth/store";
 import { useRouter } from "vue-router";
 import { useToast } from "@/composables/useToast";
+import { transformProjectsData } from "../utils/workloadDataTransformer";
 
 const authStore = useAuthStore();
 const router = useRouter();
 
 const {
-  projects,
+  projects: rawProjects,
   filters,
   isLoading,
   error,
@@ -193,6 +194,11 @@ const {
   resetFilters,
   refetch,
 } = useProjects();
+
+// Transform raw projects data for ProjectTable
+const projects = computed(() => {
+  return transformProjectsData(rawProjects.value);
+});
 
 const showFilters = ref(false);
 const showProfileMenu = ref(false);

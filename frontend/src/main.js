@@ -83,9 +83,10 @@ authStore.initializeAuth()
 
 app.mount('#app')
 
-import { vPermission, vAnyPermission, vAllPermissions, vProjectPermission } from './directives/permission'
+import { vPermission, vAnyPermission, vAllPermissions, vProjectPermission, vRole } from './directives/permission'
 
 app.directive('permission', vPermission)
 app.directive('any-permission', vAnyPermission)
 app.directive('all-permissions', vAllPermissions)
 app.directive('project-permission', vProjectPermission)
+app.directive('role', vRole)
