@@ -5,7 +5,7 @@ const projectRoutes = [
     component: () => import("./pages/ProjectDashboard.vue"),
     meta: { 
       requiresAuth: true,
-      // requiredPermissions: ['project.view']  // Dựa trên data: project.view
+      requiredPermissions: ['project.view_member_any']  // Dựa trên data: project.view
     },
   },
   {
@@ -14,7 +14,7 @@ const projectRoutes = [
     component: () => import("./pages/AddProjectPage.vue"),
     meta: { 
       requiresAuth: true,
-      // requiredPermissions: ['project.create']  // Dựa trên data: project.create
+      requiredPermissions: ['project.add_user']  // Dựa trên data: project.create
     },
   },
   {
@@ -23,7 +23,7 @@ const projectRoutes = [
     component: () => import("./pages/EditProjectPage.vue"),
     meta: { 
       requiresAuth: true,
-      // requiredPermissions: ['project.update']  // Based on project update permission
+      requiredPermissions: ['project.update_project']  // Based on project update permission
     },
   },
 ]

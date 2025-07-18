@@ -1,4 +1,4 @@
-import { post } from '@/utils/requestClient.js'
+import { post, put } from '@/utils/requestClient.js'
 import { storeAuthTokens, clearAuthTokens, refreshTokenRequest } from '@/utils/tokenRefresh.js'
 
 export const refreshToken = async (refreshToken) => {
@@ -53,8 +53,8 @@ export const resetPassword = async (resetData) => {
 export const changePassword = async (passwordData) => {
   try {
     const { currentPassword, newPassword } = passwordData
-    const response = await post('/auth/change-password', {
-      current_password: currentPassword,
+    const response = await put('/userspassword/me', {
+      old_password: currentPassword,
       new_password: newPassword
     })
     return response.data

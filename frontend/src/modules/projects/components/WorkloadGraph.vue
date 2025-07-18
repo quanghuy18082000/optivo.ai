@@ -1,7 +1,9 @@
 <template>
   <div class="relative w-full">
+    {{ chartData }}
     <!-- Main chart area -->
-    <div ref="chartRef" class="w-full h-24"></div>
+    <div ref="chartRef" class="w-full h-48"></div>
+    <!-- Increased height to h-48 -->
 
     <!-- Month labels below the chart -->
     <div class="flex justify-between pr-2 pl-12 text-xs text-gray-500 mt-1">
@@ -31,7 +33,8 @@ import {
   LegendComponent,
 } from "echarts/components";
 import { CanvasRenderer } from "echarts/renderers";
-import { formatWorkloadForChart } from "../utils/workloadDataTransformer";
+import { format, getDaysInMonth } from "date-fns"; // Import format and getDaysInMonth
+import { transformWorkloadDataForChart } from "../utils/workloadDataTransformer"; // Import the new transformer
 
 // Register necessary ECharts components
 echarts.use([
@@ -54,49 +57,9 @@ const props = defineProps({
 const chartRef = ref(null);
 let chartInstance = null;
 
-// Months for x-axis
-const months = [
-  "Jan/25",
-  "Feb/25",
-  "Mar/25",
-  "Apr/25",
-  "May/25",
-  "Jun/25",
-  "Jul/25",
-  "Aug/25",
-  "Sep/25",
-  "Oct/25",
-  "Nov/25",
-  "Dec/25",
-];
-
-// Prepare chart data for dual-axis display
+// Prepare chart data using the new transformation
 const chartData = computed(() => {
-  const monthlyData = formatWorkloadForChart(props.workload.monthly || []);
-  const weeklyActualData = props.workload.weeklyActual || [];
-
-  // Monthly data for left axis (Plan & Quotation)
-  const quotationData = monthlyData.map((item) => {
-    return item.quotation > 0 ? item.quotation : null;
-  });
-
-  const planData = monthlyData.map((item) => {
-    return item.plan > 0 ? item.plan : null;
-  });
-
-  // Weekly actual data for right axis
-  const weeklyData = weeklyActualData.map((week) => {
-    // Calculate x-axis position: month index + position within month
-    const xPosition = week.monthIndex + week.positionInMonth;
-    return [xPosition, week.allocation];
-  });
-
-  return {
-    quotation: quotationData,
-    plan: planData,
-    weeklyActual: weeklyData,
-    weeklyActualRaw: weeklyActualData, // Keep raw data for tooltips
-  };
+  return transformWorkloadDataForChart(props.workload);
 });
 
 // Chart options
@@ -133,20 +96,28 @@ const getChartOptions = () => {
       },
       confine: true, // Confine tooltip to chart area
       formatter: function (params) {
-        let result = `<div style="font-weight: 600; margin-bottom: 6px; font-size: 13px;">${params[0].name}</div>`;
-        params.forEach((param) => {
-          // Skip null values in tooltip
-          if (param.value === null || param.value === undefined) return;
+        // Filter out scatter series from the main tooltip display
+        const lineParams = params.filter(
+          (param) => param.seriesType === "line"
+        );
 
-          // Format values based on series type
-          let displayValue = param.value;
-          if (param.seriesName === "Plan" || param.seriesName === "Actual") {
-            displayValue = Math.round(param.value * 10) / 10; // Round to 1 decimal
-          } else {
-            displayValue = Math.round(param.value * 100) / 100; // Keep quotation precise
-          }
+        if (lineParams.length === 0) return ""; // If only scatter points are hovered, return empty
 
-          // Color square
+        // Get the x-axis value from the first line parameter
+        const xValue = lineParams[0].value[0];
+        const monthIndex = Math.floor(xValue);
+        const dayFraction = xValue - monthIndex;
+        const currentYear = new Date().getFullYear();
+        const daysInMonth = getDaysInMonth(new Date(currentYear, monthIndex));
+        const dayOfMonth = Math.round(dayFraction * (daysInMonth - 1)) + 1;
+        const date = new Date(currentYear, monthIndex, dayOfMonth);
+        const formattedDate = format(date, "dd/MMM/yy");
+
+        let result = `<div style="font-weight: 600; margin-bottom: 6px; font-size: 13px;">${formattedDate}</div>`;
+        lineParams.forEach((param) => {
+          let displayValue = param.value[1]; // For line series, value is [x, y]
+          displayValue = Math.round(displayValue * 100) / 100; // Keep precision
+
           result += `<div style="display: flex; align-items: center; margin: 4px 0;">
             <span style="display:inline-block;margin-right:8px;border-radius:50%;width:10px;height:10px;background-color:${param.color};"></span>
             <span style="flex: 1;">${param.seriesName}:</span>
@@ -165,249 +136,178 @@ const getChartOptions = () => {
       },
     },
     xAxis: {
-      type: "category",
-      data: months,
+      type: "value", // Change to value type for precise date positioning
+      min: 0, // Corresponds to January
+      max: 12, // Corresponds to end of December
+      interval: 1, // Major ticks at each month boundary
       axisLabel: {
-        show: false, // Hide month labels since we're showing them separately
+        show: false, // Hide ECharts labels, use custom ones below
       },
       axisLine: {
-        show: false, // Hide axis line for cleaner look
+        show: false, // Hide axis line
       },
       axisTick: {
-        show: false,
+        show: false, // Hide axis ticks
       },
-      boundaryGap: false,
       splitLine: {
-        show: false,
+        show: true, // Show vertical grid lines for months
+        lineStyle: {
+          color: "#e5e7eb",
+          type: "solid", // Solid lines for month boundaries
+          width: 1,
+        },
       },
     },
-    yAxis: [
-      {
-        // Left axis for Plan & Quotation (monthly data)
-        type: "value",
-        name: "Monthly Allocation",
-        nameLocation: "middle",
-        nameGap: 40,
-        nameTextStyle: {
-          fontSize: 10,
-          color: "#6b7280",
-        },
-        min: 0,
-        max: 2,
-        interval: 0.5,
-        axisLabel: {
-          fontSize: 9,
-          color: "#6b7280",
-          formatter: "{value}",
-        },
-        splitLine: {
-          lineStyle: {
-            color: "#e5e7eb",
-            type: "dashed",
-            width: 1,
-          },
+    yAxis: {
+      // Single Y-axis for all data
+      type: "value",
+      name: "Allocation Rate",
+      nameLocation: "middle",
+      nameGap: 40,
+      nameTextStyle: {
+        fontSize: 10,
+        color: "#6b7280",
+      },
+      min: 0,
+      max: 2,
+      interval: 0.5,
+      axisLabel: {
+        fontSize: 9,
+        color: "#6b7280",
+        formatter: "{value}",
+      },
+      splitLine: {
+        lineStyle: {
+          color: "#e5e7eb",
+          type: "dashed",
+          width: 1,
         },
       },
-      {
-        // Right axis for Weekly Actual
-        type: "value",
-        name: "Weekly Allocation",
-        nameLocation: "middle",
-        nameGap: 40,
-        nameTextStyle: {
-          fontSize: 10,
-          color: "#F59E0B",
-        },
-        min: 0,
-        max: 1,
-        interval: 0.25,
-        position: "right",
-        axisLabel: {
-          fontSize: 9,
-          color: "#F59E0B",
-          formatter: "{value}",
-        },
-        splitLine: {
-          show: false, // Hide right axis grid lines to avoid clutter
-        },
-      },
-    ],
+    },
     series: [
       {
         name: "Quotation",
         type: "line",
-        yAxisIndex: 0, // Use left axis
-        data: chartData.value.quotation,
-        smooth: true,
-        symbol: "emptyCircle",
-        symbolSize: 8,
-        showSymbol: false, // Only show symbols on hover
-        connectNulls: false, // Don't connect null values
-        emphasis: {
-          scale: true,
-          focus: "series",
-          itemStyle: {
-            shadowBlur: 5,
-            shadowColor: "rgba(59, 130, 246, 0.5)",
-          },
-        },
-        itemStyle: {
-          color: "#3B82F6", // Blue
-          borderWidth: 2,
-        },
+        step: "end", // Key for stepped line
+        data: chartData.value.quotationLineData,
+        smooth: false, // Not smooth
+        symbol: "none", // Hide symbols on line
         lineStyle: {
           width: 4,
-          shadowColor: "rgba(59, 130, 246, 0.2)",
-          shadowBlur: 10,
-          shadowOffsetY: 5,
-          cap: "round",
+          color: "#3B82F6", // Blue
         },
-        areaStyle: {
-          color: {
-            type: "linear",
-            x: 0,
-            y: 0,
-            x2: 0,
-            y2: 1,
-            colorStops: [
-              { offset: 0, color: "rgba(59, 130, 246, 0.2)" },
-              { offset: 1, color: "rgba(59, 130, 246, 0.02)" },
-            ],
-          },
-        },
-        z: 3,
+        z: 3, // Layering
       },
       {
         name: "Plan",
         type: "line",
-        yAxisIndex: 0, // Use left axis
-        data: chartData.value.plan,
-        smooth: true,
-        symbol: "emptyCircle",
-        symbolSize: 8,
-        showSymbol: false,
-        connectNulls: false, // Don't connect null values
-        emphasis: {
-          scale: true,
-          focus: "series",
-          itemStyle: {
-            shadowBlur: 5,
-            shadowColor: "rgba(16, 185, 129, 0.5)",
-          },
-        },
-        itemStyle: {
-          color: "#10B981", // Green
-          borderWidth: 2,
-        },
+        step: "end", // Key for stepped line
+        data: chartData.value.planLineData,
+        smooth: false,
+        symbol: "none",
         lineStyle: {
           width: 4,
-          shadowColor: "rgba(16, 185, 129, 0.2)",
-          shadowBlur: 10,
-          shadowOffsetY: 5,
-          cap: "round",
+          color: "#10B981", // Green
         },
-        areaStyle: {
-          color: {
-            type: "linear",
-            x: 0,
-            y: 0,
-            x2: 0,
-            y2: 1,
-            colorStops: [
-              { offset: 0, color: "rgba(16, 185, 129, 0.2)" },
-              { offset: 1, color: "rgba(16, 185, 129, 0.02)" },
-            ],
-          },
-        },
-        z: 2,
+        z: 2, // Layering
       },
       {
-        name: "Weekly Actual",
+        name: "Actual",
+        type: "line",
+        step: "end", // Key for stepped line
+        data: chartData.value.actualLineData,
+        smooth: false,
+        symbol: "none",
+        lineStyle: {
+          width: 4,
+          color: "#EF4444", // Red
+        },
+        z: 1, // Layering
+      },
+      // Scatter series for Quotation labels
+      {
+        name: "Quotation Points",
         type: "scatter",
-        yAxisIndex: 1, // Use right axis
-        data: chartData.value.weeklyActual,
-        symbol: "diamond",
-        symbolSize: 14,
+        data: chartData.value.quotationScatterData,
+        symbol: "circle",
+        symbolSize: 8,
         itemStyle: {
-          color: "#F59E0B", // Amber color
+          color: "#3B82F6",
           borderColor: "#FFFFFF",
           borderWidth: 2,
-          shadowBlur: 4,
-          shadowColor: "rgba(245, 158, 11, 0.3)",
         },
-        emphasis: {
-          scale: 1.3,
-          itemStyle: {
-            shadowBlur: 8,
-            shadowColor: "rgba(245, 158, 11, 0.6)",
+        label: {
+          show: true,
+          position: "top",
+          formatter: function (params) {
+            return params.data.label.formatter; // Use the formatter from the data item
           },
+          color: "#374151",
+          fontSize: 10,
+          fontWeight: "bold",
+          offset: [0, -10], // Adjust label position
         },
         tooltip: {
+          show: false, // Hide tooltip for scatter points as labels are shown
+        },
+        z: 4, // On top
+      },
+      // Scatter series for Plan labels
+      {
+        name: "Plan Points",
+        type: "scatter",
+        data: chartData.value.planScatterData,
+        symbol: "circle",
+        symbolSize: 8,
+        itemStyle: {
+          color: "#10B981",
+          borderColor: "#FFFFFF",
+          borderWidth: 2,
+        },
+        label: {
+          show: true,
+          position: "top",
           formatter: function (params) {
-            const weekData = chartData.value.weeklyActualRaw[params.dataIndex];
-            if (!weekData) return "";
-            return `
-              <div style="font-weight: 600; margin-bottom: 6px; font-size: 13px;">Weekly Actual</div>
-              <div style="margin: 4px 0;">
-                <span style="color: #6b7280;">Period:</span> 
-                <span style="font-weight: 600; margin-left: 8px;">${weekData.dateRange}</span>
-              </div>
-              <div style="margin: 4px 0;">
-                <span style="color: #6b7280;">Allocation:</span> 
-                <span style="font-weight: 600; margin-left: 8px;">${weekData.allocation}</span>
-              </div>
-            `;
+            return params.data.label.formatter;
           },
+          color: "#374151",
+          fontSize: 10,
+          fontWeight: "bold",
+          offset: [0, -10],
+        },
+        tooltip: {
+          show: false,
         },
         z: 4,
       },
-      // Weekly Actual Data as scatter points
-      ...(chartData.value.weeklyActual.length > 0
-        ? [
-            {
-              name: "Weekly Actual",
-              type: "scatter",
-              data: chartData.value.weeklyActual.map((week) => [
-                week.monthPosition, // x-axis position based on month + day fraction
-                week.allocation, // y-axis value
-              ]),
-              symbol: "diamond",
-              symbolSize: 12,
-              itemStyle: {
-                color: "#F59E0B", // Amber color to distinguish from monthly actual
-                borderColor: "#FFFFFF",
-                borderWidth: 2,
-                shadowBlur: 4,
-                shadowColor: "rgba(245, 158, 11, 0.3)",
-              },
-              emphasis: {
-                scale: 1.5,
-                itemStyle: {
-                  shadowBlur: 8,
-                  shadowColor: "rgba(245, 158, 11, 0.6)",
-                },
-              },
-              tooltip: {
-                formatter: function (params) {
-                  const weekData =
-                    chartData.value.weeklyActual[params.dataIndex];
-                  return `
-              <div style="font-weight: 600; margin-bottom: 6px; font-size: 13px;">Weekly Actual</div>
-              <div style="margin: 4px 0;">
-                <span style="color: #6b7280;">Period:</span> 
-                <span style="font-weight: 600; margin-left: 8px;">${weekData.dateRange}</span>
-              </div>
-              <div style="margin: 4px 0;">
-                <span style="color: #6b7280;">Allocation:</span> 
-                <span style="font-weight: 600; margin-left: 8px;">${weekData.allocation}</span>
-              </div>
-            `;
-                },
-              },
-              z: 4, // Highest z-index to appear on top
-            },
-          ]
-        : []),
+      // Scatter series for Actual labels
+      {
+        name: "Actual Points",
+        type: "scatter",
+        data: chartData.value.actualScatterData,
+        symbol: "circle",
+        symbolSize: 8,
+        itemStyle: {
+          color: "#EF4444",
+          borderColor: "#FFFFFF",
+          borderWidth: 2,
+        },
+        label: {
+          show: true,
+          position: "top",
+          formatter: function (params) {
+            return params.data.label.formatter;
+          },
+          color: "#374151",
+          fontSize: 10,
+          fontWeight: "bold",
+          offset: [0, -10],
+        },
+        tooltip: {
+          show: false,
+        },
+        z: 4,
+      },
     ],
   };
 };
@@ -415,35 +315,23 @@ const getChartOptions = () => {
 // Initialize chart
 const initChart = () => {
   if (chartRef.value) {
-    // Use devicePixelRatio for better rendering on high-DPI screens
     chartInstance = echarts.init(chartRef.value, null, {
       renderer: "canvas",
-      useDirtyRect: true, // Improves performance
+      useDirtyRect: true,
       devicePixelRatio: window.devicePixelRatio,
     });
 
     // Apply options
     chartInstance.setOption(getChartOptions());
 
-    // Add hover interaction
+    // Add hover interaction to show/hide symbols on lines (if desired, currently symbols are 'none' for lines)
+    // This part can be removed if symbols are always hidden on lines.
     chartInstance.on("mouseover", { seriesIndex: "all" }, function () {
-      chartInstance.setOption({
-        series: [
-          { showSymbol: true },
-          { showSymbol: true },
-          { showSymbol: true },
-        ],
-      });
+      // No change needed if symbols are 'none' for lines and only scatter points have symbols
     });
 
     chartInstance.on("mouseout", { seriesIndex: "all" }, function () {
-      chartInstance.setOption({
-        series: [
-          { showSymbol: false },
-          { showSymbol: false },
-          { showSymbol: false },
-        ],
-      });
+      // No change needed
     });
   }
 };
@@ -456,9 +344,12 @@ watch(
       chartInstance.setOption(
         {
           series: [
-            { data: chartData.value.quotation },
-            { data: chartData.value.plan },
-            { data: chartData.value.actual },
+            { data: chartData.value.quotationLineData },
+            { data: chartData.value.planLineData },
+            { data: chartData.value.actualLineData },
+            { data: chartData.value.quotationScatterData },
+            { data: chartData.value.planScatterData },
+            { data: chartData.value.actualScatterData },
           ],
         },
         { notMerge: false }
@@ -518,7 +409,8 @@ onBeforeUnmount(() => {
 }
 
 /* Add a subtle shadow to the chart container for depth */
-.w-full.h-full {
+.w-full.h-48 {
+  /* Updated height class */
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   border-radius: 4px;
   overflow: hidden;
@@ -526,7 +418,8 @@ onBeforeUnmount(() => {
 }
 
 /* Add a subtle hover effect */
-.w-full.h-full:hover {
+.w-full.h-48:hover {
+  /* Updated height class */
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
 }
 

@@ -348,21 +348,6 @@ const emit = defineEmits(["project-deleted", "refresh-projects"]);
 
 const router = useRouter();
 
-const months = [
-  "Jan/25",
-  "Feb/25",
-  "Mar/25",
-  "Apr/25",
-  "May/25",
-  "Jun/25",
-  "Jul/25",
-  "Aug/25",
-  "Sep/25",
-  "Oct/25",
-  "Nov/25",
-  "Dec/25",
-];
-
 // Get the removeProject function and refetch from the useProjects composable
 const { removeProject, isDeleting, refetch, isLoading } = useProjects();
 
@@ -510,20 +495,4 @@ const handleDeleteProject = async () => {
     deleteError.value = error.message || "Failed to delete project";
   }
 };
-
-// We don't need a click outside handler anymore as the PopupMenu component handles this
-// But we'll keep it for backward compatibility during transition
-const handleClickOutside = (event) => {
-  // This is now handled by the PopupMenu component
-};
-
-// We don't need event listeners anymore as the PopupMenu component handles this
-// But we'll keep empty lifecycle hooks for backward compatibility during transition
-onMounted(() => {
-  // This is now handled by the PopupMenu component
-});
-
-onBeforeUnmount(() => {
-  // This is now handled by the PopupMenu component
-});
 </script>
