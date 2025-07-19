@@ -212,9 +212,6 @@ const props = defineProps({
   },
 });
 
-// Emit events
-const emit = defineEmits(["refresh"]);
-
 // States
 const transformedData = ref([]);
 const activeActionMenu = ref(null);
@@ -234,13 +231,233 @@ const {
   transformWorklogData,
 } = useWorklogData();
 
-// Functions
+// Transform worklog data using composable
+
+const viewWorklog = (worklog) => {
+  const STANDARD_WORK_DAY = worktimeOfday * 60; // Use worktimeOfday parameter
+
+  // Group worklogs by date
+  const worklogsByDate = {};
+
+  // Process each worklog and group by date
+  worklogs.forEach((worklog) => {
+    const date = worklog.date || worklog.created_at;
+    if (!date) return;
+
+    // Initialize date group if it doesn't exist
+    if (!worklogsByDate[date]) {
+      worklogsByDate[date] = {
+        date: date,
+        formattedDate: formatDate(date),
+        entries: [],
+        totalDuration: 0,
+        totalProgress: 0,
+      };
+    }
+
+    // Calculate duration in minutes
+    const durationInMinutes =
+      (worklog.duration?.hours || 0) * 60 + (worklog.duration?.minutes || 0);
+
+    // Calculate percentage of standard work day
+    const percentOfDay = Math.round(
+      (durationInMinutes / STANDARD_WORK_DAY) * 100
+    );
+
+    // Add to total duration for this date
+    worklogsByDate[date].totalDuration += durationInMinutes;
+
+    // Create entry for this worklog
+    const entry = {
+      id: `${worklog.id}-entry`,
+      worklog_id: worklog.id,
+      project_id: worklog.project_id,
+      project_name: worklog.project_name || getProjectName(worklog.project_id),
+      category: worklog.category || "Uncategorized",
+      duration: durationInMinutes,
+      formattedDuration: formatDuration(durationInMinutes),
+      percentOfDay: percentOfDay,
+      time_spent: `${percentOfDay}% (${formatDuration(durationInMinutes)})`,
+      progress: worklog.progress
+        ? Math.round(worklog.progress * 100)
+        : percentOfDay,
+      // color: getCategoryColor(worklog.category || "Uncategorized"),
+    };
+
+    // Add entry to the date group
+    worklogsByDate[date].entries.push(entry);
+  });
+
+  // Convert the grouped data to an array and calculate totals
+  const result = Object.values(worklogsByDate).map((dateGroup) => {
+    // Calculate total percentage of day (can exceed 100% for overtime)
+    const totalPercentOfDay = Math.round(
+      (dateGroup.totalDuration / STANDARD_WORK_DAY) * 100
+    );
+
+    // Calculate average progress across all entries
+    const avgProgress =
+      dateGroup.entries.length > 0
+        ? Math.round(
+            dateGroup.entries.reduce((sum, entry) => sum + entry.progress, 0) /
+              dateGroup.entries.length
+          )
+        : 0;
+
+    return {
+      id: dateGroup.date,
+      worklog_id: dateGroup.date,
+      date: dateGroup.date,
+      formattedDate: dateGroup.formattedDate,
+      duration: dateGroup.totalDuration,
+      formattedDuration: formatDuration(dateGroup.totalDuration),
+      percentOfDay: totalPercentOfDay,
+      overall_progress: avgProgress,
+
+      // Project information (using the first entry's project for the main row)
+      project:
+        dateGroup.entries.length > 0
+          ? {
+              name: `${dateGroup.entries.length} Projects`,
+              color: "#3B82F6",
+              initials: "MP", // Multiple Projects
+            }
+          : {
+              name: "No Projects",
+              color: "#6B7280",
+              initials: "NP",
+            },
+
+      // All entries for this date
+      entries: dateGroup.entries,
+    };
+  });
+
+  // Sort by date (newest first)
+  return result.sort((a, b) => new Date(b.date) - new Date(a.date));
+};
+
+// Transform nested worklog data structure
+const transformNestedWorklogData = (data) => {
+  const STANDARD_WORK_DAY = (data.worktimeOfday || 8) * 60; // Default to 8 hours
+
+  // Group worklogs by date
+  const worklogsByDate = {};
+
+  // Process worklog data
+  Object.entries(data.worklog).forEach(([date, dailyEntries]) => {
+    // Initialize date group if it doesn't exist
+    if (!worklogsByDate[date]) {
+      worklogsByDate[date] = {
+        date: date,
+        formattedDate: formatDate(date),
+        entries: [],
+        totalDuration: 0,
+        totalProgress: 0,
+      };
+    }
+
+    dailyEntries.forEach((entry) => {
+      Object.entries(entry).forEach(([projectName, categories]) => {
+        categories.forEach((categoryObj) => {
+          Object.entries(categoryObj).forEach(([categoryName, details]) => {
+            const worklogId = `${date}-${projectName}-${categoryName}`
+              .replace(/\s+/g, "-")
+              .toLowerCase();
+            const durationInMinutes = Math.round(details.work_time * 60);
+            const percentOfDay = Math.round(
+              (durationInMinutes / STANDARD_WORK_DAY) * 100
+            );
+            const progress = Math.round(details.progress * 100);
+
+            // Add to total duration for this date
+            worklogsByDate[date].totalDuration += durationInMinutes;
+
+            // Create entry for this worklog
+            const entryItem = {
+              id: `${worklogId}-entry`,
+              worklog_id: worklogId,
+              project_id: projectName,
+              project_name: projectName,
+              category: categoryName,
+              duration: durationInMinutes,
+              formattedDuration: formatDuration(durationInMinutes),
+              percentOfDay: percentOfDay,
+              time_spent: `${percentOfDay}% (${formatDuration(
+                durationInMinutes
+              )})`,
+              progress: progress,
+              // color: getCategoryColor(categoryName),
+            };
+
+            // Add entry to the date group
+            worklogsByDate[date].entries.push(entryItem);
+          });
+        });
+      });
+    });
+  });
+
+  // Convert the grouped data to an array and calculate totals
+  const result = Object.values(worklogsByDate).map((dateGroup) => {
+    // Calculate total percentage of day (can exceed 100% for overtime)
+    const totalPercentOfDay = Math.round(
+      (dateGroup.totalDuration / STANDARD_WORK_DAY) * 100
+    );
+
+    // Calculate average progress across all entries
+    const avgProgress =
+      dateGroup.entries.length > 0
+        ? Math.round(
+            dateGroup.entries.reduce((sum, entry) => sum + entry.progress, 0) /
+              dateGroup.entries.length
+          )
+        : 0;
+
+    return {
+      id: dateGroup.date,
+      worklog_id: dateGroup.date,
+      date: dateGroup.date,
+      formattedDate: dateGroup.formattedDate,
+      duration: dateGroup.totalDuration,
+      formattedDuration: formatDuration(dateGroup.totalDuration),
+      percentOfDay: totalPercentOfDay,
+      overall_progress: avgProgress,
+
+      // Project information for the main row
+      project:
+        dateGroup.entries.length > 0
+          ? {
+              name: `${dateGroup.entries.length} Projects`,
+              color: "#3B82F6",
+              initials: "MP", // Multiple Projects
+            }
+          : {
+              name: "No Projects",
+              color: "#6B7280",
+              initials: "NP",
+            },
+
+      // All entries for this date
+      entries: dateGroup.entries,
+    };
+  });
+
+  // Sort by date (newest first)
+  return result.sort((a, b) => new Date(b.date) - new Date(a.date));
+};
+
 const viewWorklog = (worklog) => {
   selectedWorklogId.value = worklog.id;
   selectedWorklogDate.value = worklog.date;
   showDetailModal.value = true;
   activeActionMenu.value = null;
 };
+
+// const editWorklog = (worklogId) => {
+//   useRouter().push(`/worklog/edit/${worklogId}`);
+//   activeActionMenu.value = null;
+// };
 
 // Delete worklog confirmation
 const confirmDeleteWorklog = async () => {
@@ -269,30 +486,3 @@ watch(
   { immediate: true, deep: true }
 );
 </script>
-
-<style scoped>
-/* Custom scrollbar styles */
-.overflow-x-auto::-webkit-scrollbar {
-  height: 6px;
-}
-
-.overflow-x-auto::-webkit-scrollbar-track {
-  background: #f1f5f9;
-  border-radius: 3px;
-}
-
-.overflow-x-auto::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 3px;
-}
-
-.overflow-x-auto::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
-}
-
-/* Hide scrollbar for Firefox */
-.overflow-x-auto {
-  scrollbar-width: thin;
-  scrollbar-color: #cbd5e1 #f1f5f9;
-}
-</style>

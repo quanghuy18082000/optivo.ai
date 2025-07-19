@@ -37,37 +37,14 @@
 
       <!-- Filter Content -->
       <div class="p-6 space-y-6 overflow-y-auto h-full pb-24">
-        <!-- Project Name Filter -->
+        <!-- Search Text Filter -->
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-3">
-            Project Name
+            Search Text
           </label>
           <Input
-            v-model="localFilters.projectName"
-            placeholder="Search by project name"
-          />
-        </div>
-
-        <!-- Member Name Filter -->
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-3">
-            Team Member
-          </label>
-          <Input
-            v-model="localFilters.memberName"
-            placeholder="Search by team member name"
-          />
-        </div>
-
-        <!-- Status Filter -->
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-3">
-            Project Status
-          </label>
-          <Select
-            v-model="localFilters.status"
-            :options="statusOptions"
-            placeholder="Select status"
+            v-model="localFilters.search_text"
+            placeholder="Search projects, members, or descriptions..."
           />
         </div>
 
@@ -89,6 +66,32 @@
             <label class="block text-xs text-gray-500 mb-1"> End Date </label>
             <DatePicker v-model="localFilters.end_date" placeholder="To date" />
           </div>
+        </div>
+
+        <!-- Project Selection -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-3">
+            Projects
+          </label>
+          <MultiSelect
+            v-model="localFilters.project_ids"
+            :options="projectOptions"
+            placeholder="Select projects..."
+            :loading="isLoadingProjects"
+          />
+        </div>
+
+        <!-- Team Members Selection -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-3">
+            Team Members
+          </label>
+          <MultiSelect
+            v-model="localFilters.member_ids"
+            :options="memberOptions"
+            placeholder="Select team members..."
+            :loading="isLoadingMembers"
+          />
         </div>
       </div>
 
@@ -123,20 +126,13 @@
 </template>
 
 <script setup>
-import { ref, watch } from "vue";
+import { ref, watch, onMounted } from "vue";
 import Input from "@/components/ui/Input.vue";
-import Select from "@/components/ui/Select.vue";
+import MultiSelect from "@/components/ui/MultiSelect.vue";
 import DatePicker from "@/components/ui/DatePicker.vue";
 import Button from "@/components/ui/Button.vue";
-
-// Status options for the dropdown
-const statusOptions = [
-  { label: "All", value: "" },
-  { label: "Active", value: "active" },
-  { label: "Completed", value: "completed" },
-  { label: "On Hold", value: "on_hold" },
-  { label: "Cancelled", value: "cancelled" },
-];
+import { getProjects } from "../services/projectService";
+import { getUsers } from "@/services/userService";
 
 const props = defineProps({
   isOpen: {
@@ -151,31 +147,93 @@ const props = defineProps({
 
 const emit = defineEmits(["close", "apply", "reset"]);
 
+// Local filter state
 const localFilters = ref({
-  projectName: "",
-  memberName: "",
-  status: "",
+  search_text: "",
   start_date: "",
-  endDate: "",
+  end_date: "",
+  project_ids: [],
+  member_ids: [],
   ...props.filters,
 });
 
+// Options for dropdowns
+const projectOptions = ref([]);
+const memberOptions = ref([]);
+const isLoadingProjects = ref(false);
+const isLoadingMembers = ref(false);
+
+// Load project options
+const loadProjectOptions = async () => {
+  try {
+    isLoadingProjects.value = true;
+    const response = await getProjects({});
+
+    // Transform projects data to options format
+    const projects = response?.data || response || [];
+    projectOptions.value = projects.map((project) => ({
+      label: project.name || project.project_name,
+      value: project.id || project.project_id,
+    }));
+  } catch (error) {
+    console.error("Error loading projects:", error);
+    projectOptions.value = [];
+  } finally {
+    isLoadingProjects.value = false;
+  }
+};
+
+// Load member options
+const loadMemberOptions = async () => {
+  try {
+    isLoadingMembers.value = true;
+    const response = await getUsers();
+
+    // Transform users data to options format
+    // getUsers returns { message: "string", data: [{ user_id: 0, name: "string" }] }
+    const users = response?.data || [];
+    memberOptions.value = users.map((user) => ({
+      label: user.name,
+      value: user.user_id,
+    }));
+  } catch (error) {
+    console.error("Error loading members:", error);
+    // Fallback: create some default member options if API fails
+    memberOptions.value = [];
+  } finally {
+    isLoadingMembers.value = false;
+  }
+};
+
+// Panel methods
 const closePanel = () => {
   emit("close");
 };
 
 const applyFilters = () => {
-  emit("apply", { ...localFilters.value });
+  // Clean up the filters before emitting
+  const cleanFilters = { ...localFilters.value };
+
+  // Remove empty arrays and empty strings
+  Object.keys(cleanFilters).forEach((key) => {
+    if (Array.isArray(cleanFilters[key]) && cleanFilters[key].length === 0) {
+      delete cleanFilters[key];
+    } else if (cleanFilters[key] === "" || cleanFilters[key] === null) {
+      delete cleanFilters[key];
+    }
+  });
+
+  emit("apply", cleanFilters);
   closePanel();
 };
 
 const resetFilters = () => {
   localFilters.value = {
-    projectName: "",
-    memberName: "",
-    status: "",
+    search_text: "",
     start_date: "",
-    endDate: "",
+    end_date: "",
+    project_ids: [],
+    member_ids: [],
   };
   emit("reset");
 };
@@ -184,8 +242,21 @@ const resetFilters = () => {
 watch(
   () => props.filters,
   (newFilters) => {
-    localFilters.value = { ...localFilters.value, ...newFilters };
+    localFilters.value = {
+      search_text: "",
+      start_date: "",
+      end_date: "",
+      project_ids: [],
+      member_ids: [],
+      ...newFilters,
+    };
   },
   { deep: true }
 );
+
+// Load options when component mounts
+onMounted(() => {
+  loadProjectOptions();
+  loadMemberOptions();
+});
 </script>

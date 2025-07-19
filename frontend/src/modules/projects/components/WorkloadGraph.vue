@@ -1,24 +1,85 @@
 <template>
   <div class="relative w-full">
-    {{ chartData }}
-    <!-- Main chart area -->
-    <div ref="chartRef" class="w-full h-48"></div>
-    <!-- Increased height to h-48 -->
+    <!-- Chart container with sticky Y-axis -->
+    <div class="relative">
+      <!-- Sticky Y-axis labels -->
+      <div
+        class="absolute left-0 top-0 z-10 bg-transparent border-r border-gray-200"
+        style="width: 50px; height: 192px"
+      >
+        <div class="relative h-full">
+          <!-- Y-axis labels positioned to match chart grid -->
+          <div
+            class="absolute text-xs text-gray-600 font-medium"
+            style="bottom: 0px; right: 8px"
+          >
+            0
+          </div>
+          <div
+            class="absolute text-xs text-gray-600 font-medium"
+            style="bottom: 22%; right: 8px"
+          >
+            0.5
+          </div>
+          <div
+            class="absolute text-xs text-gray-600 font-medium"
+            style="bottom: 45%; right: 8px"
+          >
+            1.0
+          </div>
+          <div
+            class="absolute text-xs text-gray-600 font-medium"
+            style="bottom: 67%; right: 8px"
+          >
+            1.5
+          </div>
+          <div
+            class="absolute text-xs text-gray-600 font-medium"
+            style="top: 2px; right: 8px"
+          >
+            2.0
+          </div>
 
-    <!-- Month labels below the chart -->
-    <div class="flex justify-between pr-2 pl-12 text-xs text-gray-500 mt-1">
-      <div>Jan</div>
-      <div>Feb</div>
-      <div>Mar</div>
-      <div>Apr</div>
-      <div>May</div>
-      <div>Jun</div>
-      <div>Jul</div>
-      <div>Aug</div>
-      <div>Sep</div>
-      <div>Oct</div>
-      <div>Nov</div>
-      <div>Dec</div>
+          <!-- Y-axis title -->
+        </div>
+      </div>
+
+      <!-- Main chart area with horizontal scroll -->
+      <div
+        ref="scrollContainer"
+        class="w-full overflow-x-auto"
+        @scroll="onScroll"
+        style="margin-left: 50px"
+      >
+        <div
+          ref="chartRef"
+          :style="{
+            width: chartWidth + 'px',
+            height: '192px',
+            minWidth: '100%',
+          }"
+        ></div>
+      </div>
+    </div>
+
+    <!-- Dynamic month labels below the chart -->
+    <div
+      ref="labelsContainer"
+      class="w-full overflow-x-auto"
+      style="overflow-x: hidden; margin-left: 50px"
+    >
+      <div
+        :style="{ width: chartWidth + 'px', minWidth: '100%' }"
+        class="flex justify-between pr-2 pl-12 text-xs text-gray-500 mt-1"
+      >
+        <div
+          v-for="label in monthLabels"
+          :key="label.key"
+          class="flex-shrink-0"
+        >
+          {{ label.text }}
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -34,7 +95,6 @@ import {
 } from "echarts/components";
 import { CanvasRenderer } from "echarts/renderers";
 import { format, getDaysInMonth } from "date-fns"; // Import format and getDaysInMonth
-import { transformWorkloadDataForChart } from "../utils/workloadDataTransformer"; // Import the new transformer
 
 // Register necessary ECharts components
 echarts.use([
@@ -54,13 +114,146 @@ const props = defineProps({
   },
 });
 
+const emit = defineEmits(["actualLineClick"]);
+
 const chartRef = ref(null);
+const scrollContainer = ref(null);
+const labelsContainer = ref(null);
 let chartInstance = null;
 
-// Prepare chart data using the new transformation
+// Use the already transformed workload data
 const chartData = computed(() => {
-  return transformWorkloadDataForChart(props.workload);
+  return props.workload;
 });
+
+// Calculate chart dimensions and labels based on date range
+const chartWidth = computed(() => {
+  if (
+    !chartData.value?.dateRange?.startDate ||
+    !chartData.value?.dateRange?.endDate
+  ) {
+    return 1200; // Default width increased
+  }
+
+  const startDate = new Date(chartData.value.dateRange.startDate);
+  const endDate = new Date(chartData.value.dateRange.endDate);
+
+  // Calculate total months
+  const yearDiff = endDate.getFullYear() - startDate.getFullYear();
+  const monthDiff = endDate.getMonth() - startDate.getMonth();
+  const totalMonths = yearDiff * 12 + monthDiff + 1;
+
+  // Increased to 150px per month for better actual data visibility, minimum 1200px
+  return Math.max(totalMonths * 150, 1200);
+});
+
+const monthLabels = computed(() => {
+  if (
+    !chartData.value?.dateRange?.startDate ||
+    !chartData.value?.dateRange?.endDate
+  ) {
+    // Fallback to default 12 months
+    return [
+      { key: "jan", text: "Jan" },
+      { key: "feb", text: "Feb" },
+      { key: "mar", text: "Mar" },
+      { key: "apr", text: "Apr" },
+      { key: "may", text: "May" },
+      { key: "jun", text: "Jun" },
+      { key: "jul", text: "Jul" },
+      { key: "aug", text: "Aug" },
+      { key: "sep", text: "Sep" },
+      { key: "oct", text: "Oct" },
+      { key: "nov", text: "Nov" },
+      { key: "dec", text: "Dec" },
+    ];
+  }
+
+  const startDate = new Date(chartData.value.dateRange.startDate);
+  const endDate = new Date(chartData.value.dateRange.endDate);
+  const labels = [];
+
+  const current = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
+
+  while (current <= endDate) {
+    labels.push({
+      key: `${current.getFullYear()}-${current.getMonth()}`,
+      text: format(current, "MMM/yy"),
+    });
+    current.setMonth(current.getMonth() + 1);
+  }
+
+  return labels;
+});
+
+// Sync scroll between chart and labels
+const onScroll = () => {
+  if (scrollContainer.value && labelsContainer.value) {
+    labelsContainer.value.scrollLeft = scrollContainer.value.scrollLeft;
+  }
+};
+
+// Handle click on Actual line
+const handleActualLineClick = (params) => {
+  if (
+    !chartData.value?.actualLineData ||
+    !chartData.value?.dateRange?.referenceDate
+  ) {
+    return;
+  }
+
+  const xValue = params.value[0]; // X-axis value
+  const referenceDate = new Date(chartData.value.dateRange.referenceDate);
+
+  // Calculate the start date of the clicked week
+  const monthsFromReference = Math.floor(xValue);
+  const dayFraction = xValue - monthsFromReference;
+
+  const targetDate = new Date(referenceDate);
+  targetDate.setMonth(targetDate.getMonth() + monthsFromReference);
+
+  const daysInMonth = getDaysInMonth(targetDate);
+  const dayOfMonth = Math.round(dayFraction * (daysInMonth - 1)) + 1;
+  targetDate.setDate(dayOfMonth);
+
+  // For actual data, each point represents a week
+  // Calculate week start (Monday) and end (Sunday)
+  const dayOfWeek = targetDate.getDay();
+  const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek; // Sunday = 0, Monday = 1
+
+  const weekStart = new Date(targetDate);
+  weekStart.setDate(targetDate.getDate() + mondayOffset);
+
+  const weekEnd = new Date(weekStart);
+  weekEnd.setDate(weekStart.getDate() + 6);
+
+  // Format dates for API (YYYY-MM-DD)
+  const createdAfter = format(weekStart, "yyyy-MM-dd");
+  const createdBefore = format(weekEnd, "yyyy-MM-dd");
+
+  // Emit event with date range
+  emit("actualLineClick", {
+    createdAfter,
+    createdBefore,
+    weekStart,
+    weekEnd,
+  });
+};
+
+// Calculate max value for xAxis
+const getXAxisMax = () => {
+  if (
+    !chartData.value?.dateRange?.startDate ||
+    !chartData.value?.dateRange?.endDate
+  ) {
+    return 12; // Default to 12 months
+  }
+  const startDate = new Date(chartData.value.dateRange.startDate);
+  const endDate = new Date(chartData.value.dateRange.endDate);
+  const yearDiff = endDate.getFullYear() - startDate.getFullYear();
+  const monthDiff = endDate.getMonth() - startDate.getMonth();
+  return yearDiff * 12 + monthDiff + 1;
+};
 
 // Chart options
 const getChartOptions = () => {
@@ -71,8 +264,8 @@ const getChartOptions = () => {
       top: 10,
       right: 15,
       bottom: 5,
-      left: 30,
-      containLabel: true,
+      left: 10, // Reduced left margin since we have external sticky yAxis
+      containLabel: false, // Don't contain labels since we handle them externally
     },
     tooltip: {
       trigger: "axis",
@@ -105,13 +298,25 @@ const getChartOptions = () => {
 
         // Get the x-axis value from the first line parameter
         const xValue = lineParams[0].value[0];
-        const monthIndex = Math.floor(xValue);
-        const dayFraction = xValue - monthIndex;
-        const currentYear = new Date().getFullYear();
-        const daysInMonth = getDaysInMonth(new Date(currentYear, monthIndex));
-        const dayOfMonth = Math.round(dayFraction * (daysInMonth - 1)) + 1;
-        const date = new Date(currentYear, monthIndex, dayOfMonth);
-        const formattedDate = format(date, "dd/MMM/yy");
+
+        // Calculate date based on reference date and x-axis value
+        let formattedDate = "N/A";
+        if (chartData.value?.dateRange?.referenceDate) {
+          const referenceDate = new Date(
+            chartData.value.dateRange.referenceDate
+          );
+          const monthsFromReference = Math.floor(xValue);
+          const dayFraction = xValue - monthsFromReference;
+
+          const targetDate = new Date(referenceDate);
+          targetDate.setMonth(targetDate.getMonth() + monthsFromReference);
+
+          const daysInMonth = getDaysInMonth(targetDate);
+          const dayOfMonth = Math.round(dayFraction * (daysInMonth - 1)) + 1;
+          targetDate.setDate(dayOfMonth);
+
+          formattedDate = format(targetDate, "dd/MMM/yy");
+        }
 
         let result = `<div style="font-weight: 600; margin-bottom: 6px; font-size: 13px;">${formattedDate}</div>`;
         lineParams.forEach((param) => {
@@ -137,8 +342,8 @@ const getChartOptions = () => {
     },
     xAxis: {
       type: "value", // Change to value type for precise date positioning
-      min: 0, // Corresponds to January
-      max: 12, // Corresponds to end of December
+      min: 0, // Start from reference date
+      max: getXAxisMax(),
       interval: 1, // Major ticks at each month boundary
       axisLabel: {
         show: false, // Hide ECharts labels, use custom ones below
@@ -161,22 +366,20 @@ const getChartOptions = () => {
     yAxis: {
       // Single Y-axis for all data
       type: "value",
-      name: "Allocation Rate",
-      nameLocation: "middle",
-      nameGap: 40,
-      nameTextStyle: {
-        fontSize: 10,
-        color: "#6b7280",
-      },
       min: 0,
       max: 2,
       interval: 0.5,
       axisLabel: {
-        fontSize: 9,
-        color: "#6b7280",
-        formatter: "{value}",
+        show: false, // Hide ECharts Y-axis labels since we have custom sticky ones
+      },
+      axisLine: {
+        show: false, // Hide Y-axis line
+      },
+      axisTick: {
+        show: false, // Hide Y-axis ticks
       },
       splitLine: {
+        show: true, // Keep horizontal grid lines
         lineStyle: {
           color: "#e5e7eb",
           type: "dashed",
@@ -237,7 +440,7 @@ const getChartOptions = () => {
           borderWidth: 2,
         },
         label: {
-          show: true,
+          show: false, // Hide labels to prevent overlap
           position: "top",
           formatter: function (params) {
             return params.data.label.formatter; // Use the formatter from the data item
@@ -248,7 +451,7 @@ const getChartOptions = () => {
           offset: [0, -10], // Adjust label position
         },
         tooltip: {
-          show: false, // Hide tooltip for scatter points as labels are shown
+          show: false, // Hide tooltip for scatter points to avoid duplication with line tooltips
         },
         z: 4, // On top
       },
@@ -265,8 +468,9 @@ const getChartOptions = () => {
           borderWidth: 2,
         },
         label: {
-          show: true,
+          show: false, // Hide labels to prevent overlap
           position: "top",
+
           formatter: function (params) {
             return params.data.label.formatter;
           },
@@ -293,7 +497,7 @@ const getChartOptions = () => {
           borderWidth: 2,
         },
         label: {
-          show: true,
+          show: false, // Hide labels to prevent overlap
           position: "top",
           formatter: function (params) {
             return params.data.label.formatter;
@@ -332,6 +536,17 @@ const initChart = () => {
 
     chartInstance.on("mouseout", { seriesIndex: "all" }, function () {
       // No change needed
+    });
+
+    // Add click handler for Actual line
+    chartInstance.on("click", function (params) {
+      // Only handle clicks on the Actual line series
+      if (
+        params.seriesName === "Actual Points" &&
+        params.seriesType === "scatter"
+      ) {
+        handleActualLineClick(params);
+      }
     });
   }
 };
@@ -409,18 +624,39 @@ onBeforeUnmount(() => {
 }
 
 /* Add a subtle shadow to the chart container for depth */
-.w-full.h-48 {
-  /* Updated height class */
+.overflow-x-auto > div {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   border-radius: 4px;
-  overflow: hidden;
   transition: all 0.3s ease;
 }
 
 /* Add a subtle hover effect */
-.w-full.h-48:hover {
-  /* Updated height class */
+.overflow-x-auto > div:hover {
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
+}
+
+/* Custom scrollbar styling */
+.overflow-x-auto {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 #f1f5f9;
+}
+
+.overflow-x-auto::-webkit-scrollbar {
+  height: 6px;
+}
+
+.overflow-x-auto::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 3px;
+}
+
+.overflow-x-auto::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+.overflow-x-auto::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }
 
 /* Ensure the chart is visible in all browsers */
@@ -442,5 +678,42 @@ onBeforeUnmount(() => {
   font-size: 0.7rem;
   color: #6b7280;
   margin-top: 2px;
+}
+
+.flex-shrink-0 {
+  min-width: 120px;
+  text-align: center;
+  font-weight: 500;
+}
+
+/* Ensure labels container doesn't show scrollbar */
+div[style*="overflow-x: hidden"] {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+div[style*="overflow-x: hidden"]::-webkit-scrollbar {
+  display: none;
+}
+
+/* Sticky Y-axis styling */
+.sticky-yaxis {
+  box-shadow: 2px 0 4px rgba(0, 0, 0, 0.05);
+  backdrop-filter: blur(8px);
+}
+
+/* Ensure sticky yAxis stays on top */
+.z-10 {
+  z-index: 10;
+}
+
+/* Smooth transition for sticky elements */
+.sticky-yaxis div {
+  transition: all 0.2s ease;
+}
+
+/* Better alignment for rotated text */
+.transform.-rotate-90 {
+  transform-origin: center;
 }
 </style>

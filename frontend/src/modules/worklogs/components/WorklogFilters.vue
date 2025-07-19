@@ -110,8 +110,13 @@
         >
           <h4 class="text-sm font-medium text-blue-900 mb-2">Active Filters</h4>
           <div class="space-y-1 text-xs text-blue-700">
-            <div v-if="localFilters.projectId">
-              Project: {{ getProjectName(localFilters.projectId) }}
+            <div v-if="localFilters.projectId" class="flex items-center gap-1">
+              <span>Project:</span>
+              <TruncateText
+                :name="getProjectName(localFilters.projectId)"
+                text-class="text-xs text-blue-700"
+                :max-length="20"
+              />
             </div>
             <div v-if="localFilters.category">
               Category: {{ localFilters.category }}
@@ -160,6 +165,7 @@ import Select from "@/components/ui/Select.vue";
 import MultiSelect from "@/components/ui/MultiSelect.vue";
 import DatePicker from "@/components/ui/DatePicker.vue";
 import Button from "@/components/ui/Button.vue";
+import TruncateText from "@/components/ui/TruncateText.vue";
 import { getProjects, getCategories } from "../services/worklogService";
 import {
   format,

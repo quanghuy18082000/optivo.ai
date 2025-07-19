@@ -220,9 +220,12 @@
               <!-- Project -->
               <div class="col-span-2">
                 <div
-                  class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800"
+                  class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 max-w-full"
                 >
-                  {{ entry.project_name }}
+                  <TruncateText
+                    :name="entry.project_name"
+                    text-class="text-sm font-medium text-blue-800"
+                  />
                 </div>
               </div>
 
@@ -343,6 +346,7 @@ import { ref, computed, watch } from "vue";
 import { useRouter } from "vue-router";
 import Modal from "@/components/ui/Modal.vue";
 import ConfirmModal from "@/components/ui/ConfirmModal.vue";
+import TruncateText from "@/components/ui/TruncateText.vue";
 import {
   getWorklogDetailsByDate,
   deleteWorklogEntry,

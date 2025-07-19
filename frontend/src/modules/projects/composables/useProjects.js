@@ -6,28 +6,22 @@ export function useProjects() {
   const queryClient = useQueryClient()
 
   const filters = ref({
-    projectName: "",
-    status: "",
-    startDate: "",
-    endDate: "",
-    memberName: ""
+    search_text: "",
+    start_date: "",
+    end_date: "",
+    project_ids: [],
+    member_ids: []
   })
 
   const queryParams = computed(() => {
     const params = {}
     
     // Map frontend filter names to API parameter names
-    if (filters.value.projectName) {
-      params.name = filters.value.projectName // API expects 'name' parameter
+    if (filters.value.search_text) {
+      params.search_text = filters.value.search_text
     }
     
-    // Add other filter parameters as needed
-    // For example, if we have status filter:
-    if (filters.value.status) {
-      params.status = filters.value.status
-    }
-    
-    // If we have date range filters:
+    // Date range filters
     if (filters.value.start_date) {
       params.start_date = filters.value.start_date
     }
@@ -36,9 +30,14 @@ export function useProjects() {
       params.end_date = filters.value.end_date
     }
     
-    // If we have member name filter:
-    if (filters.value.memberName) {
-      params.member_name = filters.value.memberName
+    // Project IDs filter (array)
+    if (filters.value.project_ids && filters.value.project_ids.length > 0) {
+      params.project_ids = filters.value.project_ids
+    }
+    
+    // Member IDs filter (array)
+    if (filters.value.member_ids && filters.value.member_ids.length > 0) {
+      params.member_ids = filters.value.member_ids
     }
     
     return params
@@ -81,11 +80,11 @@ export function useProjects() {
 
   const resetFilters = () => {
     filters.value = {
-      projectName: "",
-      status: "",
-      startDate: "",
-      endDate: "",
-      memberName: ""
+      search_text: "",
+      start_date: "",
+      end_date: "",
+      project_ids: [],
+      member_ids: []
     }
   }
 

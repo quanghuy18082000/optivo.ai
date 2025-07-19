@@ -164,78 +164,146 @@
         </div>
       </div>
 
-      <!-- Worklog List -->
+      <!-- Worklog Table (same as WorklogTable component) -->
       <div class="flex-1 overflow-y-auto">
+        <!-- Table Header -->
+        <div class="bg-gray-50 px-6 py-4 border-b border-gray-200">
+          <div
+            class="grid grid-cols-12 gap-4 text-sm font-medium text-gray-500 uppercase tracking-wider"
+          >
+            <div class="col-span-2">Date</div>
+            <div class="col-span-2">Project</div>
+            <div class="col-span-2">Category</div>
+            <div class="col-span-2">Time</div>
+            <div class="col-span-2">Progress</div>
+            <div class="col-span-2">Actions</div>
+          </div>
+        </div>
+
+        <!-- Table Body -->
         <div class="divide-y divide-gray-200">
           <div
-            v-for="dayLog in processedWorklogData"
-            :key="dayLog.date"
-            class="p-6"
+            v-for="worklog in filteredData"
+            :key="worklog.id"
+            class="px-6 py-4 hover:bg-gray-50 transition-colors"
           >
-            <!-- Day Header -->
-            <div class="flex items-center justify-between mb-4">
-              <div class="flex items-center gap-3">
-                <h3 class="text-lg font-semibold text-gray-900">
-                  {{ dayLog.dayName }}
-                </h3>
-                <span class="text-sm text-gray-500">{{
-                  dayLog.formattedDate
+            <!-- Date Row -->
+            <div
+              class="grid grid-cols-12 gap-4 items-center bg-blue-50 p-2 rounded-md"
+            >
+              <div class="col-span-2">
+                <div class="flex items-center gap-2">
+                  <div
+                    class="w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center"
+                  >
+                    <svg
+                      class="w-3 h-3 text-white"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                      />
+                    </svg>
+                  </div>
+                  <span class="text-sm font-medium text-gray-900">{{
+                    worklog.formattedDate
+                  }}</span>
+                </div>
+              </div>
+              <div class="col-span-2"></div>
+              <div class="col-span-2"></div>
+              <div class="col-span-2">
+                <span class="text-sm font-medium text-gray-900">{{
+                  worklog.formattedDuration
                 }}</span>
               </div>
-              <div class="text-sm text-gray-600">
-                Total: {{ dayLog.totalTime }}
+              <div class="col-span-2">
+                <div class="flex items-center gap-2">
+                  <div
+                    class="w-full bg-gray-200 rounded-full h-2 max-w-[100px]"
+                  >
+                    <div
+                      class="h-2 rounded-full transition-all duration-300"
+                      :class="getProgressColor(worklog.percentOfDay)"
+                      :style="{
+                        width: Math.min(worklog.percentOfDay, 100) + '%',
+                      }"
+                    ></div>
+                  </div>
+                  <span class="text-sm text-gray-600 min-w-[40px]"
+                    >{{ worklog.percentOfDay }}%</span
+                  >
+                </div>
+              </div>
+              <div class="col-span-2">
+                <button
+                  class="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                  @click="viewEntry(worklog?.date)"
+                >
+                  View Details
+                </button>
               </div>
             </div>
 
-            <!-- Activities for the day -->
-            <div class="space-y-3">
+            <!-- Entries for this date -->
+            <div class="mt-2 space-y-1">
               <div
-                v-for="activity in dayLog.activities"
-                :key="activity.id"
-                class="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                v-for="entry in worklog.entries"
+                :key="entry.id"
+                class="grid grid-cols-12 gap-4 items-center py-2 px-2 hover:bg-gray-50 rounded cursor-pointer transition-colors"
+                @click="viewEntry(entry)"
               >
-                <div class="flex items-center gap-4 flex-1">
-                  <!-- Category -->
-                  <div
-                    class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium"
-                    :class="getCategoryStyle(activity.category)"
+                <div class="col-span-2"></div>
+                <div class="col-span-2">
+                  <span
+                    class="text-sm text-gray-900 block"
+                    :title="entry.project_name"
+                    >{{ entry.project_name }}</span
                   >
-                    {{ activity.category }}
-                  </div>
-
-                  <!-- Time and Progress Bar -->
-                  <div class="flex-1">
-                    <div class="flex items-center justify-between mb-1">
-                      <span class="text-sm font-medium text-gray-900">
-                        {{ activity.timeSpent }}
-                      </span>
-                      <span class="text-sm text-gray-500">
-                        {{ activity.percentage }}
-                      </span>
-                    </div>
-                    <div class="w-full bg-gray-200 rounded-full h-2">
+                </div>
+                <div class="col-span-2">
+                  <span
+                    class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium max-w-full"
+                    :class="getCategoryStyle(entry.category)"
+                    :title="entry.category"
+                  >
+                    {{ entry.category }}
+                  </span>
+                </div>
+                <div class="col-span-2">
+                  <span class="text-sm text-gray-900">{{
+                    entry.formattedDuration
+                  }}</span>
+                </div>
+                <div class="col-span-2">
+                  <div class="flex items-center gap-2">
+                    <div
+                      class="w-full bg-gray-200 rounded-full h-2 max-w-[100px]"
+                    >
                       <div
-                        class="bg-blue-500 h-2 rounded-full transition-all duration-300"
-                        :style="{ width: activity.percentage }"
+                        class="h-2 rounded-full transition-all duration-300"
+                        :class="getProgressColor(entry.progress)"
+                        :style="{ width: Math.min(entry.progress, 100) + '%' }"
                       ></div>
                     </div>
+                    <span class="text-sm text-gray-600 min-w-[40px]"
+                      >{{ entry.progress }}%</span
+                    >
                   </div>
                 </div>
-              </div>
-
-              <!-- No activities state -->
-              <div
-                v-if="dayLog.activities.length === 0"
-                class="text-center py-4"
-              >
-                <span class="text-gray-500 text-sm">N/A</span>
+                <div class="col-span-2"></div>
               </div>
             </div>
           </div>
         </div>
 
         <!-- Empty State -->
-        <div v-if="!processedWorklogData.length" class="text-center py-12">
+        <div v-if="!filteredData.length" class="text-center py-12">
           <svg
             class="mx-auto h-12 w-12 text-gray-400"
             fill="none"
@@ -271,13 +339,24 @@
       </div>
     </div>
   </Modal>
+
+  <!-- Worklog Detail Modal -->
+  <WorklogDetailModal
+    :is-open="showWorklogDetailModal"
+    :worklog-id="selectedWorklogId"
+    :date="selectedWorklogDate"
+    @close="closeWorklogDetailModal"
+    @refresh="fetchMemberWorklog"
+  />
 </template>
 
 <script setup>
 import { ref, computed, watch } from "vue";
 import Modal from "@/components/ui/Modal.vue";
+import WorklogDetailModal from "@/modules/worklogs/components/WorklogDetailModal.vue";
 import { getWorklogs } from "@/modules/worklogs/services/worklogService";
 import { format, parseISO } from "date-fns";
+import { useWorklogData } from "@/modules/worklogs/composables/useWorklogData";
 
 const props = defineProps({
   isOpen: {
@@ -300,6 +379,14 @@ const props = defineProps({
     type: String,
     default: "",
   },
+  createdAfter: {
+    type: String,
+    default: null,
+  },
+  createdBefore: {
+    type: String,
+    default: null,
+  },
 });
 
 const emit = defineEmits(["close"]);
@@ -308,185 +395,85 @@ const isLoading = ref(false);
 const error = ref(null);
 const worklogData = ref(null);
 
-// Category color mapping
-const getCategoryStyle = (category) => {
-  const styles = {
-    Communication: "bg-blue-100 text-blue-800",
-    Coding: "bg-green-100 text-green-800",
-    Testing: "bg-yellow-100 text-yellow-800",
-    Meeting: "bg-purple-100 text-purple-800",
-    Design: "bg-pink-100 text-pink-800",
-    Documentation: "bg-indigo-100 text-indigo-800",
-    Research: "bg-gray-100 text-gray-800",
-    Planning: "bg-orange-100 text-orange-800",
-    Review: "bg-teal-100 text-teal-800",
-    Learning: "bg-red-100 text-red-800",
-  };
-  return styles[category] || "bg-gray-100 text-gray-800";
-};
+// WorklogDetailModal state
+const showWorklogDetailModal = ref(false);
+const selectedWorklogId = ref(null);
+const selectedWorklogDate = ref("");
 
-// Format time duration
-const formatDuration = (hours, minutes) => {
-  if (hours === 0 && minutes === 0) return "0h";
-  if (hours === 0) return `${minutes}m`;
-  if (minutes === 0) return `${hours}h`;
-  return `${hours}h ${minutes}m`;
-};
+// Use worklog data composable
+const {
+  getCategoryStyle,
+  formatDuration,
+  getProgressColor,
+  transformWorklogData,
+} = useWorklogData();
 
-// Calculate percentage of 8-hour workday
-const calculatePercentage = (hours, minutes) => {
-  const totalMinutes = hours * 60 + minutes;
-  const workdayMinutes = 8 * 60; // 8 hours
-  return Math.round((totalMinutes / workdayMinutes) * 100);
-};
-
-// Process worklog data for display
-const processedWorklogData = computed(() => {
-  // Check if we have data in the expected format
-  if (!worklogData.value) return [];
-
-  const days = [];
-
-  // The response structure might be different than expected
-  // Let's handle different possible structures
-  let worklogEntries = {};
-
-  // Check if the data is directly in worklogData.value
-  if (typeof worklogData.value === "object" && worklogData.value !== null) {
-    // If it has a data property, use that
-    if (worklogData.value.data && typeof worklogData.value.data === "object") {
-      worklogEntries = worklogData.value.data;
-    }
-    // Otherwise, use the worklogData.value directly
-    else {
-      worklogEntries = worklogData.value;
-    }
-  }
-
-  // If worklogEntries is not an object with date keys, return empty array
-  if (typeof worklogEntries !== "object" || worklogEntries === null) {
-    console.error("Unexpected worklog data format:", worklogData.value);
-    return [];
-  }
-
-  // Get all unique dates and sort them (newest first)
-  const allDates = Object.keys(worklogEntries).sort(
-    (a, b) => new Date(b) - new Date(a)
-  );
-
-  allDates.forEach((date) => {
-    const activities = [];
-    // Each date should contain an array of worklog entries
-    const dayEntries = worklogEntries[date];
-
-    // Check if dayEntries is an array before using forEach
-    if (Array.isArray(dayEntries)) {
-      // Process each day's entries
-      dayEntries.forEach((entry) => {
-        // We don't need to filter by project_id here since we're already
-        // filtering in the API call, but let's keep a safety check
-        if (!props.projectId || entry.project_id === props.projectId) {
-          const category = entry.category || "Uncategorized";
-          const hours = Math.floor(entry.work_time || 0);
-          const minutes = Math.round(((entry.work_time || 0) - hours) * 60);
-          const percentage = calculatePercentage(hours, minutes);
-
-          activities.push({
-            id: entry.id || `${date}-${category}-${Math.random()}`,
-            category,
-            timeSpent: formatDuration(hours, minutes),
-            percentage: `${percentage}%`,
-            hours,
-            minutes,
-            description: entry.description || "",
-          });
-        }
-      });
-    } else {
-      console.warn(`Day entries for ${date} is not an array:`, dayEntries);
-    }
-
-    // Only add days that have activities
-    if (activities.length > 0) {
-      // Calculate total time for the day
-      const totalMinutes = activities.reduce((sum, activity) => {
-        return sum + (activity.hours * 60 + activity.minutes);
-      }, 0);
-      const totalHours = Math.floor(totalMinutes / 60);
-      const remainingMinutes = totalMinutes % 60;
-
-      days.push({
-        date,
-        dayName: format(parseISO(date), "EEEE"),
-        formattedDate: format(parseISO(date), "dd/MMM/yyyy"),
-        activities,
-        totalTime: formatDuration(totalHours, remainingMinutes),
-        totalMinutes,
-      });
-    }
-  });
-
-  return days;
+// Process worklog data for display (same as WorklogTable)
+const transformedData = computed(() => {
+  return transformWorklogData(worklogData.value);
 });
 
-// Computed statistics
-const totalDays = computed(() => {
-  try {
-    return processedWorklogData.value?.length || 0;
-  } catch (error) {
-    console.error("Error calculating total days:", error);
-    return 0;
+// Filter data by project if needed
+const filteredData = computed(() => {
+  if (!props.projectName && !props.projectId) {
+    return transformedData.value;
   }
+
+  const projectFilter = props.projectName || props.projectId;
+  return transformedData.value
+    .map((day) => ({
+      ...day,
+      entries: day.entries.filter(
+        (entry) =>
+          entry.project_name === projectFilter ||
+          entry.project_name.includes(projectFilter) ||
+          entry.project_id === projectFilter ||
+          projectFilter.toString() === entry.project_name ||
+          entry.project_name
+            .toLowerCase()
+            .includes(projectFilter.toString().toLowerCase())
+      ),
+    }))
+    .filter((day) => day.entries.length > 0);
 });
 
+// Calculate summary stats
+const totalDays = computed(() => filteredData.value.length);
 const totalTimeLogged = computed(() => {
-  try {
-    if (!processedWorklogData.value || !processedWorklogData.value.length) {
-      return "0h";
-    }
-
-    const totalMinutes = processedWorklogData.value.reduce((sum, day) => {
-      return sum + (day.totalMinutes || 0);
-    }, 0);
-    const hours = Math.floor(totalMinutes / 60);
-    const minutes = totalMinutes % 60;
-    return formatDuration(hours, minutes);
-  } catch (error) {
-    console.error("Error calculating total time logged:", error);
-    return "0h";
-  }
+  const totalMinutes = filteredData.value.reduce(
+    (sum, day) => sum + day.duration,
+    0
+  );
+  return formatDuration(totalMinutes);
 });
-
 const averagePerDay = computed(() => {
-  try {
-    if (
-      !processedWorklogData.value ||
-      !processedWorklogData.value.length ||
-      totalDays.value === 0
-    ) {
-      return "0h";
-    }
-
-    const totalMinutes = processedWorklogData.value.reduce((sum, day) => {
-      return sum + (day.totalMinutes || 0);
-    }, 0);
-    const avgMinutes = Math.round(totalMinutes / totalDays.value);
-    const hours = Math.floor(avgMinutes / 60);
-    const minutes = avgMinutes % 60;
-    return formatDuration(hours, minutes);
-  } catch (error) {
-    console.error("Error calculating average per day:", error);
-    return "0h";
-  }
+  if (totalDays.value === 0) return "0h";
+  const totalMinutes = filteredData.value.reduce(
+    (sum, day) => sum + day.duration,
+    0
+  );
+  return formatDuration(Math.round(totalMinutes / totalDays.value));
 });
 
 const dateRangeText = computed(() => {
-  if (!processedWorklogData.value || !processedWorklogData.value.length) {
+  // If we have specific date range from props, use that
+  if (props.createdAfter && props.createdBefore) {
+    try {
+      const startDate = format(parseISO(props.createdAfter), "dd/MM/yyyy");
+      const endDate = format(parseISO(props.createdBefore), "dd/MM/yyyy");
+      return `${startDate} - ${endDate}`;
+    } catch (error) {
+      console.error("Error formatting props date range:", error);
+    }
+  }
+
+  // Otherwise, use data from filtered worklog
+  if (!filteredData.value || !filteredData.value.length) {
     return "No data";
   }
 
   try {
-    const dates = processedWorklogData.value.map((d) => d.date).sort();
+    const dates = filteredData.value.map((d) => d.date).sort();
     if (dates.length === 0) return "No data";
 
     const startDate = format(parseISO(dates[0]), "dd/MM/yyyy");
@@ -508,16 +495,24 @@ const fetchMemberWorklog = async () => {
   try {
     // Call the worklog API with filters for user_id and project_id
     // The API endpoint is /worklogs/list/grouped-by-date
-    const response = await getWorklogs({
-      // Use the correct parameter names as expected by the API
+    const params = {
       user_id: props.memberId,
       project_id: props.projectId,
-      // We're not filtering by date as requested
-    });
+    };
+
+    // Add date range filters if provided
+    if (props.createdAfter) {
+      params.created_after = props.createdAfter;
+    }
+    if (props.createdBefore) {
+      params.created_before = props.createdBefore;
+    }
+
+    const response = await getWorklogs(params);
 
     // The response structure might be different from what the component expects
     // Make sure we're handling it correctly
-    worklogData.value = response;
+    worklogData.value = response.data;
   } catch (err) {
     console.error("Failed to fetch member worklog:", err);
     error.value = err.message || "Failed to fetch worklog data";
@@ -526,14 +521,34 @@ const fetchMemberWorklog = async () => {
   }
 };
 
+// View entry details (similar to WorklogTable)
+const viewEntry = (entry) => {
+  selectedWorklogId.value = entry;
+  selectedWorklogDate.value = entry;
+  showWorklogDetailModal.value = true;
+};
+
+// Close WorklogDetailModal
+const closeWorklogDetailModal = () => {
+  showWorklogDetailModal.value = false;
+  selectedWorklogId.value = null;
+  selectedWorklogDate.value = "";
+};
+
 const closeModal = () => {
   emit("close");
 };
 
 // Fetch data when modal is opened and memberId/projectId are available
 watch(
-  () => [props.isOpen, props.memberId, props.projectId],
-  ([isOpen, memberId, projectId]) => {
+  () => [
+    props.isOpen,
+    props.memberId,
+    props.projectId,
+    props.createdAfter,
+    props.createdBefore,
+  ],
+  ([isOpen, memberId, projectId, createdAfter, createdBefore]) => {
     if (isOpen && memberId && projectId) {
       worklogData.value = null; // Reset data before fetching
       fetchMemberWorklog();

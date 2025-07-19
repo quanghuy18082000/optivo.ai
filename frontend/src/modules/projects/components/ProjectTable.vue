@@ -48,13 +48,12 @@
         </div>
       </div>
       <div
-        class="grid grid-cols-[1fr_1fr_1fr_4fr_0.5fr] gap-4 text-sm font-medium text-gray-500 uppercase tracking-wider"
+        class="grid grid-cols-[1fr_0.5fr_0.5fr_5fr] gap-4 text-sm font-medium text-gray-500 uppercase tracking-wider"
       >
         <div>Project name</div>
         <div>Member</div>
         <div>Position</div>
         <div class="text-center">Workload</div>
-        <div>Actions</div>
       </div>
     </div>
 
@@ -66,9 +65,7 @@
           class="px-6 py-4 hover:bg-gray-50 transition-colors cursor-pointer"
           @click="toggleProject(project.id)"
         >
-          <div
-            class="grid grid-cols-[1fr_1fr_1fr_4fr_0.5fr] gap-4 items-center"
-          >
+          <div class="flex items-center justify-between">
             <div class="flex items-center gap-2">
               <button class="p-1 text-gray-400 hover:text-gray-600">
                 <svg
@@ -90,9 +87,6 @@
                 project.name
               }}</span>
             </div>
-            <div></div>
-            <div></div>
-            <div></div>
             <div class="flex justify-end">
               <PopupMenu
                 v-model="projectMenus[project.id]"
@@ -170,7 +164,7 @@
             class="px-6 py-4 border-t border-gray-200 hover:bg-gray-100 transition-colors"
           >
             <div
-              class="grid grid-cols-[1fr_1fr_1fr_4fr_0.5fr] gap-4 items-center"
+              class="grid grid-cols-[1fr_0.5fr_0.5fr_5fr] gap-4 items-center"
             >
               <div></div>
               <div>
@@ -182,88 +176,12 @@
                 <span class="text-sm text-gray-600">{{ member.position }}</span>
               </div>
               <div class="relative overflow-hidden">
-                <WorkloadGraph :workload="member.workload" />
-              </div>
-              <div class="flex justify-end gap-2">
-                <!-- View Worklog Button -->
-                <button
-                  @click.stop="viewMemberWorklog(member, project)"
-                  class="p-2 text-blue-500 hover:text-blue-700 transition-colors rounded-lg hover:bg-blue-50"
-                  title="View Worklog"
-                >
-                  <svg
-                    class="w-5 h-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                    />
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                    />
-                  </svg>
-                </button>
-
-                <!-- Actions Menu -->
-                <PopupMenu
-                  v-model="memberMenus[member.id]"
-                  placement="bottom-end"
-                  :offset="8"
-                  width="48"
-                  min-width="12rem"
-                >
-                  <template #trigger>
-                    <button
-                      @click.stop="toggleMemberMenu(member.id)"
-                      class="p-2 text-gray-400 hover:text-gray-600 transition-colors rounded-lg hover:bg-gray-100"
-                    >
-                      <svg
-                        class="w-5 h-5"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
-                      >
-                        <path
-                          d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z"
-                        />
-                      </svg>
-                    </button>
-                  </template>
-
-                  <PopupMenuItem @click="viewMemberWorklog(member, project)">
-                    <template #icon>
-                      <svg
-                        class="w-4 h-4"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                        />
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                        />
-                      </svg>
-                    </template>
-                    View Worklog
-                  </PopupMenuItem>
-                  <PopupMenuItem>Edit Member</PopupMenuItem>
-                  <PopupMenuItem>Remove Member</PopupMenuItem>
-                </PopupMenu>
+                <WorkloadGraph
+                  :workload="member.workload"
+                  @actualLineClick="
+                    handleActualLineClick(member, project, $event)
+                  "
+                />
               </div>
             </div>
           </div>
@@ -299,6 +217,8 @@
       :member-name="selectedMember?.name"
       :project-id="selectedProject?.id"
       :project-name="selectedProject?.name"
+      :created-after="selectedDateRange.createdAfter"
+      :created-before="selectedDateRange.createdBefore"
       @close="closeMemberWorklogModal"
     />
 
@@ -356,10 +276,13 @@ const activeActionMenu = ref(null); // Keep this for backward compatibility duri
 const showMemberWorklogModal = ref(false);
 const selectedMember = ref(null);
 const selectedProject = ref(null);
+const selectedDateRange = ref({
+  createdAfter: null,
+  createdBefore: null,
+});
 
 // Popup menus state
 const projectMenus = ref({});
-const memberMenus = ref({});
 
 // Delete project state
 const showDeleteConfirm = ref(false);
@@ -385,64 +308,31 @@ const toggleProjectMenu = (projectId) => {
       projectMenus.value[id] = false;
     }
   });
-
-  // Close all member menus
-  Object.keys(memberMenus.value).forEach((id) => {
-    if (memberMenus.value[id]) {
-      memberMenus.value[id] = false;
-    }
-  });
-};
-
-const toggleMemberMenu = (memberId) => {
-  // Create the property if it doesn't exist
-  if (memberMenus.value[memberId] === undefined) {
-    memberMenus.value[memberId] = false;
-  }
-
-  // Toggle the menu
-  memberMenus.value[memberId] = !memberMenus.value[memberId];
-
-  // Close all other menus
-  Object.keys(memberMenus.value).forEach((id) => {
-    if (id !== memberId.toString() && memberMenus.value[id]) {
-      memberMenus.value[id] = false;
-    }
-  });
-
-  // Close all project menus
-  Object.keys(projectMenus.value).forEach((id) => {
-    if (projectMenus.value[id]) {
-      projectMenus.value[id] = false;
-    }
-  });
-};
-
-const viewMemberWorklog = (member, project) => {
-  selectedMember.value = member;
-  selectedProject.value = project;
-  showMemberWorklogModal.value = true;
-
-  // Close all menus
-  Object.keys(memberMenus.value).forEach((id) => {
-    memberMenus.value[id] = false;
-  });
-  Object.keys(projectMenus.value).forEach((id) => {
-    projectMenus.value[id] = false;
-  });
 };
 
 const closeMemberWorklogModal = () => {
   showMemberWorklogModal.value = false;
   selectedMember.value = null;
   selectedProject.value = null;
+  selectedDateRange.value = {
+    createdAfter: null,
+    createdBefore: null,
+  };
+};
+
+// Handle actual line click from WorkloadGraph
+const handleActualLineClick = (member, project, dateRange) => {
+  selectedMember.value = member;
+  selectedProject.value = project;
+  selectedDateRange.value = {
+    createdAfter: dateRange.createdAfter,
+    createdBefore: dateRange.createdBefore,
+  };
+  showMemberWorklogModal.value = true;
 };
 
 const editProject = (project) => {
   // Close all menus
-  Object.keys(memberMenus.value).forEach((id) => {
-    memberMenus.value[id] = false;
-  });
   Object.keys(projectMenus.value).forEach((id) => {
     projectMenus.value[id] = false;
   });
@@ -457,9 +347,6 @@ const confirmDeleteProject = (project) => {
   showDeleteConfirm.value = true;
 
   // Close all menus
-  Object.keys(memberMenus.value).forEach((id) => {
-    memberMenus.value[id] = false;
-  });
   Object.keys(projectMenus.value).forEach((id) => {
     projectMenus.value[id] = false;
   });

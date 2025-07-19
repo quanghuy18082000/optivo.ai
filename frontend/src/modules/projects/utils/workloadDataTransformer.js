@@ -14,8 +14,8 @@ export function transformProjectsData(apiData) {
   if (!Array.isArray(apiData)) return []
 
   return apiData.map((project) => ({
-    id: project.project_id,
-    name: project.project_name,
+    id: project.project.id,
+    name: project.project.name,
     members: transformMembersData(project.workload_member_detail || []),
   }))
 }
@@ -28,39 +28,54 @@ export function transformProjectsData(apiData) {
 function transformMembersData(membersData) {
   if (!Array.isArray(membersData)) return []
 
+
   return membersData.map((memberData) => ({
     id: memberData.member.id,
     name: memberData.member.user_name,
     position: memberData.member.position.name,
-    workload: transformWorkloadDataForChart(memberData), // Use the new transformation
+    workload: transformWorkloadDataForChart(memberData, 2025), // Use 2025 to match your data
   }))
 }
 
 /**
- * Helper to convert date string to a numerical x-axis position (0-11.99...)
- * where 0 is Jan 1st and 11.99... is Dec 31st.
+ * Helper to convert date string to a numerical x-axis position based on months from a reference date
  * @param {string} dateString - Date in YYYY-MM-DD format
- * @returns {number} Numerical x-axis position
+ * @param {Date} referenceDate - Reference start date (usually the earliest date in the dataset)
+ * @returns {number} Numerical x-axis position in months from reference
  */
-function dateToChartX(dateString) {
+function dateToChartX(dateString, referenceDate = null) {
   const date = new Date(dateString)
-  const monthIndex = date.getMonth() // 0-11
-  const dayOfMonth = date.getDate() // 1-31
+  
+  if (!referenceDate) {
+    // Fallback to old behavior if no reference date provided
+    const monthIndex = date.getMonth() // 0-11
+    const dayOfMonth = date.getDate() // 1-31
+    const daysInMonth = getDaysInMonth(date)
+    const positionInMonth = daysInMonth > 1 ? (dayOfMonth - 1) / (daysInMonth - 1) : 0
+    return monthIndex + positionInMonth
+  }
+  
+  // Calculate months difference from reference date
+  const yearDiff = date.getFullYear() - referenceDate.getFullYear()
+  const monthDiff = date.getMonth() - referenceDate.getMonth()
+  const totalMonthsDiff = yearDiff * 12 + monthDiff
+  
+  // Add fractional part based on day of month
+  const dayOfMonth = date.getDate()
   const daysInMonth = getDaysInMonth(date)
-  // Position within the month, normalized to 0-1. Use (daysInMonth - 1) to avoid division by zero for 1-day months if dayOfMonth is 1.
-  // For a single day month, positionInMonth would be 0.
   const positionInMonth = daysInMonth > 1 ? (dayOfMonth - 1) / (daysInMonth - 1) : 0
-  return monthIndex + positionInMonth
+  
+  return totalMonthsDiff + positionInMonth
 }
 
 /**
  * Transform workload data for WorkloadGraph component to create stepped lines and scatter points.
  * @param {Object} memberData - Member data containing plan, quotation, actual periods.
+ * @param {number} targetYear - Year to filter data for (defaults to current year).
  * @returns {Object} Object containing line and scatter data for ECharts.
  */
-export function transformWorkloadDataForChart(memberData) {
+export function transformWorkloadDataForChart(memberData, targetYear = new Date().getFullYear()) {
   const { plan = [], quotation = [], actual = [] } = memberData
-  const currentYear = new Date().getFullYear() // Assuming current year for filtering
 
   const quotationLineData = []
   const quotationScatterData = []
@@ -69,53 +84,67 @@ export function transformWorkloadDataForChart(memberData) {
   const actualLineData = []
   const actualScatterData = []
 
+  // Track all dates to find the overall range
+  const allDates = []
+  
+  // First pass: collect all dates to find the range
+  quotation.forEach((item) => {
+    allDates.push(new Date(item.start_date), new Date(item.end_date))
+  })
+  plan.forEach((item) => {
+    allDates.push(new Date(item.start_date), new Date(item.end_date))
+  })
+  actual.forEach((item) => {
+    allDates.push(new Date(item.start_date), new Date(item.end_date))
+  })
+  
+  // Calculate reference date (earliest date)
+  const referenceDate = allDates.length > 0 ? new Date(Math.min(...allDates.map(d => d.getTime()))) : new Date()
+
   // Process Quotation data
   quotation.forEach((item) => {
     const startDate = new Date(item.start_date)
     const endDate = new Date(item.end_date)
 
-    // Only include data for the current year
-    if (startDate.getFullYear() === currentYear || endDate.getFullYear() === currentYear) {
-      const startX = dateToChartX(item.start_date)
-      const endX = dateToChartX(item.end_date)
+    const startX = dateToChartX(item.start_date, referenceDate)
+    const endX = dateToChartX(item.end_date, referenceDate)
 
-      // Add points for the line. For 'step: end', the value holds until the endX.
-      quotationLineData.push([startX, item.allocation_rate])
-      quotationLineData.push([endX, item.allocation_rate])
+    // Add points for the line. For 'step: end', the value holds until the endX.
+    quotationLineData.push([startX, item.allocation_rate])
+    quotationLineData.push([endX, item.allocation_rate])
 
-      // Add scatter points for start/end with labels
-      quotationScatterData.push({
-        value: [startX, item.allocation_rate],
-        label: { show: true, formatter: format(startDate, "dd/MMM") },
-      })
-      quotationScatterData.push({
-        value: [endX, item.allocation_rate],
-        label: { show: true, formatter: format(endDate, "dd/MMM") },
-      })
-    }
+    // Add scatter points for start/end with labels
+    quotationScatterData.push({
+      value: [startX, item.allocation_rate],
+      label: { show: true, formatter: format(startDate, "dd/MMM/yy") },
+    })
+    quotationScatterData.push({
+      value: [endX, item.allocation_rate],
+      label: { show: true, formatter: format(endDate, "dd/MMM/yy") },
+    })
   })
+
+
 
   // Process Plan data
   plan.forEach((item) => {
     const startDate = new Date(item.start_date)
     const endDate = new Date(item.end_date)
 
-    if (startDate.getFullYear() === currentYear || endDate.getFullYear() === currentYear) {
-      const startX = dateToChartX(item.start_date)
-      const endX = dateToChartX(item.end_date)
+    const startX = dateToChartX(item.start_date, referenceDate)
+    const endX = dateToChartX(item.end_date, referenceDate)
 
-      planLineData.push([startX, item.allocation_rate])
-      planLineData.push([endX, item.allocation_rate])
+    planLineData.push([startX, item.allocation_rate])
+    planLineData.push([endX, item.allocation_rate])
 
-      planScatterData.push({
-        value: [startX, item.allocation_rate],
-        label: { show: true, formatter: format(startDate, "dd/MMM") },
-      })
-      planScatterData.push({
-        value: [endX, item.allocation_rate],
-        label: { show: true, formatter: format(endDate, "dd/MMM") },
-      })
-    }
+    planScatterData.push({
+      value: [startX, item.allocation_rate],
+      label: { show: true, formatter: format(startDate, "dd/MMM/yy") },
+    })
+    planScatterData.push({
+      value: [endX, item.allocation_rate],
+      label: { show: true, formatter: format(endDate, "dd/MMM/yy") },
+    })
   })
 
   // Process Actual data
@@ -123,28 +152,35 @@ export function transformWorkloadDataForChart(memberData) {
     const startDate = new Date(item.start_date)
     const endDate = new Date(item.end_date)
 
-    if (startDate.getFullYear() === currentYear || endDate.getFullYear() === currentYear) {
-      const startX = dateToChartX(item.start_date)
-      const endX = dateToChartX(item.end_date)
+    const startX = dateToChartX(item.start_date, referenceDate)
+    const endX = dateToChartX(item.end_date, referenceDate)
 
-      actualLineData.push([startX, item.allocation_rate])
-      actualLineData.push([endX, item.allocation_rate])
+    actualLineData.push([startX, item.allocation_rate])
+    actualLineData.push([endX, item.allocation_rate])
 
-      actualScatterData.push({
-        value: [startX, item.allocation_rate],
-        label: { show: true, formatter: format(startDate, "dd/MMM") },
-      })
-      actualScatterData.push({
-        value: [endX, item.allocation_rate],
-        label: { show: true, formatter: format(endDate, "dd/MMM") },
-      })
-    }
+    actualScatterData.push({
+      value: [startX, item.allocation_rate],
+      // label: { show: true, formatter: format(startDate, "dd/MMM/yy") },
+    })
+    actualScatterData.push({
+      value: [endX, item.allocation_rate],
+      // label: { show: true, formatter: format(endDate, "dd/MMM/yy") },
+    })
   })
 
   // Sort all line data points by x-axis to ensure correct line drawing for 'step' type
   quotationLineData.sort((a, b) => a[0] - b[0])
   planLineData.sort((a, b) => a[0] - b[0])
   actualLineData.sort((a, b) => a[0] - b[0])
+
+  // Calculate date range from all dates
+  let startDate = null
+  let endDate = null
+  
+  if (allDates.length > 0) {
+    startDate = new Date(Math.min(...allDates.map(d => d.getTime())))
+    endDate = new Date(Math.max(...allDates.map(d => d.getTime())))
+  }
 
   return {
     quotationLineData,
@@ -153,6 +189,11 @@ export function transformWorkloadDataForChart(memberData) {
     planScatterData,
     actualLineData,
     actualScatterData,
+    dateRange: {
+      startDate,
+      endDate,
+      referenceDate
+    }
   }
 }
 
@@ -175,6 +216,8 @@ export function formatWorkloadForChart(workloadData) {
   if (!Array.isArray(workloadData) || workloadData.length === 0) {
     return Array(12).fill({ quotation: 0, plan: 0, actual: 0 })
   }
+
+  console.log("Formatting workload data for chart:", workloadData)
 
   // Ensure we have exactly 12 months of data
   const chartData = Array(12)
