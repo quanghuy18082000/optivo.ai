@@ -77,8 +77,14 @@
             v-model="localFilters.project_ids"
             :options="projectOptions"
             placeholder="Select projects..."
-            :loading="isLoadingProjects"
+            :disabled="isLoadingProjects"
+            searchable
+            show-select-all
+            @change="handleProjectChange"
           />
+          <div class="text-xs text-gray-500 mt-1">
+            Selected: {{ localFilters.project_ids.length }} projects
+          </div>
         </div>
 
         <!-- Team Members Selection -->
@@ -90,8 +96,14 @@
             v-model="localFilters.member_ids"
             :options="memberOptions"
             placeholder="Select team members..."
-            :loading="isLoadingMembers"
+            :disabled="isLoadingMembers"
+            searchable
+            show-select-all
+            @change="handleMemberChange"
           />
+          <div class="text-xs text-gray-500 mt-1">
+            Selected: {{ localFilters.member_ids.length }} members
+          </div>
         </div>
       </div>
 
@@ -131,7 +143,7 @@ import Input from "@/components/ui/Input.vue";
 import MultiSelect from "@/components/ui/MultiSelect.vue";
 import DatePicker from "@/components/ui/DatePicker.vue";
 import Button from "@/components/ui/Button.vue";
-import { getProjects } from "../services/projectService";
+import { getProjects } from "@/modules/worklogs/services/worklogService";
 import { getUsers } from "@/services/userService";
 
 const props = defineProps({
@@ -149,12 +161,15 @@ const emit = defineEmits(["close", "apply", "reset"]);
 
 // Local filter state
 const localFilters = ref({
-  search_text: "",
-  start_date: "",
-  end_date: "",
-  project_ids: [],
-  member_ids: [],
-  ...props.filters,
+  search_text: props.filters.search_text || "",
+  start_date: props.filters.start_date || "",
+  end_date: props.filters.end_date || "",
+  project_ids: Array.isArray(props.filters.project_ids)
+    ? [...props.filters.project_ids]
+    : [],
+  member_ids: Array.isArray(props.filters.member_ids)
+    ? [...props.filters.member_ids]
+    : [],
 });
 
 // Options for dropdowns
@@ -167,13 +182,14 @@ const isLoadingMembers = ref(false);
 const loadProjectOptions = async () => {
   try {
     isLoadingProjects.value = true;
-    const response = await getProjects({});
+    const response = await getProjects();
 
     // Transform projects data to options format
     const projects = response?.data || response || [];
+
     projectOptions.value = projects.map((project) => ({
-      label: project.name || project.project_name,
-      value: project.id || project.project_id,
+      label: project.name,
+      value: project.id,
     }));
   } catch (error) {
     console.error("Error loading projects:", error);
@@ -194,7 +210,7 @@ const loadMemberOptions = async () => {
     const users = response?.data || [];
     memberOptions.value = users.map((user) => ({
       label: user.name,
-      value: user.user_id,
+      value: user.id,
     }));
   } catch (error) {
     console.error("Error loading members:", error);
@@ -203,6 +219,17 @@ const loadMemberOptions = async () => {
   } finally {
     isLoadingMembers.value = false;
   }
+};
+
+// Event handlers
+const handleProjectChange = (values, options) => {
+  // Handle project selection change if needed
+  console.log("Projects changed:", { values, options });
+};
+
+const handleMemberChange = (values, options) => {
+  // Handle member selection change if needed
+  console.log("Members changed:", { values, options });
 };
 
 // Panel methods
@@ -228,13 +255,14 @@ const applyFilters = () => {
 };
 
 const resetFilters = () => {
-  localFilters.value = {
+  const resetValues = {
     search_text: "",
     start_date: "",
     end_date: "",
     project_ids: [],
     member_ids: [],
   };
+  localFilters.value = resetValues;
   emit("reset");
 };
 
@@ -243,15 +271,18 @@ watch(
   () => props.filters,
   (newFilters) => {
     localFilters.value = {
-      search_text: "",
-      start_date: "",
-      end_date: "",
-      project_ids: [],
-      member_ids: [],
-      ...newFilters,
+      search_text: newFilters.search_text || "",
+      start_date: newFilters.start_date || "",
+      end_date: newFilters.end_date || "",
+      project_ids: Array.isArray(newFilters.project_ids)
+        ? [...newFilters.project_ids]
+        : [],
+      member_ids: Array.isArray(newFilters.member_ids)
+        ? [...newFilters.member_ids]
+        : [],
     };
   },
-  { deep: true }
+  { deep: true, immediate: true }
 );
 
 // Load options when component mounts

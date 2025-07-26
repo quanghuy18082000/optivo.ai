@@ -1,6 +1,7 @@
 <template>
   <div class="flex items-center gap-2">
     <input
+      ref="checkboxRef"
       :id="id"
       type="checkbox"
       :checked="modelValue"
@@ -24,7 +25,9 @@
 </template>
 
 <script setup>
-defineProps({
+import { ref, watch, onMounted } from "vue";
+
+const props = defineProps({
   id: {
     type: String,
     default: () => `checkbox-${Math.random().toString(36).substr(2, 9)}`,
@@ -34,6 +37,10 @@ defineProps({
     default: "",
   },
   modelValue: {
+    type: Boolean,
+    default: false,
+  },
+  indeterminate: {
     type: Boolean,
     default: false,
   },
@@ -52,4 +59,24 @@ defineProps({
 });
 
 defineEmits(["update:modelValue"]);
+
+const checkboxRef = ref(null);
+
+// Update indeterminate state when prop changes
+watch(
+  () => props.indeterminate,
+  (newVal) => {
+    if (checkboxRef.value) {
+      checkboxRef.value.indeterminate = newVal;
+    }
+  },
+  { immediate: true }
+);
+
+// Set initial indeterminate state
+onMounted(() => {
+  if (checkboxRef.value) {
+    checkboxRef.value.indeterminate = props.indeterminate;
+  }
+});
 </script>

@@ -7,6 +7,10 @@ import { v4 as uuidv4 } from "uuid";
 import { useI18n } from "vue-i18n";
 import { useQuery } from "@tanstack/vue-query";
 import { useRouter } from "vue-router";
+import {
+  useLoadingIntegration,
+  LOADING_KEYS,
+} from "@/composables/useLoadingIntegration.js";
 
 import MainLayout from "@/layouts/MainLayout.vue";
 import Input from "@/components/ui/Input.vue";
@@ -47,6 +51,9 @@ const { data: projectsData, isLoading: isLoadingProjects } = useQuery({
   queryKey: ["projects"],
   queryFn: getProjects,
 });
+
+// Integrate projects loading with global loading screen
+useLoadingIntegration(LOADING_KEYS.PROJECTS, isLoadingProjects);
 
 // All available projects
 const allProjectOptions = computed(() => {

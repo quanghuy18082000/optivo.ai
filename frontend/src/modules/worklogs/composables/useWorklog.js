@@ -2,13 +2,14 @@ import { ref, computed } from 'vue'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
 import { getWorklogs, createWorklog, createWorklogBatch, updateWorklogBatch, deleteWorklog } from '../services/worklogService'
 import { useAuthStore } from '@/modules/auth/store'
+import { useLoadingIntegration, LOADING_KEYS } from '@/composables/useLoadingIntegration.js'
 
 export function useWorklog(options = { fetchWorklogs: true }) {
   const queryClient = useQueryClient()
   const authStore = useAuthStore()
   
   const filters = ref({
-    projectId: null,
+    projectIds: [],
     category: null,
     createdAfter: '',
     createdBefore: '',
@@ -29,9 +30,9 @@ export function useWorklog(options = { fetchWorklogs: true }) {
     // Add user_id parameter with the current user ID
     params.user_id = userId.value
   
-    // Add project_id if selected
-    if (filters.value.projectId) {
-      params.project_id = filters.value.projectId
+    // Add project_ids if selected
+    if (filters.value.projectIds && filters.value.projectIds.length > 0) {
+      params.project_ids = filters.value.projectIds.join(',')
     }
     
     // Add category if selected
@@ -80,6 +81,11 @@ export function useWorklog(options = { fetchWorklogs: true }) {
     size: 20,
     total_pages: 0,
   })
+
+  // Integrate with global loading screen
+  if (options.fetchWorklogs) {
+    useLoadingIntegration(LOADING_KEYS.WORKLOGS, isLoading)
+  }
 
   // Mutations
   const createWorklogMutation = useMutation({
@@ -130,7 +136,7 @@ export function useWorklog(options = { fetchWorklogs: true }) {
 
   const resetFilters = () => {
     filters.value = {
-      projectId: null,
+      projectIds: [],
       category: null,
       createdAfter: '',
       createdBefore: '',

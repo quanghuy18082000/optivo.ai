@@ -6,11 +6,51 @@ import NotFoundPage from '@/views/NotFoundPage.vue'
 import ServerErrorPage from '@/views/ServerErrorPage.vue'
 import UnauthorizedPage from '@/views/UnauthorizedPage.vue'
 import { getUserPermissions } from '@/services/systemConfigService.js'
+import { useGlobalLoading } from '@/composables/useGlobalLoading.js'
 
 const routes = [
   ...authRoutes, 
   ...worklogRoutes, 
   ...projectRoutes,
+
+  // Demo route (development only)
+  {
+    path: '/test-multiselect',
+    name: 'TestMultiSelect',
+    component: () => import('@/components/TestMultiSelect.vue'),
+    meta: {
+      title: 'Test MultiSelect',
+      requiresAuth: true
+    }
+  },
+  {
+    path: '/test-project-filters',
+    name: 'TestProjectFilters',
+    component: () => import('@/components/TestProjectFilters.vue'),
+    meta: {
+      title: 'Test Project Filters',
+      requiresAuth: true
+    }
+  },
+  {
+    path: '/test-checkbox-group',
+    name: 'TestCheckboxGroup',
+    component: () => import('@/components/TestCheckboxGroup.vue'),
+    meta: {
+      title: 'Test CheckboxGroup',
+      requiresAuth: true
+    }
+  },
+  {
+    path: '/test-multiselect-fixed',
+    name: 'TestMultiSelectFixed',
+    component: () => import('@/components/TestMultiSelectFixed.vue'),
+    meta: {
+      title: 'Test MultiSelect Fixed',
+      requiresAuth: true
+    }
+  },
+
   // Error routes
   {
     path: '/server-error',
@@ -55,6 +95,7 @@ const hasRequiredPermissions = (requiredPermissions, userPermissionNames) => {
 
 router.beforeEach(async (to, from, next) => {
   const isAuthenticated = localStorage.getItem('isAuthenticated')
+  const { setLoading } = useGlobalLoading()
   
   // If route requires authentication but user is not authenticated
   if (to.meta.requiresAuth && !isAuthenticated) {
@@ -67,6 +108,8 @@ router.beforeEach(async (to, from, next) => {
     try {
       // If permissions not loaded yet, fetch them
       if (!userPermissions) {
+        setLoading('routePermissions', true)
+        
         const response = await getUserPermissions()
         if (response && response.data) {
           // Extract all permission names
@@ -106,13 +149,16 @@ router.beforeEach(async (to, from, next) => {
       
       // Check if user has required permissions
       if (hasRequiredPermissions(to.meta.requiredPermissions, userPermissions.permissionNames)) {
+        setLoading('routePermissions', false)
         next()
       } else {
+        setLoading('routePermissions', false)
         // Redirect to unauthorized page or home
         next({ name: 'unauthorized' })
       }
     } catch (error) {
       console.error('Error checking permissions:', error)
+      setLoading('routePermissions', false)
       next('/login')
     }
   } else {

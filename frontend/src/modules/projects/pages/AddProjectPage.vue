@@ -87,6 +87,10 @@ import QuotationStep from "../components/steps/QuotationStep.vue";
 import PlanStep from "../components/steps/PlanStep.vue";
 import { useToast } from "@/composables/useToast";
 import { getPositions } from "@/services/systemConfigService.js";
+import {
+  useLoadingIntegration,
+  LOADING_KEYS,
+} from "@/composables/useLoadingIntegration.js";
 
 const router = useRouter();
 const toast = useToast();
@@ -146,6 +150,9 @@ const stepDescriptions = [
 const apiPositions = ref([]);
 const isLoadingPositions = ref(false);
 const positionError = ref(null);
+
+// Integrate positions loading with global loading screen
+useLoadingIntegration(LOADING_KEYS.POSITIONS, isLoadingPositions);
 
 // Fetch positions from the API
 const fetchPositions = async () => {

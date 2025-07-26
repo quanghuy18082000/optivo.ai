@@ -5,7 +5,7 @@ const projectRoutes = [
     component: () => import("./pages/ProjectDashboard.vue"),
     meta: { 
       requiresAuth: true,
-      requiredPermissions: ['project.view_member_any']  // Dựa trên data: project.view
+      requiredPermissions: ['project.view_member']  // Dựa trên data: project.view
     },
   },
   {

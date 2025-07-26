@@ -48,8 +48,17 @@
         </div>
       </div>
       <div
-        class="grid grid-cols-[1fr_0.5fr_0.5fr_5fr] gap-4 text-sm font-medium text-gray-500 uppercase tracking-wider"
+        class="grid grid-cols-[auto_1fr_0.5fr_0.5fr_5fr] gap-4 text-sm font-medium text-gray-500 uppercase tracking-wider"
       >
+        <div class="flex items-center">
+          <input
+            type="checkbox"
+            :checked="isAllSelected"
+            :indeterminate.prop="isIndeterminate"
+            @change="toggleSelectAll"
+            class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+          />
+        </div>
         <div>Project name</div>
         <div>Member</div>
         <div>Position</div>
@@ -62,12 +71,26 @@
       <div v-for="project in projects" :key="project.id">
         <!-- Project Row -->
         <div
-          class="px-6 py-4 hover:bg-gray-50 transition-colors cursor-pointer"
-          @click="toggleProject(project.id)"
+          class="px-6 py-4 hover:bg-gray-50 transition-colors"
+          :class="{ 'bg-blue-50': selectedProjects.includes(project.id) }"
         >
-          <div class="flex items-center justify-between">
+          <div
+            class="grid grid-cols-[auto_1fr_0.5fr_0.5fr_5fr] gap-4 items-center"
+          >
+            <div class="flex items-center">
+              <input
+                type="checkbox"
+                :checked="selectedProjects.includes(project.id)"
+                @change="toggleProjectSelection(project.id)"
+                @click.stop
+                class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              />
+            </div>
             <div class="flex items-center gap-2">
-              <button class="p-1 text-gray-400 hover:text-gray-600">
+              <button
+                class="p-1 text-gray-400 hover:text-gray-600"
+                @click="toggleProject(project.id)"
+              >
                 <svg
                   class="w-4 h-4 transition-transform duration-200"
                   :class="{ 'rotate-90': expandedProjects[project.id] }"
@@ -87,6 +110,8 @@
                 project.name
               }}</span>
             </div>
+            <div></div>
+            <div></div>
             <div class="flex justify-end">
               <PopupMenu
                 v-model="projectMenus[project.id]"
@@ -112,45 +137,56 @@
                   </button>
                 </template>
 
-                <PopupMenuItem @click="editProject(project)">
-                  <template #icon>
-                    <svg
-                      class="w-4 h-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                      />
-                    </svg>
-                  </template>
-                  Edit Project
-                </PopupMenuItem>
-                <PopupMenuItem
-                  variant="danger"
-                  @click="confirmDeleteProject(project)"
+                <PermissionGuard
+                  :any-of="[PERMISSIONS.PROJECT_UPDATE]"
+                  :project-id="project.id"
                 >
-                  <template #icon>
-                    <svg
-                      class="w-4 h-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                      />
-                    </svg>
-                  </template>
-                  Delete
-                </PopupMenuItem>
+                  <PopupMenuItem @click="editProject(project)">
+                    <template #icon>
+                      <svg
+                        class="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                        />
+                      </svg>
+                    </template>
+                    Edit Project
+                  </PopupMenuItem>
+                </PermissionGuard>
+
+                <PermissionGuard
+                  :any-of="[PERMISSIONS.PROJECT_DELETE]"
+                  :project-id="project.id"
+                >
+                  <PopupMenuItem
+                    variant="danger"
+                    @click="confirmDeleteProject(project)"
+                  >
+                    <template #icon>
+                      <svg
+                        class="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                        />
+                      </svg>
+                    </template>
+                    Delete
+                  </PopupMenuItem>
+                </PermissionGuard>
               </PopupMenu>
             </div>
           </div>
@@ -164,8 +200,9 @@
             class="px-6 py-4 border-t border-gray-200 hover:bg-gray-100 transition-colors"
           >
             <div
-              class="grid grid-cols-[1fr_0.5fr_0.5fr_5fr] gap-4 items-center"
+              class="grid grid-cols-[auto_1fr_0.5fr_0.5fr_5fr] gap-4 items-center"
             >
+              <div></div>
               <div></div>
               <div>
                 <span class="text-sm font-medium text-gray-900">{{
@@ -248,13 +285,15 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from "vue";
+import { ref, computed, onMounted, onBeforeUnmount } from "vue";
 import WorkloadGraph from "./WorkloadGraph.vue";
 import MemberWorklogModal from "./MemberWorklogModal.vue";
 import ConfirmDialog from "@/components/ui/ConfirmDialog.vue";
 import PopupMenu from "@/components/ui/PopupMenu.vue";
 import PopupMenuItem from "@/components/ui/PopupMenuItem.vue";
+import PermissionGuard from "@/components/PermissionGuard.vue";
 import { useProjects } from "../composables/useProjects";
+import { usePermissions } from "@/composables/usePermissions";
 import { useRouter } from "vue-router";
 
 const props = defineProps({
@@ -264,9 +303,14 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(["project-deleted", "refresh-projects"]);
+const emit = defineEmits([
+  "project-deleted",
+  "refresh-projects",
+  "selection-changed",
+]);
 
 const router = useRouter();
+const { PERMISSIONS } = usePermissions();
 
 // Get the removeProject function and refetch from the useProjects composable
 const { removeProject, isDeleting, refetch, isLoading } = useProjects();
@@ -288,6 +332,24 @@ const projectMenus = ref({});
 const showDeleteConfirm = ref(false);
 const projectToDelete = ref(null);
 const deleteError = ref(null);
+
+// Selection state
+const selectedProjects = ref([]);
+
+// Computed properties for selection
+const isAllSelected = computed(() => {
+  return (
+    props.projects.length > 0 &&
+    selectedProjects.value.length === props.projects.length
+  );
+});
+
+const isIndeterminate = computed(() => {
+  return (
+    selectedProjects.value.length > 0 &&
+    selectedProjects.value.length < props.projects.length
+  );
+});
 
 const toggleProject = (projectId) => {
   expandedProjects.value[projectId] = !expandedProjects.value[projectId];
@@ -372,6 +434,12 @@ const handleDeleteProject = async () => {
     showDeleteConfirm.value = false;
     projectToDelete.value = null;
 
+    // Remove from selection if it was selected
+    selectedProjects.value = selectedProjects.value.filter(
+      (id) => id !== deletedProject.id
+    );
+    emitSelectionChange();
+
     // Explicitly refresh the project list
     await refetch();
 
@@ -382,4 +450,41 @@ const handleDeleteProject = async () => {
     deleteError.value = error.message || "Failed to delete project";
   }
 };
+
+// Selection methods
+const toggleSelectAll = () => {
+  if (isAllSelected.value) {
+    selectedProjects.value = [];
+  } else {
+    selectedProjects.value = props.projects.map((project) => project.id);
+  }
+  emitSelectionChange();
+};
+
+const toggleProjectSelection = (projectId) => {
+  const index = selectedProjects.value.indexOf(projectId);
+  if (index > -1) {
+    selectedProjects.value.splice(index, 1);
+  } else {
+    selectedProjects.value.push(projectId);
+  }
+  emitSelectionChange();
+};
+
+const emitSelectionChange = () => {
+  const selectedProjectsData = props.projects.filter((project) =>
+    selectedProjects.value.includes(project.id)
+  );
+  emit("selection-changed", selectedProjectsData);
+};
+
+const clearSelection = () => {
+  selectedProjects.value = [];
+  emitSelectionChange();
+};
+
+// Expose methods to parent component
+defineExpose({
+  clearSelection,
+});
 </script>

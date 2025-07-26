@@ -136,7 +136,10 @@ const post = (url, data) => apiClient.post(url, data);
 // A simple PUT wrapper
 const put = (url, data) => apiClient.put(url, data);
 
+// A simple PATCH wrapper
+const patch = (url, data) => apiClient.patch(url, data);
+
 // A simple DELETE wrapper
 const del = (url) => apiClient.delete(url);
 
-export { get, post, put, del };
+export { get, post, put, patch, del };

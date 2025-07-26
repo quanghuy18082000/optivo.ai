@@ -40,13 +40,18 @@
         <!-- Project -->
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-3"
-            >Project</label
+            >Projects</label
           >
-          <Select
-            v-model="localFilters.projectId"
+          <MultiSelect
+            v-model="localFilters.projectIds"
             :options="projectOptions"
-            placeholder="Select project"
+            placeholder="Select projects..."
+            searchable
+            show-select-all
           />
+          <div class="text-xs text-gray-500 mt-1">
+            Selected: {{ localFilters.projectIds?.length || 0 }} projects
+          </div>
         </div>
 
         <!-- Category -->
@@ -110,13 +115,23 @@
         >
           <h4 class="text-sm font-medium text-blue-900 mb-2">Active Filters</h4>
           <div class="space-y-1 text-xs text-blue-700">
-            <div v-if="localFilters.projectId" class="flex items-center gap-1">
-              <span>Project:</span>
-              <TruncateText
-                :name="getProjectName(localFilters.projectId)"
-                text-class="text-xs text-blue-700"
-                :max-length="20"
-              />
+            <div
+              v-if="
+                localFilters.projectIds && localFilters.projectIds.length > 0
+              "
+              class="flex items-center gap-1"
+            >
+              <span>Projects:</span>
+              <span v-if="localFilters.projectIds.length === 1">
+                <TruncateText
+                  :name="getProjectName(localFilters.projectIds[0])"
+                  text-class="text-xs text-blue-700"
+                  :max-length="20"
+                />
+              </span>
+              <span v-else>
+                {{ localFilters.projectIds.length }} projects selected
+              </span>
             </div>
             <div v-if="localFilters.category">
               Category: {{ localFilters.category }}
@@ -197,7 +212,7 @@ const props = defineProps({
 const emit = defineEmits(["close", "apply", "reset"]);
 
 const localFilters = ref({
-  projectId: null,
+  projectIds: [],
   category: null,
   createdAfter: "",
   createdBefore: "",
@@ -325,7 +340,8 @@ const handleTimePeriodChange = (value) => {
 
 const hasActiveFilters = computed(() => {
   return (
-    localFilters.value.projectId ||
+    (localFilters.value.projectIds &&
+      localFilters.value.projectIds.length > 0) ||
     localFilters.value.category ||
     (localFilters.value.createdAfter && localFilters.value.createdBefore)
   );
@@ -403,7 +419,7 @@ const applyFilters = () => {
 const resetFilters = () => {
   // First reset the filters
   localFilters.value = {
-    projectId: null,
+    projectIds: [],
     category: null,
     createdAfter: "",
     createdBefore: "",

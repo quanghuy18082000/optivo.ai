@@ -10,8 +10,47 @@
     <!-- Main Content -->
     <div class="space-y-6">
       <!-- Action Buttons -->
-      <div class="flex items-center justify-between">
-        <h2 class="text-lg font-medium text-gray-900">Your Projects</h2>
+      <div class="flex items-start justify-between">
+        <div class="flex flex-col gap-3">
+          <h2 class="text-lg font-medium text-gray-900">Your Projects</h2>
+
+          <!-- Bulk Actions (shown when projects are selected) -->
+          <div
+            v-if="selectedProjects.length > 0"
+            class="flex items-center gap-3 p-2 bg-blue-50 border border-blue-200 rounded-lg"
+          >
+            <div class="flex items-center gap-2">
+              <div class="w-2 h-2 bg-blue-500 rounded-full"></div>
+              <span class="text-sm font-medium text-blue-900">
+                {{ selectedProjects.length }} project{{
+                  selectedProjects.length > 1 ? "s" : ""
+                }}
+                selected
+              </span>
+            </div>
+            <Button
+              variant="primary"
+              size="small"
+              @click="showChangeStatusModal = true"
+              class="bg-blue-600 hover:bg-blue-700 text-white border-0 shadow-sm hover:shadow-md transition-all duration-200 flex items-center gap-2"
+            >
+              <svg
+                class="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"
+                />
+              </svg>
+              Change Status
+            </Button>
+          </div>
+        </div>
 
         <div class="flex items-center gap-3">
           <!-- Filters Button -->
@@ -37,6 +76,7 @@
 
           <!-- Add New Project Button -->
           <Button
+            v-if="hasPermission(PERMISSIONS.PROJECT_CREATE)"
             variant="primary"
             class="bg-blue-600 hover:bg-blue-700"
             @click="addNewProject"
@@ -143,6 +183,7 @@
           criteria.
         </p>
         <button
+          v-if="hasPermission(PERMISSIONS.PROJECT_CREATE)"
           @click="addNewProject"
           class="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
         >
@@ -153,9 +194,11 @@
       <!-- Project Table -->
       <ProjectTable
         v-else
+        ref="projectTableRef"
         :projects="projects"
         @project-deleted="handleProjectDeleted"
         @refresh-projects="refetch"
+        @selection-changed="handleSelectionChanged"
       />
     </div>
 
@@ -167,6 +210,15 @@
       @apply="applyFilters"
       @reset="handleResetFilters"
     />
+
+    <!-- Change Status Modal -->
+    <ChangeStatusModal
+      :is-open="showChangeStatusModal"
+      :selected-projects="selectedProjects"
+      :is-loading="isChangingStatus"
+      @close="showChangeStatusModal = false"
+      @change-status="handleChangeStatus"
+    />
   </MainLayout>
 </template>
 
@@ -176,14 +228,20 @@ import MainLayout from "@/layouts/MainLayout.vue";
 import Button from "@/components/ui/Button.vue";
 import ProjectTable from "../components/ProjectTable.vue";
 import ProjectFilters from "../components/ProjectFilters.vue";
+import ChangeStatusModal from "../components/ChangeStatusModal.vue";
+
 import { useProjects } from "../composables/useProjects";
 import { useAuthStore } from "@/modules/auth/store";
 import { useRouter } from "vue-router";
 import { useToast } from "@/composables/useToast";
 import { transformProjectsData } from "../utils/workloadDataTransformer";
+import { usePermissions } from "@/composables/usePermissions";
+import { updateProjectsStatus } from "../services/projectService";
 
 const authStore = useAuthStore();
 const router = useRouter();
+const { showToast } = useToast();
+const { hasPermission, PERMISSIONS } = usePermissions();
 
 const {
   projects: rawProjects,
@@ -202,6 +260,10 @@ const projects = computed(() => {
 
 const showFilters = ref(false);
 const showProfileMenu = ref(false);
+const showChangeStatusModal = ref(false);
+const selectedProjects = ref([]);
+const isChangingStatus = ref(false);
+const projectTableRef = ref(null);
 
 // Click outside handler for profile menu
 const handleClickOutside = (event) => {
@@ -235,6 +297,48 @@ const toast = useToast();
 
 const handleProjectDeleted = (project) => {
   toast.success(`Project "${project.name}" was successfully deleted`);
+};
+
+const handleSelectionChanged = (projects) => {
+  selectedProjects.value = projects;
+};
+
+const handleChangeStatus = async ({ changes }) => {
+  try {
+    isChangingStatus.value = true;
+
+    // Format changes for API
+    const updates = changes.map(({ projectId, newStatus }) => ({
+      project_id: projectId,
+      status: newStatus,
+    }));
+
+    // Send all updates in one request
+    await updateProjectsStatus(updates);
+
+    const projectCount = changes.length;
+    toast.success(
+      `Successfully changed status for ${projectCount} project${
+        projectCount > 1 ? "s" : ""
+      }`
+    );
+
+    // Close modal and clear selection
+    showChangeStatusModal.value = false;
+    selectedProjects.value = [];
+
+    // Clear selection in ProjectTable component
+    if (projectTableRef.value) {
+      projectTableRef.value.clearSelection();
+    }
+
+    // Refresh projects
+    await refetch();
+  } catch (error) {
+    toast.error(error.message || "Failed to change project status");
+  } finally {
+    isChangingStatus.value = false;
+  }
 };
 
 // Handle escape key to close profile menu

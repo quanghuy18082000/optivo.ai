@@ -1,6 +1,7 @@
 import { ref, computed } from "vue"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/vue-query"
 import { getProjects, deleteProject } from "../services/projectService"
+import { useLoadingIntegration, LOADING_KEYS } from '@/composables/useLoadingIntegration.js'
 
 export function useProjects() {
   const queryClient = useQueryClient()
@@ -72,6 +73,9 @@ export function useProjects() {
     console.warn('Unexpected projects data format:', projectsData.value)
     return []
   })
+
+  // Integrate with global loading screen
+  useLoadingIntegration(LOADING_KEYS.PROJECTS, isLoading)
 
   // Methods
   const updateFilters = (newFilters) => {

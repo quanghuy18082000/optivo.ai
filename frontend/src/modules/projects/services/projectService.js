@@ -1,4 +1,4 @@
-import { get, post, put, del } from '@/utils/requestClient.js'
+import { get, post, put, patch, del } from '@/utils/requestClient.js'
 import { useToast } from '@/composables/useToast'
 
 const toast = useToast()
@@ -60,5 +60,22 @@ export const deleteProject = async (projectId) => {
     toast.error("Failed to delete project. Please try again.")
     // Rethrow the error so it can be caught by the calling function
     throw new Error(error.response?.data?.message || error.message || 'Failed to delete project')
+  }
+}
+
+/**
+ * Update status for multiple projects
+ * @param {Array<Object>} updates - Array of project updates with {project_id, status}
+ * @returns {Promise<Object>} - The response data
+ */
+export const updateProjectsStatus = async (updates) => {
+  try {
+    const response = await patch('/projects/bulk-status-update', {
+      updates: updates
+    })
+    return response.data
+  } catch (error) {
+    console.error('API Error:', error);
+    throw new Error(error.response?.data?.message || error.message || 'Failed to update project status')
   }
 }

@@ -16,6 +16,7 @@ export function transformProjectsData(apiData) {
   return apiData.map((project) => ({
     id: project.project.id,
     name: project.project.name,
+    status: project.project.status || 'not_started', // Default to not_started if no status
     members: transformMembersData(project.workload_member_detail || []),
   }))
 }
@@ -217,7 +218,6 @@ export function formatWorkloadForChart(workloadData) {
     return Array(12).fill({ quotation: 0, plan: 0, actual: 0 })
   }
 
-  console.log("Formatting workload data for chart:", workloadData)
 
   // Ensure we have exactly 12 months of data
   const chartData = Array(12)

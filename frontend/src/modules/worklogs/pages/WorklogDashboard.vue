@@ -336,7 +336,7 @@ const visiblePages = computed(() => {
 
 const hasActiveFilters = computed(() => {
   return (
-    filters.value.projectId ||
+    (filters.value.projectIds && filters.value.projectIds.length > 0) ||
     filters.value.category ||
     (filters.value.createdAfter && filters.value.createdBefore) ||
     (filters.value.sortBy && filters.value.sortBy !== "created_at") ||
@@ -346,7 +346,7 @@ const hasActiveFilters = computed(() => {
 
 const activeFilterCount = computed(() => {
   let count = 0;
-  if (filters.value.projectId) count++;
+  if (filters.value.projectIds && filters.value.projectIds.length > 0) count++;
   if (filters.value.category) count++;
   if (filters.value.createdAfter && filters.value.createdBefore) count++;
   if (filters.value.sortBy && filters.value.sortBy !== "created_at") count++;
