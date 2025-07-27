@@ -1,13 +1,24 @@
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useQuery } from '@tanstack/vue-query'
 import { getUserPermissions } from '@/services/systemConfigService.js'
 import { useLoadingIntegration, LOADING_KEYS } from '@/composables/useLoadingIntegration.js'
 
+// Global permissions state - shared across all instances
+const globalPermissions = ref({
+  globalRoles: [],
+  projectAccess: [],
+  allPermissions: []
+})
+
+const globalIsLoading = ref(false)
+const globalError = ref(null)
+const isInitialized = ref(false)
+
 export function usePermissions() {
   const permissions = ref({
-    roles: [],
-    permissionNames: [],
-    projectAccess: []
+    globalRoles: [],
+    projectAccess: [],
+    allPermissions: []
   })
 
   const isLoading = ref(false)
@@ -16,36 +27,54 @@ export function usePermissions() {
   // Integrate with global loading screen
   useLoadingIntegration(LOADING_KEYS.PERMISSIONS, isLoading)
 
+  // Sync local state with global state
+  watch(globalPermissions, (newPermissions) => {
+    permissions.value = { ...newPermissions }
+  }, { immediate: true, deep: true })
+
+  watch(globalIsLoading, (loading) => {
+    isLoading.value = loading
+  }, { immediate: true })
+
+  watch(globalError, (err) => {
+    error.value = err
+  }, { immediate: true })
+
   // Fetch user permissions using vue-query
-  const { refetch } = useQuery({
+  const { refetch, data } = useQuery({
     queryKey: ['userPermissions'],
     queryFn: async () => {
       try {
-        isLoading.value = true
+        globalIsLoading.value = true
+        globalError.value = null
         
         const response = await getUserPermissions()
-
         
         if (response) {
           // Transform API response to our internal format
-          permissions.value = {
-            globalRoles: response.data?.global_roles || response.global_roles || [],
-            projectAccess: response.data?.project_access || response.project_access || [],
-            allPermissions: extractAllPermissionNames(response.data || response)
+          const transformedPermissions = {
+            globalRoles: response.data?.global_roles || [],
+            projectAccess: response.data?.project_access || [],
+            allPermissions: extractAllPermissionNames(response?.data)
           }
+          
+          // Update global state
+          globalPermissions.value = transformedPermissions
+          isInitialized.value = true
         }
         
         return response
       } catch (err) {
-        error.value = err.message || 'Failed to load permissions'
+        globalError.value = err.message || 'Failed to load permissions'
         throw err
       } finally {
-        isLoading.value = false
+        globalIsLoading.value = false
       }
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
     refetchOnWindowFocus: true,
-    refetchOnMount: true
+    refetchOnMount: true,
+    enabled: !isInitialized.value // Only fetch if not already initialized
   })
 
   // Extract all permission names from roles and project access
@@ -80,6 +109,7 @@ export function usePermissions() {
 
   // Check if user has a global permission
   const hasGlobalPermission = (permissionName) => {
+    console.log(1111, permissions.value.globalRoles)
     if (!permissions.value.globalRoles) return false
     
     return permissions.value.globalRoles.some(role => 
@@ -179,6 +209,34 @@ export function usePermissions() {
     SYSTEM_CONFIG_COMPANY_UPDATE: 'system_config_company.update'
   }
 
+  // Function to set permissions from external source (like router)
+  const setPermissions = (permissionsData) => {
+    if (permissionsData) {
+      const transformedPermissions = {
+        globalRoles: permissionsData.roles || permissionsData.globalRoles || [],
+        projectAccess: permissionsData.projectAccess || [],
+        allPermissions: permissionsData.permissionNames || permissionsData.allPermissions || []
+      }
+      
+      globalPermissions.value = transformedPermissions
+      isInitialized.value = true
+    }
+  }
+
+  // Function to clear permissions (for logout)
+  const clearPermissions = () => {
+    globalPermissions.value = {
+      globalRoles: [],
+      projectAccess: [],
+      allPermissions: []
+    }
+    globalError.value = null
+    isInitialized.value = false
+  }
+
+  // Function to check if permissions are ready
+  const isReady = computed(() => isInitialized.value && !globalIsLoading.value)
+
   // Computed properties for easier access
   const globalRoles = computed(() => permissions.value.globalRoles || [])
   const projectAccess = computed(() => permissions.value.projectAccess || [])
@@ -189,6 +247,7 @@ export function usePermissions() {
     permissions,
     isLoading,
     error,
+    isReady,
     
     // Computed
     globalRoles,
@@ -198,6 +257,8 @@ export function usePermissions() {
     
     // Actions
     refetchPermissions: refetch,
+    setPermissions,
+    clearPermissions,
     
     // Permission checks
     hasPermission,
@@ -211,4 +272,36 @@ export function usePermissions() {
     // Constants
     PERMISSIONS
   }
+}
+
+// Export functions for external use (like router)
+export const setGlobalPermissions = (permissionsData) => {
+  if (permissionsData) {
+    const transformedPermissions = {
+      globalRoles: permissionsData.roles || permissionsData.globalRoles || [],
+      projectAccess: permissionsData.projectAccess || [],
+      allPermissions: permissionsData.permissionNames || permissionsData.allPermissions || []
+    }
+    
+    globalPermissions.value = transformedPermissions
+    isInitialized.value = true
+  }
+}
+
+export const clearGlobalPermissions = () => {
+  globalPermissions.value = {
+    globalRoles: [],
+    projectAccess: [],
+    allPermissions: []
+  }
+  globalError.value = null
+  isInitialized.value = false
+}
+
+export const getGlobalPermissions = () => {
+  return globalPermissions.value
+}
+
+export const isPermissionsReady = () => {
+  return isInitialized.value && !globalIsLoading.value
 }

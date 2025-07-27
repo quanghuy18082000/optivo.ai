@@ -106,9 +106,14 @@
                   />
                 </svg>
               </button>
-              <span class="text-sm font-medium text-gray-900">{{
-                project.name
-              }}</span>
+              <div class="flex flex-col items-start gap-2">
+                <span class="text-sm font-medium text-gray-900">{{
+                  project.name
+                }}</span>
+                <span class="text-sm font-medium text-gray-900">{{
+                  getStatusLabel(project.status)
+                }}</span>
+              </div>
             </div>
             <div></div>
             <div></div>
@@ -295,6 +300,7 @@ import PermissionGuard from "@/components/PermissionGuard.vue";
 import { useProjects } from "../composables/useProjects";
 import { usePermissions } from "@/composables/usePermissions";
 import { useRouter } from "vue-router";
+import { PROJECT_STATUS_LABELS } from "../constants/projectStatus";
 
 const props = defineProps({
   projects: {
@@ -350,6 +356,10 @@ const isIndeterminate = computed(() => {
     selectedProjects.value.length < props.projects.length
   );
 });
+
+const getStatusLabel = (status) => {
+  return PROJECT_STATUS_LABELS[status] || status;
+};
 
 const toggleProject = (projectId) => {
   expandedProjects.value[projectId] = !expandedProjects.value[projectId];

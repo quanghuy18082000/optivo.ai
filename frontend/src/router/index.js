@@ -7,6 +7,7 @@ import ServerErrorPage from '@/views/ServerErrorPage.vue'
 import UnauthorizedPage from '@/views/UnauthorizedPage.vue'
 import { getUserPermissions } from '@/services/systemConfigService.js'
 import { useGlobalLoading } from '@/composables/useGlobalLoading.js'
+import { setGlobalPermissions, clearGlobalPermissions, getGlobalPermissions, isPermissionsReady } from '@/composables/usePermissions.js'
 
 const routes = [
   ...authRoutes, 
@@ -84,9 +85,6 @@ const router = createRouter({
   routes,
 })
 
-// Store user permissions in memory
-let userPermissions = null
-
 // Function to check if user has required permissions
 const hasRequiredPermissions = (requiredPermissions, userPermissionNames) => {
   if (!requiredPermissions || requiredPermissions.length === 0) return true
@@ -106,8 +104,8 @@ router.beforeEach(async (to, from, next) => {
   // If route requires specific permissions
   if (to.meta.requiredPermissions && isAuthenticated) {
     try {
-      // If permissions not loaded yet, fetch them
-      if (!userPermissions) {
+      // Check if permissions are already loaded
+      if (!isPermissionsReady()) {
         setLoading('routePermissions', true)
         
         const response = await getUserPermissions()
@@ -139,16 +137,20 @@ router.beforeEach(async (to, from, next) => {
             })
           }
           
-          userPermissions = {
-            roles: response.data.global_roles || [],
+          // Set global permissions
+          setGlobalPermissions({
+            globalRoles: response.data.global_roles || [],
             permissionNames,
             projectAccess: response.data.project_access || []
-          }
+          })
         }
       }
       
+      // Get current permissions
+      const currentPermissions = getGlobalPermissions()
+      
       // Check if user has required permissions
-      if (hasRequiredPermissions(to.meta.requiredPermissions, userPermissions.permissionNames)) {
+      if (hasRequiredPermissions(to.meta.requiredPermissions, currentPermissions.allPermissions)) {
         setLoading('routePermissions', false)
         next()
       } else {
@@ -169,7 +171,7 @@ router.beforeEach(async (to, from, next) => {
 
 // Clear permissions on logout
 export const clearPermissions = () => {
-  userPermissions = null
+  clearGlobalPermissions()
 }
 
 export default router

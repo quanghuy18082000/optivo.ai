@@ -13,5 +13,17 @@ export default defineConfig({
   },
   server: {
     host: "0.0.0.0",
+  },
+  build: {
+    outDir: 'dist',
+    assetsDir: 'assets',
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['vue', 'vue-router', 'pinia'],
+          ui: ['@tanstack/vue-query', 'vue-toastification'],
+        }
+      }
     }
+  }
 })
