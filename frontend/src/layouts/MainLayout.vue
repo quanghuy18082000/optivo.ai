@@ -71,7 +71,9 @@
             <!-- Tooltip for collapsed state -->
           </router-link>
 
+
           <router-link
+            v-if="canViewProjects"
             to="/projects"
             class="flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-blue-700 transition-colors group"
             :class="{ 'bg-blue-700': $route.path === '/projects' }"
@@ -112,6 +114,30 @@
               <div class="text-sm text-blue-200 truncate">Your account</div>
             </div>
           </router-link>
+
+          <!-- System Configuration -->
+          <!-- <router-link
+            v-if="canViewSystemConfig"
+            to="/system-config"
+            class="flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-blue-700 transition-colors group"
+            :class="{ 'bg-blue-700': $route.path === '/system-config' }"
+          >
+            <svg
+              class="w-5 h-5 flex-shrink-0"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+            >
+              <path
+                fill-rule="evenodd"
+                d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z"
+                clip-rule="evenodd"
+              />
+            </svg>
+            <div v-if="!isCollapsed" class="min-w-0">
+              <div class="font-medium truncate">System Config</div>
+              <div class="text-sm text-blue-200 truncate">System settings</div>
+            </div>
+          </router-link> -->
 
           <!-- Loading Demo Link (Development only) -->
           <!-- <router-link
@@ -172,13 +198,36 @@
 </template>
 
 <script setup>
-import { ref, computed } from "vue";
+import { ref, computed, watch } from "vue";
 import UserMenu from "@/components/UserMenu.vue";
+import { usePermissions } from "@/composables/usePermissions.js";
+import { PERMISSIONS } from "@/constants/permissions.js";
 
 const isCollapsed = ref(false);
+const { hasPermission, isReady, permissions } = usePermissions();
+
+// Debug permissions
+watch(permissions, (newPermissions) => {
+  console.log('🔍 MainLayout permissions updated:', newPermissions)
+}, { deep: true })
+
+watch(isReady, (ready) => {
+  console.log('🔍 MainLayout permissions ready:', ready)
+})
 
 // Show development features only in dev mode
-const isDevelopment = computed(() => import.meta.env.DEV);
+
+// Check if user has system config permission
+const canViewSystemConfig = computed(() => {
+  // if (!isReady.value) return false;
+  return hasPermission(PERMISSIONS.SYSTEM_CONFIG.COMPANY_VIEW);
+});
+
+// Check if user has project permission
+const canViewProjects = computed(() => {
+  // if (!isReady.value) return false;
+  return hasPermission(PERMISSIONS.PROJECT.VIEW_MEMBER_OWN) || hasPermission(PERMISSIONS.PROJECT.VIEW_MEMBER_ANY) || hasPermission(PERMISSIONS.PROJECT.VIEW_MEMBER);
+});
 
 const toggleSidebar = () => {
   isCollapsed.value = !isCollapsed.value;

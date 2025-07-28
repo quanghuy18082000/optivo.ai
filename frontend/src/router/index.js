@@ -1,83 +1,33 @@
-import { createRouter, createWebHistory } from 'vue-router'
-import authRoutes from '@/modules/auth/routes'
-import worklogRoutes from '@/modules/worklogs/routes'
-import projectRoutes from "@/modules/projects/routes" // Imp
-import NotFoundPage from '@/views/NotFoundPage.vue'
-import ServerErrorPage from '@/views/ServerErrorPage.vue'
-import UnauthorizedPage from '@/views/UnauthorizedPage.vue'
-import { getUserPermissions } from '@/services/systemConfigService.js'
-import { useGlobalLoading } from '@/composables/useGlobalLoading.js'
-import { setGlobalPermissions, clearGlobalPermissions, getGlobalPermissions, isPermissionsReady } from '@/composables/usePermissions.js'
+import { createRouter, createWebHistory } from "vue-router"
+import { useAuthStore } from "@/modules/auth/store"
+import { fetchUserPermissions, hasAnyPermission } from "@/services/permissionService.js"
+
+// Import route modules
+import authRoutes from "@/modules/auth/routes"
+import projectRoutes from "@/modules/projects/routes"
+import worklogRoutes from "@/modules/worklogs/routes"
+import systemConfigRoutes from "@/modules/system-config/routes"
 
 const routes = [
-  ...authRoutes, 
-  ...worklogRoutes, 
+  ...authRoutes,
+  ...worklogRoutes,
   ...projectRoutes,
-
-  // Demo route (development only)
+  ...systemConfigRoutes,
   {
-    path: '/test-multiselect',
-    name: 'TestMultiSelect',
-    component: () => import('@/components/TestMultiSelect.vue'),
-    meta: {
-      title: 'Test MultiSelect',
-      requiresAuth: true
-    }
+    path: "/unauthorized",
+    name: "Unauthorized",
+    component: () => import("@/pages/UnauthorizedPage.vue"),
   },
   {
-    path: '/test-project-filters',
-    name: 'TestProjectFilters',
-    component: () => import('@/components/TestProjectFilters.vue'),
-    meta: {
-      title: 'Test Project Filters',
-      requiresAuth: true
-    }
+    path: "/server-error",
+    name: "ServerError",
+    component: () => import("@/views/ServerErrorPage.vue"),
   },
   {
-    path: '/test-checkbox-group',
-    name: 'TestCheckboxGroup',
-    component: () => import('@/components/TestCheckboxGroup.vue'),
-    meta: {
-      title: 'Test CheckboxGroup',
-      requiresAuth: true
-    }
+    path: "/:pathMatch(.*)*",
+    name: "NotFound",
+    component: () => import("@/views/NotFoundPage.vue"),
   },
-  {
-    path: '/test-multiselect-fixed',
-    name: 'TestMultiSelectFixed',
-    component: () => import('@/components/TestMultiSelectFixed.vue'),
-    meta: {
-      title: 'Test MultiSelect Fixed',
-      requiresAuth: true
-    }
-  },
-
-  // Error routes
-  {
-    path: '/server-error',
-    name: 'ServerError',
-    component: ServerErrorPage,
-    meta: {
-      title: 'Server Error'
-    }
-  },
-  {
-    path: '/unauthorized',
-    name: 'unauthorized',
-    component: UnauthorizedPage,
-    meta: {
-      title: 'Access Denied'
-    }
-  },
-  // 404 route - must be the last one
-  {
-    path: '/:pathMatch(.*)*',
-    name: 'NotFound',
-    component: NotFoundPage,
-    meta: {
-      title: '404 Not Found'
-    }
-  }
 ]
 
 const router = createRouter({
@@ -85,93 +35,68 @@ const router = createRouter({
   routes,
 })
 
-// Function to check if user has required permissions
-const hasRequiredPermissions = (requiredPermissions, userPermissionNames) => {
-  if (!requiredPermissions || requiredPermissions.length === 0) return true
-  return requiredPermissions.every(perm => userPermissionNames.includes(perm))
-}
-
+// Global navigation guard
 router.beforeEach(async (to, from, next) => {
-  const isAuthenticated = localStorage.getItem('isAuthenticated')
-  const { setLoading } = useGlobalLoading()
+  const authStore = useAuthStore()
+
+  // If user is not authenticated and trying to access a protected route
+  if (to.meta.requiresAuth && !authStore.isAuthenticated) {
+    next("/login")
+    return
+  } 
   
-  // If route requires authentication but user is not authenticated
-  if (to.meta.requiresAuth && !isAuthenticated) {
-    next('/login')
+  // If user is authenticated and trying to access login page, redirect to home
+  if (to.path === "/login" && authStore.isAuthenticated) {
+    next("/")
     return
   }
   
-  // If route requires specific permissions
-  if (to.meta.requiredPermissions && isAuthenticated) {
+  // If user is not authenticated and trying to access root path, redirect to login
+  if (to.path === "/" && !authStore.isAuthenticated) {
+    next("/login")
+    return
+  }
+  
+  // Check permissions for authenticated users
+  if (authStore.isAuthenticated && to.meta.requiredPermissions) {
     try {
-      // Check if permissions are already loaded
-      if (!isPermissionsReady()) {
-        setLoading('routePermissions', true)
+      console.log('🔍 Checking permissions for route:', to.path)
+      console.log('🔍 Required permissions:', to.meta.requiredPermissions)
+      
+      // Refresh permissions on route change, but respect cache if recent
+      // This ensures we have up-to-date permissions while avoiding excessive API calls
+      await fetchUserPermissions()
+      
+      // Check if user has any of the required permissions
+      if (!hasAnyPermission(to.meta.requiredPermissions)) {
+        console.log('❌ Access denied. Required permissions:', to.meta.requiredPermissions)
+        // Try force refresh once in case permissions were recently updated
+        console.log('🔄 Retrying with fresh permissions...')
+        await fetchUserPermissions(true)
         
-        const response = await getUserPermissions()
-        if (response && response.data) {
-          // Extract all permission names
-          const permissionNames = []
-          
-          // Add permissions from roles
-          if (response.data.global_roles) {
-            response.data.global_roles.forEach(role => {
-              if (role.permissions) {
-                role.permissions.forEach(permission => {
-                  permissionNames.push(permission.name)
-                })
-              }
-            })
-          }
-          
-          // Add permissions from project access
-          if (response.data.project_access) {
-            response.data.project_access.forEach(project => {
-              if (project.permission_names) {
-                project.permission_names.forEach(permName => {
-                  if (!permissionNames.includes(permName)) {
-                    permissionNames.push(permName)
-                  }
-                })
-              }
-            })
-          }
-          
-          // Set global permissions
-          setGlobalPermissions({
-            globalRoles: response.data.global_roles || [],
-            permissionNames,
-            projectAccess: response.data.project_access || []
-          })
+        // Check again with fresh permissions
+        if (!hasAnyPermission(to.meta.requiredPermissions)) {
+          console.log('❌ Access still denied after refresh. Required permissions:', to.meta.requiredPermissions)
+          next("/unauthorized")
+          return
         }
       }
       
-      // Get current permissions
-      const currentPermissions = getGlobalPermissions()
-      
-      // Check if user has required permissions
-      if (hasRequiredPermissions(to.meta.requiredPermissions, currentPermissions.allPermissions)) {
-        setLoading('routePermissions', false)
-        next()
-      } else {
-        setLoading('routePermissions', false)
-        // Redirect to unauthorized page or home
-        next({ name: 'unauthorized' })
-      }
+      console.log('✅ Permission check passed for:', to.path)
     } catch (error) {
-      console.error('Error checking permissions:', error)
-      setLoading('routePermissions', false)
-      next('/login')
+      console.error('❌ Permission check failed:', error)
+      next("/unauthorized")
+      return
     }
-  } else {
-    // No special permission requirements
-    next()
   }
+  
+  next()
 })
 
-// Clear permissions on logout
+// Clear permissions cache function
 export const clearPermissions = () => {
-  clearGlobalPermissions()
+  // Implementation for clearing permissions cache
+  console.log("Permissions cache cleared")
 }
 
 export default router

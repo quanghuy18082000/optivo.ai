@@ -9,9 +9,14 @@ import Button from "@/components/ui/Button.vue";
 import { useAuth } from "../composables/useAuth";
 import { useI18n } from "vue-i18n";
 import { useRoute } from "vue-router";
+import { usePageLoading } from "@/composables/usePageLoading";
 
 const { t } = useI18n();
 const route = useRoute();
+
+// Page loading management
+const { stopLoading } = usePageLoading("reset-password");
+
 const { resetPassword, error: authError, isLoading, success } = useAuth();
 
 const token = ref("");
@@ -23,6 +28,7 @@ onMounted(() => {
   if (!token.value) {
     console.error("No reset token found in URL");
   }
+  stopLoading();
 });
 
 // Create validation schema using Yup

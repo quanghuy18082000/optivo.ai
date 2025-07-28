@@ -30,15 +30,22 @@ export const PROJECT_PERMISSIONS = {
   DELETE_USER: "project.delete_user",
   ASSIGN_ROLE: "project.assign_role",
   CREATE_ROLE: "project.create_role",
+  VIEW_MEMBER : "project.view_member",
   VIEW_MEMBER_OWN: "project.view_member_own",
   VIEW_MEMBER_ANY: "project.view_member_any"
+}
+
+export const SYSTEM_CONFIG_PERMISSIONS = {
+  COMPANY_VIEW: "system_config_company.view",
+  COMPANY_UPDATE: "system_config_company.update"
 }
 
 // Combined permissions object for easy access
 export const PERMISSIONS = {
   WORKLOG: WORKLOG_PERMISSIONS,
   ROLE: ROLE_PERMISSIONS,
-  PROJECT: PROJECT_PERMISSIONS
+  PROJECT: PROJECT_PERMISSIONS,
+  SYSTEM_CONFIG: SYSTEM_CONFIG_PERMISSIONS
 }
 
 // Helper function to get all permissions as an array
@@ -46,7 +53,8 @@ export const getAllPermissions = () => {
   return [
     ...Object.values(WORKLOG_PERMISSIONS),
     ...Object.values(ROLE_PERMISSIONS),
-    ...Object.values(PROJECT_PERMISSIONS)
+    ...Object.values(PROJECT_PERMISSIONS),
+    ...Object.values(SYSTEM_CONFIG_PERMISSIONS)
   ]
 }
 
@@ -59,6 +67,8 @@ export const getPermissionsByCategory = (category) => {
       return Object.values(ROLE_PERMISSIONS)
     case 'project':
       return Object.values(PROJECT_PERMISSIONS)
+    case 'system_config':
+      return Object.values(SYSTEM_CONFIG_PERMISSIONS)
     default:
       return []
   }

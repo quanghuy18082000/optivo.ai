@@ -22,11 +22,16 @@ import {
   getWorklogDetailsByDate,
 } from "../services/worklogService";
 import { useToast } from "@/composables/useToast";
+import { usePageInitLoading } from "@/composables/usePageLoading";
 
 const router = useRouter();
 const route = useRoute();
 const { t } = useI18n();
 const toast = useToast();
+
+// Page loading management
+const { stopLoading } = usePageInitLoading("edit-worklog");
+
 const worklogId = route.params.id;
 const worklogDate = route.query.date;
 const isLoading = ref(true);
@@ -79,6 +84,7 @@ const fetchWorklog = async () => {
     router.push("/");
   } finally {
     isLoading.value = false;
+    stopLoading();
   }
 };
 

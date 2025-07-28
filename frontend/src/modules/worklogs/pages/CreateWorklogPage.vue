@@ -19,11 +19,15 @@ import Button from "@/components/ui/Button.vue";
 import { useWorklog } from "../composables/useWorklog";
 import { getProjects } from "../services/worklogService";
 import { useToast } from "@/composables/useToast";
+import { usePageInitLoading } from "@/composables/usePageLoading";
 
 const router = useRouter();
 const route = useRouter().currentRoute.value;
 const { t } = useI18n();
 const toast = useToast();
+
+// Page loading management
+const { stopLoading } = usePageInitLoading("create-worklog");
 
 // Get date from query parameter or use current date
 const selectedDate = ref(
@@ -279,6 +283,7 @@ watch(
 // Initialize the selected projects map when component is mounted
 onMounted(() => {
   updateSelectedProjects();
+  stopLoading();
 });
 </script>
 

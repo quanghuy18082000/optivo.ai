@@ -53,6 +53,29 @@
         </div>
 
         <div class="flex items-center gap-3">
+          <!-- Export CSV Button -->
+          <Button
+            variant="secondary"
+            class="border-gray-300 text-gray-700 hover:bg-gray-50"
+            @click="handleExportCSV"
+            :disabled="isExporting"
+          >
+            <svg
+              class="w-4 h-4 mr-2"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+              />
+            </svg>
+            {{ isExporting ? "Exporting..." : "Export CSV" }}
+          </Button>
+
           <!-- Filters Button -->
           <button
             @click="showFilters = true"
@@ -223,7 +246,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount, computed } from "vue";
+import { ref, onMounted, onBeforeUnmount, computed, watch } from "vue";
 import MainLayout from "@/layouts/MainLayout.vue";
 import Button from "@/components/ui/Button.vue";
 import ProjectTable from "../components/ProjectTable.vue";
@@ -236,12 +259,19 @@ import { useRouter } from "vue-router";
 import { useToast } from "@/composables/useToast";
 import { transformProjectsData } from "../utils/workloadDataTransformer";
 import { usePermissions } from "@/composables/usePermissions";
-import { updateProjectsStatus } from "../services/projectService";
+import {
+  updateProjectsStatus,
+  exportProjectsMembersDetailCSV,
+} from "../services/projectService";
+import { usePageInitLoading } from "@/composables/usePageLoading";
 
 const authStore = useAuthStore();
 const router = useRouter();
 const { showToast } = useToast();
 const { hasPermission, PERMISSIONS } = usePermissions();
+
+// Page loading management
+const { stopLoading } = usePageInitLoading("project-dashboard");
 
 const {
   projects: rawProjects,
@@ -253,6 +283,17 @@ const {
   refetch,
 } = useProjects();
 
+// Stop page loading when data is loaded
+watch(
+  isLoading,
+  (newIsLoading) => {
+    if (!newIsLoading) {
+      stopLoading();
+    }
+  },
+  { immediate: true }
+);
+
 // Transform raw projects data for ProjectTable
 const projects = computed(() => {
   return transformProjectsData(rawProjects.value);
@@ -263,6 +304,7 @@ const showProfileMenu = ref(false);
 const showChangeStatusModal = ref(false);
 const selectedProjects = ref([]);
 const isChangingStatus = ref(false);
+const isExporting = ref(false);
 const projectTableRef = ref(null);
 
 // Click outside handler for profile menu
@@ -341,6 +383,52 @@ const handleChangeStatus = async ({ changes }) => {
   }
 };
 
+const handleExportCSV = async () => {
+  try {
+    isExporting.value = true;
+
+    // Prepare request body
+    let requestBody = {};
+
+    // If user has selected projects from table, use those project IDs
+    if (selectedProjects.value.length > 0) {
+      requestBody.project_ids = selectedProjects.value.map(
+        (project) => project.id
+      );
+    } else {
+      // If no projects selected, use current filters
+      requestBody = { ...filters.value };
+    }
+
+    // Call export API
+    const csvBlob = await exportProjectsMembersDetailCSV(requestBody);
+
+    // Create download link
+    const url = window.URL.createObjectURL(csvBlob);
+    const link = document.createElement("a");
+    link.href = url;
+
+    // Generate filename with current date
+    const currentDate = new Date().toISOString().split("T")[0];
+    link.download = `projects-members-detail-${currentDate}.csv`;
+
+    // Trigger download
+    document.body.appendChild(link);
+    link.click();
+
+    // Cleanup
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+
+    toast.success("CSV file downloaded successfully");
+  } catch (error) {
+    console.error("Export CSV error:", error);
+    toast.error(error.message || "Failed to export CSV");
+  } finally {
+    isExporting.value = false;
+  }
+};
+
 // Handle escape key to close profile menu
 const handleEscKey = (e) => {
   if (e.key === "Escape" && showProfileMenu.value) {
@@ -352,6 +440,7 @@ const handleEscKey = (e) => {
 onMounted(() => {
   document.addEventListener("keydown", handleEscKey);
   document.addEventListener("click", handleClickOutside);
+  stopLoading();
 });
 
 onBeforeUnmount(() => {

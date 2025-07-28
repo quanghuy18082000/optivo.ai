@@ -91,9 +91,14 @@ import {
   useLoadingIntegration,
   LOADING_KEYS,
 } from "@/composables/useLoadingIntegration.js";
+import { usePageInitLoading } from "@/composables/usePageLoading";
 
 const router = useRouter();
 const toast = useToast();
+
+// Page loading management
+const { stopLoading } = usePageInitLoading("add-project");
+
 // Current step state
 const currentStep = ref(1);
 const isSubmitting = ref(false);
@@ -176,8 +181,9 @@ const fetchPositions = async () => {
 };
 
 // Fetch positions when component is mounted
-onMounted(() => {
-  fetchPositions();
+onMounted(async () => {
+  await fetchPositions();
+  stopLoading();
 });
 
 // Options for dropdowns

@@ -460,6 +460,7 @@ import { ref, computed, onMounted } from "vue";
 import MainLayout from "@/layouts/MainLayout.vue";
 import { useAuthStore } from "@/modules/auth/store";
 import { useToast } from "@/composables/useToast";
+import { usePageInitLoading } from "@/composables/usePageLoading";
 import {
   updateProfile as updateProfileService,
   changePassword as changePasswordService,
@@ -467,6 +468,10 @@ import {
 
 const authStore = useAuthStore();
 const { success, error } = useToast();
+
+// Page loading management
+const { stopLoading } = usePageInitLoading("profile-page");
+
 const isLoading = ref(true);
 
 // Modal states
@@ -649,6 +654,7 @@ onMounted(() => {
   // Simulate loading
   setTimeout(() => {
     isLoading.value = false;
+    stopLoading();
   }, 500);
 });
 </script>

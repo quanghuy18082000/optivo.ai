@@ -7,9 +7,14 @@ import PasswordInput from "@/components/ui/PasswordInput.vue";
 import Button from "@/components/ui/Button.vue";
 import { useAuth } from "../composables/useAuth";
 import { useI18n } from "vue-i18n";
-import { ref, computed, watch } from "vue";
+import { ref, computed, watch, onMounted } from "vue";
+import { usePageLoading } from "@/composables/usePageLoading";
 
 const { t } = useI18n();
+
+// Page loading management - Login page loads immediately
+const { stopLoading } = usePageLoading("login-page");
+
 const {
   loginUser,
   loginWithMicrosoft,
@@ -43,6 +48,11 @@ const { value: password, errorMessage: passwordError } = useField("password");
 const formError = ref(null);
 const localLoading = ref(false);
 const googleError = ref(null);
+
+// Stop page loading when component is ready
+onMounted(() => {
+  stopLoading();
+});
 
 // Computed property for any loading state
 const isAnyLoading = computed(() => {

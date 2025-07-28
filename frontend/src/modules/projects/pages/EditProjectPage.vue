@@ -152,10 +152,14 @@ import QuotationStep from "../components/steps/QuotationStep.vue";
 import PlanStep from "../components/steps/PlanStep.vue";
 import { useToast } from "@/composables/useToast";
 import { getPositions } from "@/services/systemConfigService.js";
+import { usePageInitLoading } from "@/composables/usePageLoading";
 
 const router = useRouter();
 const route = useRoute();
 const toast = useToast();
+
+// Page loading management
+const { stopLoading } = usePageInitLoading("edit-project");
 
 // Get project ID from route params
 const projectId = route.params.id;
@@ -606,6 +610,7 @@ const updateProject = async (skipPlan = false) => {
 onMounted(async () => {
   await fetchPositions();
   await fetchProjectDetails();
+  stopLoading();
 });
 
 // Watch for changes in project dates and propagate to quotations and plans

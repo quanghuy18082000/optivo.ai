@@ -6,9 +6,14 @@ import Input from "@/components/ui/Input.vue";
 import Button from "@/components/ui/Button.vue";
 import { useI18n } from "vue-i18n";
 import { useAuth } from "../composables/useAuth";
-import { ref } from "vue";
+import { ref, onMounted } from "vue";
+import { usePageLoading } from "@/composables/usePageLoading";
 
 const { t } = useI18n();
+
+// Page loading management
+const { stopLoading } = usePageLoading("forgot-password");
+
 const { forgotPassword, error: authError, success, isLoading } = useAuth();
 
 // Create validation schema using Yup
@@ -50,6 +55,11 @@ const onSubmit = async (event) => {
   // Get current values from the form
   forgotPassword(email.value);
 };
+
+// Stop page loading when component is ready
+onMounted(() => {
+  stopLoading();
+});
 </script>
 
 <template>

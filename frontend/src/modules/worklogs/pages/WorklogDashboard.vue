@@ -6,6 +6,9 @@
         <span class="text-sm text-gray-500">Log your work</span>
       </div>
     </template>
+    <!-- Debug Panel (Development only) -->
+    <!-- <PermissionDebug v-if="isDevelopment" /> -->
+
     <!-- Main Content -->
     <div class="space-y-6">
       <!-- Action Buttons -->
@@ -276,15 +279,23 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from "vue";
+import { ref, computed, onMounted, onBeforeUnmount, watch } from "vue";
 import MainLayout from "@/layouts/MainLayout.vue";
 import WorklogTable from "../components/WorklogTable.vue";
 import WorklogFilters from "../components/WorklogFilters.vue";
 import Button from "@/components/ui/Button.vue";
+// import PermissionDebug from "@/components/PermissionDebug.vue";
 import { useWorklog } from "../composables/useWorklog";
 import { useRouter } from "vue-router";
+import { usePageInitLoading } from "@/composables/usePageLoading";
 
 const router = useRouter();
+
+// Page loading management
+const { stopLoading } = usePageInitLoading("worklog-dashboard");
+
+// Development mode check
+const isDevelopment = computed(() => import.meta.env.DEV);
 
 // Use the worklog composable with fetchWorklogs explicitly set to true
 const {
@@ -298,6 +309,17 @@ const {
   changePage,
   refetch,
 } = useWorklog({ fetchWorklogs: true });
+
+// Stop page loading when data is loaded
+watch(
+  isLoading,
+  (newIsLoading) => {
+    if (!newIsLoading) {
+      stopLoading();
+    }
+  },
+  { immediate: true }
+);
 
 const showFilters = ref(false);
 const showProfileMenu = ref(false);
@@ -380,6 +402,7 @@ const handleEscKey = (e) => {
 onMounted(() => {
   document.addEventListener("keydown", handleEscKey);
   document.addEventListener("click", handleClickOutside);
+  stopLoading();
 });
 
 onBeforeUnmount(() => {

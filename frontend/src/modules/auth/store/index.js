@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { clearPermissions } from '@/router'
+import { clearPermissionsCache } from '@/services/permissionService.js'
 
 export const useAuthStore = defineStore('auth', {
   state: () => ({
@@ -63,7 +63,7 @@ export const useAuthStore = defineStore('auth', {
       localStorage.removeItem('userInfo')
       
       // Clear permissions cache
-      clearPermissions()
+      clearPermissionsCache()
     },
     initializeAuth() {
       const isAuthenticated = localStorage.getItem('isAuthenticated')

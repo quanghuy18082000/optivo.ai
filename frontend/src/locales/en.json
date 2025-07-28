@@ -32,7 +32,7 @@
       "invalid": "Invalid username or password",
       "or_continue_with": "Or continue with",
       "failed": "Please check your username and password and try again."
-    }, 
+    },
     "forgot": {
       "title": "Forgot Password",
       "description": "Enter your email address to receive a password reset link.",
@@ -40,7 +40,7 @@
       "success": "Password reset link has been sent to your email.",
       "error": "Unable to send password reset link: {msg}",
       "back_to_login": "Back to Login",
-      "failed":"Failed to send reset link, please try again later."
+      "failed": "Failed to send reset link, please try again later."
     },
     "reset_password": {
       "title": "Reset Your Password",
@@ -67,5 +67,44 @@
     "networkErrorMessage": "Unable to connect to the server. Please check your internet connection.",
     "unauthorized": "Access Denied",
     "unauthorizedMessage": "You don't have permission to access this page. Please contact your administrator if you believe this is an error."
+  },
+  "system_config": {
+    "title": "System Configuration",
+    "how_to_group_tasks": "How to group tasks to the category",
+    "description_part1": "Here is",
+    "description_worklog_data": "Work log data",
+    "description_part2": ", the workload data input by the user, and here is",
+    "description_category_list": "Category list",
+    "description_part3": ", the list of categories that have been or are currently being used. As a work management expert, please categorize the items in",
+    "description_part4": "using the categories from",
+    "description_part5": ". If creating a new category would improve accuracy, feel free to create one following the same format.",
+    "system_variables": "System variables",
+    "current_category_list": "Current Category List",
+    "ai_category_list": "AI Category List",
+    "add_new": "Add New +",
+    "remove": "remove",
+    "category": "Category {number}",
+    "ai_category": "AI Category {number}",
+    "edit_worklog_minutes": "The number of minutes the user can edit their worklog entries",
+    "delete_worklog_minutes": "The number of minutes the user can delete their worklog entries",
+    "hours_per_working_day": "The number of hours per working day",
+    "ai_prompt": "AI Prompt for categorization",
+    "ai_prompt_placeholder": "Enter the AI prompt that will be used for automatic categorization of work log entries...",
+    "add_custom_fields": "Add custom fields to the Worklog to collect additional data according to your needs.",
+    "custom_field_display_location": "Custom field display location*",
+    "standalone_input_field": "A standalone input field",
+    "linked_input_field": "An input field linked to Project / Work List",
+    "custom_field_name": "Custom field name",
+    "input_types": "Input types",
+    "single_choice": "Single choice",
+    "multiple_choice": "Multiple choice",
+    "paragraph": "Paragraph",
+    "single_text_line": "Single text line",
+    "datetime": "Datetime",
+    "action": "Action",
+    "remove_custom_field": "Remove this custom field",
+    "add_one_more_custom_field": "Add one more custom field below",
+    "select_location": "Select location",
+    "enter_field_name": "Enter field name"
   }
 }

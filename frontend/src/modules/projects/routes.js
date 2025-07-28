@@ -23,7 +23,7 @@ const projectRoutes = [
     component: () => import("./pages/EditProjectPage.vue"),
     meta: { 
       requiresAuth: true,
-      requiredPermissions: ['project.update_project']  // Based on project update permission
+      requiredPermissions: ['project.update']  // Based on project update permission
     },
   },
 ]

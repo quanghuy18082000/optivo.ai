@@ -131,7 +131,7 @@ apiClient.interceptors.response.use(
 const get = (url, params = {}) => apiClient.get(url, { params });
 
 // A simple POST wrapper
-const post = (url, data) => apiClient.post(url, data);
+const post = (url, data, config = {}) => apiClient.post(url, data, config);
 
 // A simple PUT wrapper
 const put = (url, data) => apiClient.put(url, data);

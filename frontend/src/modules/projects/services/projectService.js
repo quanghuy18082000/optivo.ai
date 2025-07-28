@@ -79,3 +79,20 @@ export const updateProjectsStatus = async (updates) => {
     throw new Error(error.response?.data?.message || error.message || 'Failed to update project status')
   }
 }
+
+/**
+ * Export projects members detail to CSV
+ * @param {Object} requestBody - Filter parameters for export
+ * @returns {Promise<Blob>} - The CSV file as blob
+ */
+export const exportProjectsMembersDetailCSV = async (requestBody = {}) => {
+  try {
+    const response = await post('/projects/members-detail/export-csv', requestBody, {
+      responseType: 'blob'
+    })
+    return response.data
+  } catch (error) {
+    console.error('API Error:', error);
+    throw new Error(error.response?.data?.message || error.message || 'Failed to export CSV')
+  }
+}
