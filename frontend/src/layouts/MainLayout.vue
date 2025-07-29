@@ -116,7 +116,7 @@
           </router-link>
 
           <!-- System Configuration -->
-          <!-- <router-link
+          <router-link
             v-if="canViewSystemConfig"
             to="/system-config"
             class="flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-blue-700 transition-colors group"
@@ -137,7 +137,7 @@
               <div class="font-medium truncate">System Config</div>
               <div class="text-sm text-blue-200 truncate">System settings</div>
             </div>
-          </router-link> -->
+          </router-link>
 
           <!-- Loading Demo Link (Development only) -->
           <!-- <router-link
@@ -216,6 +216,7 @@ watch(isReady, (ready) => {
 })
 
 // Show development features only in dev mode
+const isDevelopment = computed(() => import.meta.env.DEV);
 
 // Check if user has system config permission
 const canViewSystemConfig = computed(() => {

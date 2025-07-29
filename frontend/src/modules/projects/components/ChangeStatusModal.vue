@@ -26,7 +26,16 @@
                   {{ project.name }}
                 </h4>
                 <p class="text-xs text-gray-500 mt-1">
-                  Current: {{ getStatusLabel(project.status) }}
+                  Current:
+                  <span
+                    :class="[
+                      PROJECT_STATUS_COLORS[project.status].bg,
+                      PROJECT_STATUS_COLORS[project.status].text,
+                      PROJECT_STATUS_COLORS[project.status].border,
+                      'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium',
+                    ]"
+                    >{{ getStatusLabel(project.status) }}</span
+                  >
                 </p>
               </div>
               <div class="flex-shrink-0 w-48">
@@ -70,6 +79,7 @@ import Button from "@/components/ui/Button.vue";
 import Select from "@/components/ui/Select.vue";
 import {
   PROJECT_STATUS_LABELS,
+  PROJECT_STATUS_COLORS,
   getAvailableStatusOptions,
 } from "../constants/projectStatus";
 

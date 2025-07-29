@@ -396,8 +396,26 @@ const handleExportCSV = async () => {
         (project) => project.id
       );
     } else {
-      // If no projects selected, use current filters
-      requestBody = { ...filters.value };
+      // If no projects selected, use current filters but clean up empty values
+      const cleanFilters = { ...filters.value };
+
+      // Remove empty arrays and empty values
+      Object.keys(cleanFilters).forEach((key) => {
+        if (
+          Array.isArray(cleanFilters[key]) &&
+          cleanFilters[key].length === 0
+        ) {
+          delete cleanFilters[key];
+        } else if (
+          cleanFilters[key] === "" ||
+          cleanFilters[key] === null ||
+          cleanFilters[key] === undefined
+        ) {
+          delete cleanFilters[key];
+        }
+      });
+
+      requestBody = cleanFilters;
     }
 
     // Call export API
@@ -420,10 +438,10 @@ const handleExportCSV = async () => {
     document.body.removeChild(link);
     window.URL.revokeObjectURL(url);
 
-    toast.success("CSV file downloaded successfully");
+    showToast.success("CSV file downloaded successfully");
   } catch (error) {
     console.error("Export CSV error:", error);
-    toast.error(error.message || "Failed to export CSV");
+    showToast.error(error.message || "Failed to export CSV");
   } finally {
     isExporting.value = false;
   }

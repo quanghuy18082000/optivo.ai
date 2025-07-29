@@ -1,4 +1,4 @@
-import { getUserPermissions } from '@/services/systemConfigService.js'
+import { getUserPermissions } from '@/services/systemService.js'
 
 // Global permissions cache
 let permissionsCache = {

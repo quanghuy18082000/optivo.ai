@@ -151,7 +151,7 @@ import BasicInformationStep from "../components/steps/BasicInformationStep.vue";
 import QuotationStep from "../components/steps/QuotationStep.vue";
 import PlanStep from "../components/steps/PlanStep.vue";
 import { useToast } from "@/composables/useToast";
-import { getPositions } from "@/services/systemConfigService.js";
+import { getPositions } from "@/services/systemService.js";
 import { usePageInitLoading } from "@/composables/usePageLoading";
 
 const router = useRouter();
