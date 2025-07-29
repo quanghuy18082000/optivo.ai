@@ -17,24 +17,26 @@ export function transformProjectsData(apiData) {
     id: project.project.id,
     name: project.project.name,
     status: project.project.status || 'not_started', // Default to not_started if no status
-    members: transformMembersData(project.workload_member_detail || []),
+    start_date: project.project.start_date,
+    end_date: project.project.end_date,
+    members: transformMembersData(project.workload_member_detail || [], project.project),
   }))
 }
 
 /**
  * Transform members data for a project
  * @param {Array} membersData - Array of member workload data
+ * @param {Object} projectData - Project data containing start_date and end_date
  * @returns {Array} Transformed members data
  */
-function transformMembersData(membersData) {
+function transformMembersData(membersData, projectData = {}) {
   if (!Array.isArray(membersData)) return []
-
 
   return membersData.map((memberData) => ({
     id: memberData.member.id,
     name: memberData.member.user_name,
     position: memberData.member.position.name,
-    workload: transformWorkloadDataForChart(memberData, 2025), // Use 2025 to match your data
+    workload: transformWorkloadDataForChart(memberData, 2025, projectData), // Pass project data
   }))
 }
 
@@ -73,9 +75,10 @@ function dateToChartX(dateString, referenceDate = null) {
  * Transform workload data for WorkloadGraph component to create stepped lines and scatter points.
  * @param {Object} memberData - Member data containing plan, quotation, actual periods.
  * @param {number} targetYear - Year to filter data for (defaults to current year).
+ * @param {Object} projectData - Project data containing start_date and end_date.
  * @returns {Object} Object containing line and scatter data for ECharts.
  */
-export function transformWorkloadDataForChart(memberData, targetYear = new Date().getFullYear()) {
+export function transformWorkloadDataForChart(memberData, targetYear = new Date().getFullYear(), projectData = {}) {
   const { plan = [], quotation = [], actual = [] } = memberData
 
   const quotationLineData = []
@@ -99,8 +102,22 @@ export function transformWorkloadDataForChart(memberData, targetYear = new Date(
     allDates.push(new Date(item.start_date), new Date(item.end_date))
   })
   
-  // Calculate reference date (earliest date)
-  const referenceDate = allDates.length > 0 ? new Date(Math.min(...allDates.map(d => d.getTime()))) : new Date()
+  // Add project dates to find the widest range
+  if (projectData.start_date) {
+    allDates.push(new Date(projectData.start_date))
+  }
+  if (projectData.end_date) {
+    allDates.push(new Date(projectData.end_date))
+  }
+  
+  // Calculate reference date (earliest date) with padding
+  let referenceDate = new Date();
+  if (allDates.length > 0) {
+    const minDate = new Date(Math.min(...allDates.map(d => d.getTime())));
+    // Add 1 month padding before the earliest date to match WorkloadGraph logic
+    referenceDate = new Date(minDate);
+    referenceDate.setMonth(referenceDate.getMonth() - 1);
+  }
 
   // Process Quotation data
   quotation.forEach((item) => {
@@ -174,13 +191,20 @@ export function transformWorkloadDataForChart(memberData, targetYear = new Date(
   planLineData.sort((a, b) => a[0] - b[0])
   actualLineData.sort((a, b) => a[0] - b[0])
 
-  // Calculate date range from all dates
+  // Calculate date range from all dates with padding to match WorkloadGraph logic
   let startDate = null
   let endDate = null
   
   if (allDates.length > 0) {
-    startDate = new Date(Math.min(...allDates.map(d => d.getTime())))
-    endDate = new Date(Math.max(...allDates.map(d => d.getTime())))
+    const minDate = new Date(Math.min(...allDates.map(d => d.getTime())));
+    const maxDate = new Date(Math.max(...allDates.map(d => d.getTime())));
+    
+    // Add padding to match WorkloadGraph getDateRange logic
+    startDate = new Date(minDate);
+    startDate.setMonth(startDate.getMonth() - 1);
+    
+    endDate = new Date(maxDate);
+    endDate.setMonth(endDate.getMonth() + 1);
   }
 
   return {
@@ -194,6 +218,15 @@ export function transformWorkloadDataForChart(memberData, targetYear = new Date(
       startDate,
       endDate,
       referenceDate
+    },
+    rawData: {
+      quotation,
+      plan,
+      actual
+    },
+    projectData: {
+      start_date: projectData.start_date,
+      end_date: projectData.end_date
     }
   }
 }

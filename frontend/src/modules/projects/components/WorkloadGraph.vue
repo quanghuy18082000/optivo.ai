@@ -56,7 +56,7 @@
           :style="{
             width: chartWidth + 'px',
             height: '192px',
-            minWidth: '100%',
+            minWidth: chartWidth + 'px',
           }"
         ></div>
       </div>
@@ -69,7 +69,7 @@
       style="overflow-x: hidden; margin-left: 50px"
     >
       <div
-        :style="{ width: chartWidth + 'px', minWidth: '100%' }"
+        :style="{ width: chartWidth + 'px', minWidth: chartWidth + 'px' }"
         class="flex justify-between pr-2 pl-12 text-xs text-gray-500 mt-1"
       >
         <div
@@ -112,6 +112,11 @@ const props = defineProps({
     required: true,
     default: () => ({ monthly: [], weeklyActual: [] }),
   },
+  project: {
+    type: Object,
+    required: false,
+    default: () => ({}),
+  },
 });
 
 const emit = defineEmits(["actualLineClick"]);
@@ -126,53 +131,114 @@ const chartData = computed(() => {
   return props.workload;
 });
 
-// Calculate chart dimensions and labels based on date range
-const chartWidth = computed(() => {
-  if (
-    !chartData.value?.dateRange?.startDate ||
-    !chartData.value?.dateRange?.endDate
-  ) {
-    return 1200; // Default width increased
+// Calculate the widest date range from both workload and project data
+const getDateRange = () => {
+  const dates = [];
+
+  // Add workload date range if available
+  if (chartData.value?.dateRange?.startDate) {
+    dates.push(new Date(chartData.value.dateRange.startDate));
+  }
+  if (chartData.value?.dateRange?.endDate) {
+    dates.push(new Date(chartData.value.dateRange.endDate));
   }
 
-  const startDate = new Date(chartData.value.dateRange.startDate);
-  const endDate = new Date(chartData.value.dateRange.endDate);
+  // Add project dates if available (from props)
+  if (props.project?.start_date) {
+    dates.push(new Date(props.project.start_date));
+  }
+  if (props.project?.end_date) {
+    dates.push(new Date(props.project.end_date));
+  }
+
+  // Add project dates from workload data (if available)
+  if (chartData.value?.projectData?.start_date) {
+    dates.push(new Date(chartData.value.projectData.start_date));
+  }
+  if (chartData.value?.projectData?.end_date) {
+    dates.push(new Date(chartData.value.projectData.end_date));
+  }
+
+  // Add dates from raw workload data (quotation, plan, actual)
+  if (chartData.value?.rawData) {
+    const { quotation = [], plan = [], actual = [] } = chartData.value.rawData;
+
+    // Collect all start_date and end_date from quotation
+    quotation.forEach((item) => {
+      if (item.start_date) dates.push(new Date(item.start_date));
+      if (item.end_date) dates.push(new Date(item.end_date));
+    });
+
+    // Collect all start_date and end_date from plan
+    plan.forEach((item) => {
+      if (item.start_date) dates.push(new Date(item.start_date));
+      if (item.end_date) dates.push(new Date(item.end_date));
+    });
+
+    // Collect all start_date and end_date from actual
+    actual.forEach((item) => {
+      if (item.start_date) dates.push(new Date(item.start_date));
+      if (item.end_date) dates.push(new Date(item.end_date));
+    });
+  }
+
+  if (dates.length === 0) {
+    // Fallback to current year if no dates available
+    const now = new Date();
+    return {
+      startDate: new Date(now.getFullYear(), 0, 1), // January 1st
+      endDate: new Date(now.getFullYear(), 11, 31), // December 31st
+    };
+  }
+
+  const minDate = new Date(Math.min(...dates));
+  const maxDate = new Date(Math.max(...dates));
+
+  // Add some padding to ensure all data is visible
+  // Extend the range by 1 month on each side
+  const startDate = new Date(minDate);
+  startDate.setMonth(startDate.getMonth() - 1);
+
+  const endDate = new Date(maxDate);
+  endDate.setMonth(endDate.getMonth() + 1);
+
+  return {
+    startDate,
+    endDate,
+  };
+};
+
+// Calculate chart dimensions and labels based on date range
+const chartWidth = computed(() => {
+  const { startDate, endDate } = getDateRange();
 
   // Calculate total months
   const yearDiff = endDate.getFullYear() - startDate.getFullYear();
   const monthDiff = endDate.getMonth() - startDate.getMonth();
   const totalMonths = yearDiff * 12 + monthDiff + 1;
 
-  // Increased to 150px per month for better actual data visibility, minimum 1200px
-  return Math.max(totalMonths * 150, 1200);
+  // Increased to 180px per month for better visibility and ensure all data is visible
+  // Minimum 1400px to ensure adequate space
+  return Math.max(totalMonths * 180, 1400);
 });
 
 const monthLabels = computed(() => {
+  // Use reference date from workload data to match X-axis calculations
+  let startDate, endDate;
+
   if (
-    !chartData.value?.dateRange?.startDate ||
-    !chartData.value?.dateRange?.endDate
+    chartData.value?.dateRange?.referenceDate &&
+    chartData.value?.dateRange?.endDate
   ) {
-    // Fallback to default 12 months
-    return [
-      { key: "jan", text: "Jan" },
-      { key: "feb", text: "Feb" },
-      { key: "mar", text: "Mar" },
-      { key: "apr", text: "Apr" },
-      { key: "may", text: "May" },
-      { key: "jun", text: "Jun" },
-      { key: "jul", text: "Jul" },
-      { key: "aug", text: "Aug" },
-      { key: "sep", text: "Sep" },
-      { key: "oct", text: "Oct" },
-      { key: "nov", text: "Nov" },
-      { key: "dec", text: "Dec" },
-    ];
+    startDate = new Date(chartData.value.dateRange.referenceDate);
+    endDate = new Date(chartData.value.dateRange.endDate);
+  } else {
+    const dateRange = getDateRange();
+    startDate = dateRange.startDate;
+    endDate = dateRange.endDate;
   }
 
-  const startDate = new Date(chartData.value.dateRange.startDate);
-  const endDate = new Date(chartData.value.dateRange.endDate);
   const labels = [];
-
   const current = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
 
   while (current <= endDate) {
@@ -195,15 +261,15 @@ const onScroll = () => {
 
 // Handle click on Actual line
 const handleActualLineClick = (params) => {
-  if (
-    !chartData.value?.actualLineData ||
-    !chartData.value?.dateRange?.referenceDate
-  ) {
+  if (!chartData.value?.actualLineData) {
     return;
   }
 
   const xValue = params.value[0]; // X-axis value
-  const referenceDate = new Date(chartData.value.dateRange.referenceDate);
+  // Use reference date from workload data to match X-axis calculations
+  const referenceDate = chartData.value?.dateRange?.referenceDate
+    ? new Date(chartData.value.dateRange.referenceDate)
+    : getDateRange().startDate;
 
   // Calculate the start date of the clicked week
   const monthsFromReference = Math.floor(xValue);
@@ -242,14 +308,21 @@ const handleActualLineClick = (params) => {
 
 // Calculate max value for xAxis
 const getXAxisMax = () => {
+  // Use the same reference date as the workload data
   if (
-    !chartData.value?.dateRange?.startDate ||
-    !chartData.value?.dateRange?.endDate
+    chartData.value?.dateRange?.referenceDate &&
+    chartData.value?.dateRange?.endDate
   ) {
-    return 12; // Default to 12 months
+    const referenceDate = new Date(chartData.value.dateRange.referenceDate);
+    const endDate = new Date(chartData.value.dateRange.endDate);
+
+    const yearDiff = endDate.getFullYear() - referenceDate.getFullYear();
+    const monthDiff = endDate.getMonth() - referenceDate.getMonth();
+    return yearDiff * 12 + monthDiff + 1;
   }
-  const startDate = new Date(chartData.value.dateRange.startDate);
-  const endDate = new Date(chartData.value.dateRange.endDate);
+
+  // Fallback to getDateRange if workload data doesn't have reference date
+  const { startDate, endDate } = getDateRange();
   const yearDiff = endDate.getFullYear() - startDate.getFullYear();
   const monthDiff = endDate.getMonth() - startDate.getMonth();
   return yearDiff * 12 + monthDiff + 1;
@@ -262,7 +335,7 @@ const getChartOptions = () => {
     animationDuration: 500,
     grid: {
       top: 10,
-      right: 15,
+      right: 30, // Increased right margin to prevent data cutoff
       bottom: 5,
       left: 10, // Reduced left margin since we have external sticky yAxis
       containLabel: false, // Don't contain labels since we handle them externally
@@ -301,10 +374,12 @@ const getChartOptions = () => {
 
         // Calculate date based on reference date and x-axis value
         let formattedDate = "N/A";
-        if (chartData.value?.dateRange?.referenceDate) {
-          const referenceDate = new Date(
-            chartData.value.dateRange.referenceDate
-          );
+        try {
+          // Use reference date from workload data to match X-axis calculations
+          const referenceDate = chartData.value?.dateRange?.referenceDate
+            ? new Date(chartData.value.dateRange.referenceDate)
+            : getDateRange().startDate;
+
           const monthsFromReference = Math.floor(xValue);
           const dayFraction = xValue - monthsFromReference;
 
@@ -316,6 +391,8 @@ const getChartOptions = () => {
           targetDate.setDate(dayOfMonth);
 
           formattedDate = format(targetDate, "dd/MMM/yy");
+        } catch (error) {
+          console.warn("Error calculating date for tooltip:", error);
         }
 
         let result = `<div style="font-weight: 600; margin-bottom: 6px; font-size: 13px;">${formattedDate}</div>`;
@@ -573,6 +650,15 @@ watch(
   },
   { deep: true }
 );
+
+// Watch for chartWidth changes and resize chart accordingly
+watch(chartWidth, () => {
+  if (chartInstance) {
+    setTimeout(() => {
+      chartInstance.resize();
+    }, 0);
+  }
+});
 
 // Handle window resize with debounce for better performance
 let resizeTimeout = null;

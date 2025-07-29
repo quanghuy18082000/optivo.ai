@@ -86,22 +86,20 @@
           <label class="block text-sm font-medium text-gray-700 mb-3"
             >Custom Date Range</label
           >
-          <div class="grid grid-cols-2 gap-3">
+          <div class="flex flex-col gap-2">
             <div>
-              <label class="block text-xs text-gray-500 mb-1">From</label>
+              <label class="block text-xs text-gray-500 mb-1">Start Date</label>
               <DatePicker
                 v-model="localFilters.createdAfter"
                 placeholder="yyyy-mm-dd"
-                type="date"
                 @update:modelValue="saveCustomDateFrom"
               />
             </div>
             <div>
-              <label class="block text-xs text-gray-500 mb-1">To</label>
+              <label class="block text-xs text-gray-500 mb-1">End Date</label>
               <DatePicker
                 v-model="localFilters.createdBefore"
                 placeholder="yyyy-mm-dd"
-                type="date"
                 @update:modelValue="saveCustomDateTo"
               />
             </div>

@@ -411,11 +411,11 @@
                   >
                     {{ $t("system_config.edit_worklog_minutes") }}
                   </label>
-                  <Input
+                  <TimeInput
                     id="edit-worklog-minutes"
-                    type="number"
                     v-model="formData.worklog_edit_time_limit_minutes"
-                    class="w-32"
+                    input-class="w-48"
+                    :show-helper="true"
                     @blur="handleFieldUpdate"
                   />
                 </div>
@@ -428,11 +428,11 @@
                   >
                     {{ $t("system_config.delete_worklog_minutes") }}
                   </label>
-                  <Input
+                  <TimeInput
                     id="delete-worklog-minutes"
-                    type="number"
                     v-model="formData.worklog_delete_time_limit_minutes"
-                    class="w-32"
+                    input-class="w-48"
+                    :show-helper="true"
                     @blur="handleFieldUpdate"
                   />
                 </div>
@@ -498,6 +498,7 @@ import { usePageInitLoading } from "@/composables/usePageLoading";
 import MainLayout from "@/layouts/MainLayout.vue";
 import Button from "@/components/ui/Button.vue";
 import Input from "@/components/ui/Input.vue";
+import TimeInput from "@/components/ui/TimeInput.vue";
 import TabGroup from "@/components/ui/TabGroup.vue";
 import TabList from "@/components/ui/TabList.vue";
 import Tab from "@/components/ui/Tab.vue";

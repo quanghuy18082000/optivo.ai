@@ -16,6 +16,7 @@ import MainLayout from "@/layouts/MainLayout.vue";
 import Input from "@/components/ui/Input.vue";
 import Select from "@/components/ui/Select.vue";
 import Button from "@/components/ui/Button.vue";
+import DatePicker from "@/components/ui/DatePicker.vue";
 import { useWorklog } from "../composables/useWorklog";
 import { getProjects } from "../services/worklogService";
 import { useToast } from "@/composables/useToast";
@@ -309,10 +310,9 @@ onMounted(() => {
           >
             Worklog Date
           </label>
-          <Input
+          <DatePicker
             id="worklog-date"
             v-model="selectedDate"
-            type="date"
             class="w-full sm:w-64"
             :disabled="isFormLoading"
             @update:modelValue="updateDateInURL"

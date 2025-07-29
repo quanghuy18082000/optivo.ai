@@ -107,8 +107,18 @@
                 </svg>
               </button>
               <div class="flex flex-col items-start gap-2">
-                <span class="text-sm font-medium text-gray-900">{{ project.name }}</span>
-                <span :class="[PROJECT_STATUS_COLORS[project.status].bg, PROJECT_STATUS_COLORS[project.status].text, PROJECT_STATUS_COLORS[project.status].border, 'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium']">{{ getStatusLabel(project.status) }}</span>
+                <span class="text-sm font-medium text-gray-900">{{
+                  project.name
+                }}</span>
+                <span
+                  :class="[
+                    PROJECT_STATUS_COLORS[project.status].bg,
+                    PROJECT_STATUS_COLORS[project.status].text,
+                    PROJECT_STATUS_COLORS[project.status].border,
+                    'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium',
+                  ]"
+                  >{{ getStatusLabel(project.status) }}</span
+                >
               </div>
             </div>
             <div></div>
@@ -216,6 +226,7 @@
               <div class="relative overflow-hidden">
                 <WorkloadGraph
                   :workload="member.workload"
+                  :project="project"
                   @actualLineClick="
                     handleActualLineClick(member, project, $event)
                   "
@@ -296,7 +307,10 @@ import PermissionGuard from "@/components/PermissionGuard.vue";
 import { useProjects } from "../composables/useProjects";
 import { usePermissions } from "@/composables/usePermissions";
 import { useRouter } from "vue-router";
-import { PROJECT_STATUS_LABELS, PROJECT_STATUS_COLORS } from "../constants/projectStatus";
+import {
+  PROJECT_STATUS_LABELS,
+  PROJECT_STATUS_COLORS,
+} from "../constants/projectStatus";
 
 const props = defineProps({
   projects: {
