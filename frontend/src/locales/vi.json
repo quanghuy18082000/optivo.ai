@@ -116,6 +116,14 @@
     "reject_success": "Danh mục đã bị từ chối",
     "reject_error": "Lỗi khi từ chối danh mục",
     "categories": "Danh mục",
-    "general_settings": "Cài đặt chung"
+    "general_settings": "Cài đặt chung",
+    "select_all": "Chọn tất cả",
+    "selected": "đã chọn",
+    "approve_selected": "Chấp nhận {count} mục đã chọn",
+    "select_items_to_approve": "Chọn mục để chấp nhận",
+    "no_items_selected": "Chưa chọn mục nào",
+    "bulk_approve_success": "Đã chấp nhận thành công {count} danh mục",
+    "bulk_approve_error": "Lỗi khi chấp nhận các danh mục đã chọn",
+    "ai_prompt_readonly_note": "AI prompt này chỉ đọc và được quản lý bởi hệ thống."
   }
 }

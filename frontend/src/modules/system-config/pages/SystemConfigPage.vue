@@ -251,11 +251,24 @@
               </div>
 
               <!-- Arrow Button -->
-              <div class="flex justify-center items-center">
+              <div class="flex flex-col justify-center items-center space-y-2">
                 <Button
                   variant="primary"
-                  class="bg-blue-500 hover:bg-blue-600 rounded-full p-3 min-w-0"
-                  @click="transferCategories"
+                  :class="[
+                    'rounded-full p-3 min-w-0 transition-all duration-200',
+                    selectedSuggestions.length > 0
+                      ? 'bg-green-500 hover:bg-green-600'
+                      : 'bg-blue-500 hover:bg-blue-600',
+                  ]"
+                  @click="handleBulkApprove"
+                  :disabled="selectedSuggestions.length === 0"
+                  :title="
+                    selectedSuggestions.length > 0
+                      ? $t('system_config.approve_selected', {
+                          count: selectedSuggestions.length,
+                        })
+                      : $t('system_config.select_items_to_approve')
+                  "
                 >
                   <svg
                     class="w-5 h-5 transform"
@@ -271,14 +284,40 @@
                     ></path>
                   </svg>
                 </Button>
+                <!-- Counter badge -->
+                <div
+                  v-if="selectedSuggestions.length > 0"
+                  class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full font-medium"
+                >
+                  {{ selectedSuggestions.length }}
+                  {{ $t("system_config.selected") }}
+                </div>
               </div>
               <!-- AI Category List -->
               <div
                 class="border col-span-5 border-gray-300 rounded-lg p-4 bg-white"
               >
-                <h3 class="font-medium text-gray-900 mb-3">
-                  {{ $t("system_config.ai_category_list") }}
-                </h3>
+                <div class="flex items-center justify-between mb-3">
+                  <h3 class="font-medium text-gray-900">
+                    {{ $t("system_config.ai_category_list") }}
+                  </h3>
+                  <!-- Select All checkbox -->
+                  <div
+                    v-if="aiCategories.length > 0"
+                    class="flex items-center space-x-2"
+                  >
+                    <input
+                      type="checkbox"
+                      id="selectAll"
+                      :checked="isAllSelected"
+                      @change="toggleSelectAll"
+                      class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    <label for="selectAll" class="text-sm text-gray-600">
+                      {{ $t("system_config.select_all") }}
+                    </label>
+                  </div>
+                </div>
                 <div class="space-y-2">
                   <div v-if="loadingCategories" class="text-gray-500">
                     Loading...
@@ -293,54 +332,66 @@
                   <div
                     v-for="item in aiCategories"
                     :key="item?.suggestion?.id"
-                    class="flex items-center justify-between text-sm py-2 group hover:bg-gray-50 rounded-md px-2"
+                    class="flex items-center text-sm py-2 group hover:bg-gray-50 rounded-md px-2"
                   >
-                    <span class="text-gray-700">
-                      {{ item?.suggestion?.proposed_name }} (Status:
-                      {{ item?.suggestion?.status }}, Worklogs:
-                      {{ item?.worklogs_count }})
-                    </span>
-                    <div
-                      class="flex space-x-2 opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
-                      <button
-                        @click="handleApprove(item?.suggestion?.id)"
-                        class="text-green-500 hover:text-green-700"
-                        title="Approve"
+                    <!-- Checkbox -->
+                    <input
+                      type="checkbox"
+                      :id="`checkbox-${item?.suggestion?.id}`"
+                      v-model="selectedSuggestions"
+                      :value="item?.suggestion?.id"
+                      class="mr-3 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+
+                    <!-- Content -->
+                    <div class="flex-grow flex items-center justify-between">
+                      <span class="text-gray-700">
+                        {{ item?.suggestion?.proposed_name }} (Status:
+                        {{ item?.suggestion?.status }}, Worklogs:
+                        {{ item?.worklogs_count }})
+                      </span>
+                      <div
+                        class="flex space-x-2 opacity-0 group-hover:opacity-100 transition-opacity"
                       >
-                        <svg
-                          class="w-5 h-5"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
+                        <button
+                          @click="handleApprove(item?.suggestion?.id)"
+                          class="text-green-500 hover:text-green-700"
+                          title="Approve"
                         >
-                          <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M5 13l4 4L19 7"
-                          />
-                        </svg>
-                      </button>
-                      <button
-                        @click="handleReject(item?.suggestion?.id)"
-                        class="text-red-500 hover:text-red-700"
-                        title="Reject"
-                      >
-                        <svg
-                          class="w-5 h-5"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
+                          <svg
+                            class="w-5 h-5"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              stroke-width="2"
+                              d="M5 13l4 4L19 7"
+                            />
+                          </svg>
+                        </button>
+                        <button
+                          @click="handleReject(item?.suggestion?.id)"
+                          class="text-red-500 hover:text-red-700"
+                          title="Reject"
                         >
-                          <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M6 18L18 6M6 6l12 12"
-                          />
-                        </svg>
-                      </button>
+                          <svg
+                            class="w-5 h-5"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              stroke-width="2"
+                              d="M6 18L18 6M6 6l12 12"
+                            />
+                          </svg>
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -350,8 +401,8 @@
 
           <!-- General Settings Panel -->
           <TabPanel :index="1">
-            <div class="space-y-6 max-w-2xl">
-              <div class="bg-gray-50 p-6 rounded-lg space-y-6">
+            <div class="space-y-6 w-full">
+              <div class="p-6 rounded-lg space-y-6">
                 <!-- Worklog Edit Time Limit -->
                 <div class="space-y-2">
                   <label
@@ -400,6 +451,22 @@
                     v-model="formData.work_hours_per_day"
                     class="w-32"
                     @blur="handleFieldUpdate"
+                  />
+                </div>
+
+                <!-- AI Prompt -->
+                <div class="space-y-2">
+                  <label
+                    for="ai-prompt"
+                    class="block text-sm font-medium text-gray-700"
+                  >
+                    {{ $t("system_config.ai_prompt") }}
+                  </label>
+                  <textarea
+                    id="ai-prompt"
+                    v-model="formData.ai_prompt"
+                    :placeholder="$t('system_config.ai_prompt_placeholder')"
+                    class="w-full min-h-[250px] px-6 border border-gray-300 rounded-md outline-none shadow-sm focus:ring-blue-500 focus:border-blue-500 resize-none"
                   />
                 </div>
               </div>
@@ -454,6 +521,8 @@ const { t } = useI18n();
 const authStore = useAuthStore();
 const toast = useToast();
 const isAddingNew = ref(false);
+const newCategoryName = ref("");
+const newCategoryDescription = ref("");
 
 // Page loading management
 const { stopLoading } = usePageInitLoading("system-config");
@@ -581,6 +650,47 @@ const transferCategories = () => {
   console.log("Transfer categories");
 };
 
+// Bulk selection functions
+const toggleSelectAll = () => {
+  if (isAllSelected.value) {
+    selectedSuggestions.value = [];
+  } else {
+    selectedSuggestions.value = aiCategories.value
+      .map((item) => item?.suggestion?.id)
+      .filter(Boolean);
+  }
+};
+
+// Bulk approve function
+const handleBulkApprove = async () => {
+  if (selectedSuggestions.value.length === 0) {
+    toast.warning(t("system_config.no_items_selected"));
+    return;
+  }
+
+  try {
+    // Show loading state
+    const approvePromises = selectedSuggestions.value.map((suggestionId) =>
+      approveCategorySuggestion(suggestionId)
+    );
+
+    await Promise.all(approvePromises);
+
+    // Clear selections and refresh data
+    selectedSuggestions.value = [];
+    await fetchCategories();
+
+    toast.success(
+      t("system_config.bulk_approve_success", {
+        count: approvePromises.length,
+      })
+    );
+  } catch (error) {
+    console.error("Bulk approve failed:", error);
+    toast.error(t("system_config.bulk_approve_error"));
+  }
+};
+
 const removeCustomField = () => {
   console.log("Remove custom field");
 };
@@ -597,6 +707,17 @@ const editingCategory = ref(null);
 const editedName = ref("");
 const editedDescription = ref("");
 const error = ref(null);
+
+// Bulk selection state
+const selectedSuggestions = ref([]);
+
+// Computed properties for bulk selection
+const isAllSelected = computed(() => {
+  return (
+    aiCategories.value.length > 0 &&
+    selectedSuggestions.value.length === aiCategories.value.length
+  );
+});
 
 // Fetch categories
 async function fetchCategories() {

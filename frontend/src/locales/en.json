@@ -118,6 +118,14 @@
     "reject_success": "Category suggestion rejected successfully",
     "reject_error": "Error rejecting category suggestion",
     "categories": "Categories",
-    "general_settings": "General Settings"
+    "general_settings": "General Settings",
+    "select_all": "Select All",
+    "selected": "selected",
+    "approve_selected": "Approve {count} selected items",
+    "select_items_to_approve": "Select items to approve",
+    "no_items_selected": "No items selected",
+    "bulk_approve_success": "Successfully approved {count} categories",
+    "bulk_approve_error": "Error approving selected categories",
+    "ai_prompt_readonly_note": "This AI prompt is read-only and managed by the system."
   }
 }
