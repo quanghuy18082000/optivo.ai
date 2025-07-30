@@ -1,5 +1,5 @@
 <template>
-  <div class="relative">
+  <div class="relative datepicker-container">
     <!-- Input Field -->
     <div class="relative">
       <input
@@ -48,117 +48,122 @@
       </div>
     </div>
 
-    <!-- Calendar Popup -->
-    <div
-      v-if="showCalendar"
-      ref="popupRef"
-      :style="popupStyle"
-      class="absolute bg-white border border-gray-200 rounded-lg shadow-lg z-50 p-4 min-w-[200px]"
-      @click.stop
-    >
-      <!-- Calendar Header -->
-      <div class="flex items-center justify-between mb-2">
-        <button
-          @click.prevent="previousMonth"
-          class="p-1 hover:bg-gray-100 rounded transition-colors"
-        >
-          <svg
-            class="w-5 h-5 text-gray-600"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M15 19l-7-7 7-7"
-            />
-          </svg>
-        </button>
-
-        <div class="flex items-center space-x-2">
-          <select
-            v-model="currentMonth"
-            class="px-2 py-1 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-          >
-            <option
-              v-for="(month, index) in months"
-              :key="index"
-              :value="index"
-            >
-              {{ month }}
-            </option>
-          </select>
-          <select
-            v-model="currentYear"
-            class="px-2 py-1 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-          >
-            <option v-for="year in years" :key="year" :value="year">
-              {{ year }}
-            </option>
-          </select>
-        </div>
-
-        <button
-          @click.prevent="nextMonth"
-          class="p-1 hover:bg-gray-100 rounded transition-colors"
-        >
-          <svg
-            class="w-5 h-5 text-gray-600"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M9 5l7 7-7 7"
-            />
-          </svg>
-        </button>
-      </div>
-
-      <!-- Days of Week -->
-      <div class="grid grid-cols-7 mb-1">
+    <!-- Calendar Popup using Teleport -->
+    <Teleport to="body">
+      <div v-if="showCalendar">
+        <!-- Overlay -->
         <div
-          v-for="day in daysOfWeek"
-          :key="day"
-          class="text-center text-sm font-medium text-gray-500 py-1"
+          class="fixed inset-0 bg-black bg-opacity-10 datepicker-overlay"
+          @click="closeCalendar"
+        ></div>
+
+        <!-- Calendar Popup -->
+        <div
+          ref="popupRef"
+          :style="popupStyle"
+          class="fixed bg-white border border-gray-200 rounded-lg shadow-xl p-4 min-w-[280px] max-w-[320px] datepicker-popup"
+          @click.stop
         >
-          {{ day }}
+          <!-- Calendar Header -->
+          <div class="flex items-center justify-between mb-3">
+            <button
+              @click.prevent="previousMonth"
+              class="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <svg
+                class="w-4 h-4 text-gray-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M15 19l-7-7 7-7"
+                />
+              </svg>
+            </button>
+
+            <div class="flex items-center space-x-2">
+              <select
+                v-model="currentMonth"
+                class="px-3 py-1 rounded-md text-sm border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option
+                  v-for="(month, index) in months"
+                  :key="index"
+                  :value="index"
+                >
+                  {{ month }}
+                </option>
+              </select>
+              <select
+                v-model="currentYear"
+                class="px-3 py-1 rounded-md text-sm border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option v-for="year in years" :key="year" :value="year">
+                  {{ year }}
+                </option>
+              </select>
+            </div>
+
+            <button
+              @click.prevent="nextMonth"
+              class="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <svg
+                class="w-4 h-4 text-gray-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9 5l7 7-7 7"
+                />
+              </svg>
+            </button>
+          </div>
+
+          <!-- Days of Week -->
+          <div class="grid grid-cols-7 mb-2">
+            <div
+              v-for="day in daysOfWeek"
+              :key="day"
+              class="text-center text-xs font-semibold text-gray-600 py-2"
+            >
+              {{ day }}
+            </div>
+          </div>
+
+          <!-- Calendar Days -->
+          <div class="grid grid-cols-7 gap-1">
+            <button
+              v-for="date in calendarDays"
+              :key="`${date.year}-${date.month}-${date.day}`"
+              @click="selectDate(date)"
+              class="w-9 h-9 text-sm rounded-lg transition-all duration-150 flex items-center justify-center font-medium"
+              :class="[
+                date.isCurrentMonth
+                  ? 'text-gray-900 hover:bg-blue-50'
+                  : 'text-gray-400 hover:bg-gray-50',
+                date.isSelected
+                  ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-md'
+                  : '',
+                date.isToday && !date.isSelected
+                  ? 'bg-blue-100 text-blue-700 font-bold ring-2 ring-blue-200'
+                  : '',
+              ]"
+            >
+              {{ date.day }}
+            </button>
+          </div>
         </div>
       </div>
-
-      <!-- Calendar Days -->
-      <div class="grid grid-cols-7">
-        <button
-          v-for="date in calendarDays"
-          :key="`${date.year}-${date.month}-${date.day}`"
-          @click="selectDate(date)"
-          class="w-8 h-8 text-xs rounded transition-all duration-150 flex items-center justify-center"
-          :class="[
-            date.isCurrentMonth
-              ? 'text-gray-900 hover:bg-blue-300'
-              : 'text-gray-400 hover:bg-gray-300',
-            date.isSelected ? 'bg-blue-600 text-white hover:bg-blue-700' : '',
-            date.isToday && !date.isSelected
-              ? 'bg-blue-100 text-blue-600 font-semibold'
-              : '',
-          ]"
-        >
-          {{ date.day }}
-        </button>
-      </div>
-    </div>
-
-    <!-- Overlay -->
-    <div
-      v-if="showCalendar"
-      class="fixed inset-0 z-40"
-      @click="closeCalendar"
-    ></div>
+    </Teleport>
 
     <!-- Error Message -->
     <div v-if="error" class="mt-2 text-sm text-red-600">
@@ -169,6 +174,7 @@
 
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from "vue";
+import "./datepicker.css";
 
 const props = defineProps({
   id: {
@@ -259,16 +265,40 @@ const calendarDays = computed(() => {
 const toggleCalendar = () => {
   if (props.disabled) return;
   showCalendar.value = !showCalendar.value;
-  if (showCalendar.value) nextTick(() => positionPopup());
+  if (showCalendar.value) {
+    // Add class to body to prevent scrolling on mobile
+    document.body.classList.add("datepicker-open");
+    nextTick(() => {
+      positionPopup();
+      // Re-position after a short delay to ensure DOM is fully rendered
+      setTimeout(() => positionPopup(), 10);
+    });
+  } else {
+    // Remove class from body
+    document.body.classList.remove("datepicker-open");
+  }
 };
 
-const closeCalendar = () => (showCalendar.value = false);
+const closeCalendar = () => {
+  showCalendar.value = false;
+  // Remove class from body when closing
+  document.body.classList.remove("datepicker-open");
+};
 
 const handleInputBlur = () => setTimeout(() => emit("blur"), 150);
 
 const selectDate = (dateObj) => {
   selectedDate.value = dateObj.date;
   emit("update:modelValue", dateObj.date.toISOString().split("T")[0]);
+  closeCalendar();
+};
+
+const selectToday = () => {
+  const today = new Date();
+  selectedDate.value = today;
+  currentMonth.value = today.getMonth();
+  currentYear.value = today.getFullYear();
+  emit("update:modelValue", today.toISOString().split("T")[0]);
   closeCalendar();
 };
 
@@ -287,19 +317,66 @@ const nextMonth = () => {
 };
 
 const positionPopup = () => {
-  if (!inputRef.value || !popupRef.value) return;
+  if (!inputRef.value) return;
+
   const inputRect = inputRef.value.getBoundingClientRect();
-  const popupHeight = popupRef.value.offsetHeight;
   const viewportHeight = window.innerHeight;
-  const spaceBelow = viewportHeight - inputRect.bottom;
-  const spaceAbove = inputRect.top;
+  const viewportWidth = window.innerWidth;
+  const isMobile = viewportWidth < 640; // sm breakpoint
+
+  if (isMobile) {
+    // On mobile, center the popup
+    popupStyle.value = {
+      top: "50%",
+      left: "50%",
+      transform: "translate(-50%, -50%)",
+      position: "fixed",
+      maxWidth: "calc(100vw - 20px)",
+      width: "300px",
+    };
+    return;
+  }
+
+  const popupWidth = 320; // max-w-[320px]
+  const popupHeight = 380; // estimated height
+
+  // Calculate vertical position
+  const spaceBelow = viewportHeight - inputRect.bottom - 10; // 10px margin
+  const spaceAbove = inputRect.top - 10; // 10px margin
   const shouldOpenUp = spaceBelow < popupHeight && spaceAbove > popupHeight;
 
+  // Calculate horizontal position
+  let left = inputRect.left;
+  const spaceRight = viewportWidth - inputRect.left;
+
+  // If popup would overflow on the right, align it to the right edge of input
+  if (spaceRight < popupWidth) {
+    left = inputRect.right - popupWidth;
+  }
+
+  // Ensure popup doesn't go off-screen on the left
+  if (left < 10) {
+    left = 10;
+  }
+
+  // Ensure popup doesn't go off-screen on the right
+  if (left + popupWidth > viewportWidth - 10) {
+    left = viewportWidth - popupWidth - 10;
+  }
+
+  // Calculate top position
+  let top;
+  if (shouldOpenUp) {
+    top = Math.max(10, inputRect.top - popupHeight - 5);
+  } else {
+    top = Math.min(viewportHeight - popupHeight - 10, inputRect.bottom + 5);
+  }
+
   popupStyle.value = {
-    top: shouldOpenUp ? "auto" : "100%",
-    bottom: shouldOpenUp ? "100%" : "auto",
-    left: "0",
-    position: "absolute",
+    top: `${top}px`,
+    left: `${left}px`,
+    position: "fixed",
+    transform: "none",
   };
 };
 
@@ -328,6 +405,17 @@ watch(
   { immediate: true }
 );
 
+// Watch for calendar visibility changes to update positioning
+watch(showCalendar, (isVisible) => {
+  if (isVisible) {
+    nextTick(() => {
+      positionPopup();
+      // Additional positioning after DOM updates
+      setTimeout(() => positionPopup(), 50);
+    });
+  }
+});
+
 onMounted(() => {
   document.addEventListener("keydown", handleEscape);
   window.addEventListener("resize", updateOnResizeOrScroll);
@@ -338,6 +426,8 @@ onUnmounted(() => {
   document.removeEventListener("keydown", handleEscape);
   window.removeEventListener("resize", updateOnResizeOrScroll);
   window.removeEventListener("scroll", updateOnResizeOrScroll, true);
+  // Cleanup body class on unmount
+  document.body.classList.remove("datepicker-open");
 });
 </script>
 
