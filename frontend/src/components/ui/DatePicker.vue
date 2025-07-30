@@ -175,6 +175,7 @@
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from "vue";
 import "./datepicker.css";
+import { format } from "date-fns";
 
 const props = defineProps({
   id: {
@@ -186,7 +187,7 @@ const props = defineProps({
   disabled: { type: Boolean, default: false },
   error: { type: Boolean, default: false },
   errorMessage: { type: String, default: "This field has an error" },
-  dateFormat: { type: String, default: "DD/MM/YYYY" },
+  dateFormat: { type: String, default: "dd/MM/yyyy" },
 });
 
 const emit = defineEmits(["update:modelValue", "blur"]);
@@ -289,16 +290,7 @@ const handleInputBlur = () => setTimeout(() => emit("blur"), 150);
 
 const selectDate = (dateObj) => {
   selectedDate.value = dateObj.date;
-  emit("update:modelValue", dateObj.date.toISOString().split("T")[0]);
-  closeCalendar();
-};
-
-const selectToday = () => {
-  const today = new Date();
-  selectedDate.value = today;
-  currentMonth.value = today.getMonth();
-  currentYear.value = today.getFullYear();
-  emit("update:modelValue", today.toISOString().split("T")[0]);
+  emit("update:modelValue", format(new Date(dateObj.date), props.dateFormat));
   closeCalendar();
 };
 
