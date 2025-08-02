@@ -50,23 +50,15 @@ export const fetchUserPermissions = async (forceRefresh = false) => {
   const now = Date.now()
   const cacheAge = permissionsCache.lastFetched ? now - permissionsCache.lastFetched : null
   
-  console.log('🔍 fetchUserPermissions called:', { 
-    forceRefresh, 
-    cacheAge: cacheAge ? `${Math.round(cacheAge / 1000)}s` : 'no cache',
-    cacheValid: cacheAge ? cacheAge < CACHE_DURATION : false
-  })
-  
   // Return cached data if still valid and not forcing refresh
   if (!forceRefresh && 
       permissionsCache.lastFetched && 
       (now - permissionsCache.lastFetched) < CACHE_DURATION) {
-    console.log('🔍 Using cached permissions (age:', Math.round(cacheAge / 1000), 'seconds)')
     return permissionsCache
   }
 
   // Prevent multiple simultaneous requests
   if (permissionsCache.isLoading) {
-    console.log('🔍 Permissions already loading, waiting...')
     // Wait for current request to complete
     while (permissionsCache.isLoading) {
       await new Promise(resolve => setTimeout(resolve, 100))
@@ -75,11 +67,9 @@ export const fetchUserPermissions = async (forceRefresh = false) => {
   }
 
   try {
-    console.log('🔍 Fetching fresh permissions from API (force:', forceRefresh, ')')
     permissionsCache.isLoading = true
     
     const response = await getUserPermissions()
-    console.log('🔍 Raw API Response:', response)
     
     if (response?.data) {
       // Transform API response
@@ -90,13 +80,6 @@ export const fetchUserPermissions = async (forceRefresh = false) => {
         lastFetched: now,
         isLoading: false
       }
-      
-      console.log('🔄 Transformed Permissions:', transformedPermissions)
-      console.log('📊 Permission Summary:', {
-        globalRoles: transformedPermissions.globalRoles.length,
-        projectAccess: transformedPermissions.projectAccess.length,
-        allPermissions: transformedPermissions.allPermissions.length
-      })
       
       // Update cache
       permissionsCache = transformedPermissions
@@ -116,11 +99,7 @@ export const fetchUserPermissions = async (forceRefresh = false) => {
  * Check if user has a global permission
  */
 export const hasGlobalPermission = (permissionName) => {
-  console.log('🔍 Checking global permission:', permissionName)
-  console.log('🔍 Available global roles:', permissionsCache.globalRoles)
-  
   if (!permissionsCache.globalRoles || !Array.isArray(permissionsCache.globalRoles)) {
-    console.log('❌ No global roles available')
     return false
   }
   
@@ -128,7 +107,6 @@ export const hasGlobalPermission = (permissionName) => {
     role.permissions && role.permissions.some(p => p.name === permissionName)
   )
   
-  console.log('✅ Global permission check result:', hasPermission)
   return hasPermission
 }
 
@@ -188,7 +166,6 @@ export const hasProjectPermission = (projectId, permissionName) => {
  * Clear permissions cache
  */
 export const clearPermissionsCache = () => {
-  console.log('🔄 Clearing permissions cache')
   permissionsCache = {
     globalRoles: [],
     projectAccess: [],

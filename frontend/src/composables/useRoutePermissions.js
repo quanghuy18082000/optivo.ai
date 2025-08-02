@@ -15,16 +15,13 @@ export function useRoutePermissions() {
     async (newPath, oldPath) => {
       // Only refresh if we're actually changing routes (not initial load)
       if (oldPath && newPath !== oldPath) {
-        console.log('🔄 Route changed from', oldPath, 'to', newPath)
+
         
         // Check if the new route requires permissions
         if (route.meta?.requiredPermissions) {
-          console.log('🔍 New route requires permissions:', route.meta.requiredPermissions)
-          
           try {
             // Refresh permissions to ensure we have the latest data
             await fetchUserPermissions()
-            console.log('✅ Permissions refreshed for route change')
           } catch (error) {
             console.error('❌ Failed to refresh permissions on route change:', error)
           }

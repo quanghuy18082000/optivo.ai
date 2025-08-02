@@ -49,11 +49,7 @@
               }}</span>
             </div>
           </div>
-          <div class="col-span-2">
-            <span class="text-sm font-medium text-gray-900">{{
-              worklog.project?.name
-            }}</span>
-          </div>
+          <div class="col-span-2"></div>
           <div class="col-span-2">
             <span class="text-xs font-medium text-gray-500"
               >{{ worklog.entries.length }} ENTRIES</span
@@ -127,14 +123,23 @@
                   class="w-2 h-2 rounded-full"
                   :style="{ backgroundColor: entry.color || '#3B82F6' }"
                 ></div>
-                <span class="text-sm font-medium text-gray-700 truncate">{{
-                  entry.project_name
-                }}</span>
+
+                <TruncateText
+                  :name="entry.project_name"
+                  text-class="text-sm font-medium text-gray-700"
+                />
               </div>
             </div>
             <div class="col-span-2">
               <div class="flex items-center gap-2">
-                <span class="text-sm text-gray-700">{{ entry.category }}</span>
+                <TruncateText
+                  :name="entry.category"
+                  text-class="text-sm text-gray-700"
+                />
+                <TruncateText
+                  :name="entry.category_type"
+                  text-class="text-xs text-gray-500"
+                />
               </div>
             </div>
             <div class="col-span-2">
@@ -201,6 +206,7 @@ import { ref, watch } from "vue";
 import { useRouter } from "vue-router";
 import WorklogDetailModal from "./WorklogDetailModal.vue";
 import ConfirmModal from "@/components/ui/ConfirmModal.vue";
+import TruncateText from "@/components/ui/TruncateText.vue";
 import { deleteWorklog as deleteWorklogAPI } from "../services/worklogService";
 import { useWorklogData } from "../composables/useWorklogData";
 

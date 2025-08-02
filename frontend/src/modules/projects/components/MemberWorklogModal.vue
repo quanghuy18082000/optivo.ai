@@ -260,20 +260,21 @@
               >
                 <div class="col-span-2"></div>
                 <div class="col-span-2">
-                  <span
-                    class="text-sm text-gray-900 block"
-                    :title="entry.project_name"
-                    >{{ entry.project_name }}</span
-                  >
+                  <TruncateText
+                    :name="entry.project_name"
+                    text-class="text-sm text-gray-900"
+                  />
                 </div>
                 <div class="col-span-2">
-                  <span
+                  <div
                     class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium max-w-full"
                     :class="getCategoryStyle(entry.category)"
-                    :title="entry.category"
                   >
-                    {{ entry.category }}
-                  </span>
+                    <TruncateText
+                      :name="entry.category"
+                      text-class="text-xs font-medium"
+                    />
+                  </div>
                 </div>
                 <div class="col-span-2">
                   <span class="text-sm text-gray-900">{{
@@ -353,6 +354,7 @@
 <script setup>
 import { ref, computed, watch } from "vue";
 import Modal from "@/components/ui/Modal.vue";
+import TruncateText from "@/components/ui/TruncateText.vue";
 import WorklogDetailModal from "@/modules/worklogs/components/WorklogDetailModal.vue";
 import { getWorklogs } from "@/modules/worklogs/services/worklogService";
 import { format, parseISO } from "date-fns";

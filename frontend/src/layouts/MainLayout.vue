@@ -186,11 +186,11 @@ const { hasPermission, isReady, permissions } = usePermissions();
 
 // Debug permissions
 watch(permissions, (newPermissions) => {
-  console.log('🔍 MainLayout permissions updated:', newPermissions)
+
 }, { deep: true })
 
 watch(isReady, (ready) => {
-  console.log('🔍 MainLayout permissions ready:', ready)
+  // Permissions ready
 })
 
 // Show development features only in dev mode

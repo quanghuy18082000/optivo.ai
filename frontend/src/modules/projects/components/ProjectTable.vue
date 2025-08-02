@@ -107,9 +107,10 @@
                 </svg>
               </button>
               <div class="flex flex-col items-start gap-2">
-                <span class="text-sm font-medium text-gray-900">{{
-                  project.name
-                }}</span>
+                <TruncateText
+                  :name="project.name"
+                  text-class="text-sm font-medium text-gray-900"
+                />
                 <span
                   :class="[
                     PROJECT_STATUS_COLORS[project.status].bg,
@@ -216,12 +217,16 @@
               <div></div>
               <div></div>
               <div>
-                <span class="text-sm font-medium text-gray-900">{{
-                  member.name
-                }}</span>
+                <TruncateText
+                  :name="member.name"
+                  text-class="text-sm font-medium text-gray-900"
+                />
               </div>
               <div>
-                <span class="text-sm text-gray-600">{{ member.position }}</span>
+                <TruncateText
+                  :name="member.position"
+                  text-class="text-sm text-gray-600"
+                />
               </div>
               <div class="relative overflow-hidden">
                 <WorkloadGraph
@@ -304,6 +309,7 @@ import ConfirmDialog from "@/components/ui/ConfirmDialog.vue";
 import PopupMenu from "@/components/ui/PopupMenu.vue";
 import PopupMenuItem from "@/components/ui/PopupMenuItem.vue";
 import PermissionGuard from "@/components/PermissionGuard.vue";
+import TruncateText from "@/components/ui/TruncateText.vue";
 import { useProjects } from "../composables/useProjects";
 import { usePermissions } from "@/composables/usePermissions";
 import { useRouter } from "vue-router";

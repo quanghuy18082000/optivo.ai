@@ -231,7 +231,7 @@ const positionOptions = computed(() => {
     label: position.name,
     value: String(position.id),
   }));
-  console.log("EditProject - positionOptions:", options);
+
   return options;
 });
 
@@ -294,7 +294,6 @@ const formatDateForInput = (dateString) => {
 
 // Transform quotations from API format to form format
 const transformQuotations = (quotations) => {
-  console.log("EditProject - transformQuotations input:", quotations);
   const transformed = quotations.map((q) => ({
     id: q.id ? q.id.toString() : uuidv4(),
     position_id: q.position_id
@@ -307,13 +306,12 @@ const transformQuotations = (quotations) => {
     end_date: formatDateForInput(q.end_date),
     isContinuation: false,
   }));
-  console.log("EditProject - transformQuotations output:", transformed);
+
   return transformed;
 };
 
 // Transform plans from API format to form format
 const transformPlans = (plans) => {
-  console.log("EditProject - transformPlans input:", plans);
   const transformed = plans.map((p) => ({
     id: p.id ? p.id.toString() : uuidv4(),
     memberId: p.user?.id
@@ -330,7 +328,7 @@ const transformPlans = (plans) => {
     start_date: formatDateForInput(p.start_date),
     end_date: formatDateForInput(p.end_date),
   }));
-  console.log("EditProject - transformPlans output:", transformed);
+
   return transformed;
 };
 
@@ -350,12 +348,34 @@ const validateStep1 = () => {
     newErrors.description = "Description must be less than 500 characters";
   }
 
-  if (!formData.value.start_date) {
+  if (!formData.value.start_date || formData.value.start_date.trim() === "") {
     newErrors.start_date = "Start date is required";
+  } else {
+    // Validate date format - accept both YYYY-MM-DD and DD/MM/YYYY formats
+    const isISOFormat = /^\d{4}-\d{2}-\d{2}$/.test(formData.value.start_date);
+    const isDDMMYYYYFormat = /^\d{2}\/\d{2}\/\d{4}$/.test(
+      formData.value.start_date
+    );
+    const dateObj = new Date(formData.value.start_date);
+
+    if (!(isISOFormat || isDDMMYYYYFormat) || isNaN(dateObj.getTime())) {
+      newErrors.start_date = "Invalid date format";
+    }
   }
 
-  if (!formData.value.end_date) {
+  if (!formData.value.end_date || formData.value.end_date.trim() === "") {
     newErrors.end_date = "End date is required";
+  } else {
+    // Validate date format - accept both YYYY-MM-DD and DD/MM/YYYY formats
+    const isISOFormat = /^\d{4}-\d{2}-\d{2}$/.test(formData.value.end_date);
+    const isDDMMYYYYFormat = /^\d{2}\/\d{2}\/\d{4}$/.test(
+      formData.value.end_date
+    );
+    const dateObj = new Date(formData.value.end_date);
+
+    if (!(isISOFormat || isDDMMYYYYFormat) || isNaN(dateObj.getTime())) {
+      newErrors.end_date = "Invalid date format";
+    }
   }
 
   if (

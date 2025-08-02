@@ -3,6 +3,7 @@
     <!-- Main Input Display -->
     <button
       type="button"
+      ref="triggerRef"
       @click="toggleDropdown"
       :disabled="disabled"
       :class="[
@@ -24,7 +25,10 @@
               :key="item.value"
               class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 text-blue-800"
             >
-              {{ item.label }}
+              <TruncateText
+                :name="item.label"
+                text-class="text-xs font-medium"
+              />
               <button
                 type="button"
                 @click.stop="removeItem(item)"
@@ -78,80 +82,95 @@
       </div>
     </button>
 
-    <!-- Dropdown Menu -->
-    <div
-      v-if="isOpen"
-      ref="dropdownRef"
-      class="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto"
-    >
-      <!-- Search Input -->
-      <div v-if="searchable" class="p-2 border-b border-gray-200">
-        <input
-          v-model="searchQuery"
-          type="text"
-          placeholder="Search options..."
-          class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-          @click.stop
-        />
-      </div>
-
-      <!-- Select All Option -->
-      <div
-        v-if="showSelectAll && filteredOptions.length > 0"
-        class="px-3 py-2 cursor-pointer hover:bg-gray-100 border-b border-gray-200"
-        @click.stop="handleSelectAllClick"
-      >
-        <div class="flex items-center gap-2">
-          <input
-            type="checkbox"
-            :checked="isAllSelected"
-            :indeterminate.prop="isIndeterminate"
-            class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-            @click.stop
-          />
-          <span class="text-sm font-medium text-gray-700">Select All</span>
-        </div>
-      </div>
-
-      <!-- Options List -->
-      <div>
-        <div
-          v-for="option in filteredOptions"
-          :key="option.value"
-          class="px-3 py-2 cursor-pointer hover:bg-gray-100 flex items-center gap-2"
-          @click.stop="handleOptionClick(option)"
-        >
-          <input
-            type="checkbox"
-            :checked="isOptionSelected(option)"
-            class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-            @click.stop
-          />
-          <span class="text-sm text-gray-700">{{ option.label }}</span>
-        </div>
-
-        <!-- No Options Message -->
-        <div
-          v-if="filteredOptions.length === 0"
-          class="px-3 py-2 text-gray-500 text-sm"
-        >
-          {{ searchQuery ? "No options found" : "No options available" }}
-        </div>
-      </div>
-    </div>
-
     <!-- Error Message -->
     <p v-if="error && errorMessage" class="mt-1 text-sm text-red-600">
       {{ errorMessage }}
     </p>
   </div>
 
-  <!-- Backdrop -->
-  <div v-if="isOpen" class="fixed inset-0 z-40" @click="closeDropdown"></div>
+  <!-- Dropdown using Teleport -->
+  <Teleport to="body">
+    <div v-if="isOpen">
+      <!-- Overlay -->
+      <div
+        class="fixed inset-0 bg-transparent multiselect-overlay"
+        @click="closeDropdown"
+        :style="{ zIndex: 40 }"
+      ></div>
+
+      <!-- Dropdown Menu -->
+      <div
+        ref="dropdownRef"
+        :style="popupStyle"
+        class="bg-white border border-gray-300 rounded-md shadow-lg overflow-auto multiselect-dropdown"
+        @click.stop
+      >
+        <!-- Search Input -->
+        <div v-if="searchable" class="p-2 border-b border-gray-200">
+          <input
+            v-model="searchQuery"
+            type="text"
+            placeholder="Search options..."
+            class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+            @click.stop
+          />
+        </div>
+
+        <!-- Select All Option -->
+        <div
+          v-if="showSelectAll && filteredOptions.length > 0"
+          class="px-3 py-2 cursor-pointer hover:bg-gray-100 border-b border-gray-200"
+          @click.stop="handleSelectAllClick"
+        >
+          <div class="flex items-center gap-2">
+            <input
+              type="checkbox"
+              :checked="isAllSelected"
+              :indeterminate.prop="isIndeterminate"
+              class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              @click.stop
+            />
+            <span class="text-sm font-medium text-gray-700">Select All</span>
+          </div>
+        </div>
+
+        <!-- Options List -->
+        <div>
+          <div
+            v-for="option in filteredOptions"
+            :key="option.value"
+            class="px-3 py-2 cursor-pointer hover:bg-gray-100 flex items-center gap-2"
+            @click.stop="handleOptionClick(option)"
+          >
+            <input
+              type="checkbox"
+              :checked="isOptionSelected(option)"
+              class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              @click.stop
+            />
+            <TruncateText
+              :name="option.label"
+              text-class="text-sm text-gray-700"
+            />
+          </div>
+
+          <!-- No Options Message -->
+          <div
+            v-if="filteredOptions.length === 0"
+            class="px-3 py-2 text-gray-500 text-sm"
+          >
+            {{ searchQuery ? "No options found" : "No options available" }}
+          </div>
+        </div>
+      </div>
+    </div>
+  </Teleport>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from "vue";
+import { ref, computed, onMounted, onUnmounted, watch } from "vue";
+import { useDropdownPosition } from "@/composables/useDropdownPosition";
+import TruncateText from "./TruncateText.vue";
 
 // Props
 const props = defineProps({
@@ -191,6 +210,10 @@ const props = defineProps({
     type: Number,
     default: 3,
   },
+  maxHeight: {
+    type: Number,
+    default: 240,
+  },
 });
 
 // Emits
@@ -200,7 +223,10 @@ const emit = defineEmits(["update:modelValue", "change"]);
 const isOpen = ref(false);
 const searchQuery = ref("");
 const containerRef = ref(null);
+const triggerRef = ref(null);
 const dropdownRef = ref(null);
+
+const { popupStyle, updatePosition } = useDropdownPosition();
 
 // Computed
 const selectedItems = computed(() => {
@@ -245,12 +271,23 @@ const toggleDropdown = () => {
   isOpen.value = !isOpen.value;
   if (isOpen.value) {
     searchQuery.value = "";
+    // Add class to body to prevent scrolling on mobile
+    document.body.classList.add("multiselect-open");
+    updatePosition(triggerRef.value, dropdownRef.value, {
+      maxHeight: props.maxHeight,
+      preferredPosition: "bottom",
+    });
+  } else {
+    // Remove class from body
+    document.body.classList.remove("multiselect-open");
   }
 };
 
 const closeDropdown = () => {
   isOpen.value = false;
   searchQuery.value = "";
+  // Remove class from body when closing
+  document.body.classList.remove("multiselect-open");
 };
 
 const isOptionSelected = (option) => {
@@ -324,23 +361,43 @@ const toggleSelectAll = () => {
   }
 };
 
-// Click outside handler
-const handleClickOutside = (event) => {
-  if (
-    isOpen.value &&
-    containerRef.value &&
-    !containerRef.value.contains(event.target)
-  ) {
+const handleEscape = (e) => {
+  if (e.key === "Escape" && isOpen.value) {
     closeDropdown();
   }
 };
 
+const updateOnResizeOrScroll = () => {
+  if (isOpen.value && triggerRef.value && dropdownRef.value) {
+    updatePosition(triggerRef.value, dropdownRef.value, {
+      maxHeight: props.maxHeight,
+      preferredPosition: "bottom",
+    });
+  }
+};
+
+// Watch for dropdown visibility changes to update positioning
+watch(isOpen, (isVisible) => {
+  if (isVisible) {
+    updatePosition(triggerRef.value, dropdownRef.value, {
+      maxHeight: props.maxHeight,
+      preferredPosition: "bottom",
+    });
+  }
+});
+
 // Lifecycle
 onMounted(() => {
-  document.addEventListener("click", handleClickOutside);
+  document.addEventListener("keydown", handleEscape);
+  window.addEventListener("resize", updateOnResizeOrScroll);
+  window.addEventListener("scroll", updateOnResizeOrScroll, true);
 });
 
 onUnmounted(() => {
-  document.removeEventListener("click", handleClickOutside);
+  document.removeEventListener("keydown", handleEscape);
+  window.removeEventListener("resize", updateOnResizeOrScroll);
+  window.removeEventListener("scroll", updateOnResizeOrScroll, true);
+  // Cleanup body class on unmount
+  document.body.classList.remove("multiselect-open");
 });
 </script>

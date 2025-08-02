@@ -220,11 +220,11 @@
               <!-- Project -->
               <div class="col-span-2">
                 <div
-                  class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 max-w-full"
+                  class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800"
                 >
                   <TruncateText
                     :name="entry.project_name"
-                    text-class="text-sm font-medium text-blue-800"
+                    text-class="text-sm font-medium"
                   />
                 </div>
               </div>
@@ -234,15 +234,19 @@
                 <div
                   class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium"
                 >
-                  {{ entry.category }}
+                  <TruncateText
+                    :name="entry?.category?.name || 'N/A'"
+                    text-class="text-sm font-medium"
+                  />
                 </div>
               </div>
 
               <!-- Description -->
               <div class="col-span-4">
-                <p class="text-sm text-gray-900">
-                  {{ entry.description }}
-                </p>
+                <TruncateText
+                  :name="entry.description || 'No description'"
+                  text-class="text-sm text-gray-900"
+                />
               </div>
 
               <!-- Hours -->

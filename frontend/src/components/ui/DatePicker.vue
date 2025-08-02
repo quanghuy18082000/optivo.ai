@@ -175,7 +175,7 @@
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from "vue";
 import "./datepicker.css";
-import { format } from "date-fns";
+import { format, parse, isValid } from "date-fns";
 
 const props = defineProps({
   id: {
@@ -187,7 +187,7 @@ const props = defineProps({
   disabled: { type: Boolean, default: false },
   error: { type: Boolean, default: false },
   errorMessage: { type: String, default: "This field has an error" },
-  dateFormat: { type: String, default: "dd/MM/yyyy" },
+  dateFormat: { type: String, default: "yyyy-MM-dd" },
 });
 
 const emit = defineEmits(["update:modelValue", "blur"]);
@@ -223,14 +223,26 @@ const years = computed(() => {
 
 const displayValue = computed(() => {
   if (!selectedDate.value) return "";
-  const d = selectedDate.value;
-  const day = String(d.getDate()).padStart(2, "0");
-  const month = String(d.getMonth() + 1).padStart(2, "0");
-  const year = d.getFullYear();
-  return props.dateFormat === "MM/DD/YYYY"
-    ? `${month}/${day}/${year}`
-    : `${day}/${month}/${year}`;
+  try {
+    // Use date-fns format for consistent formatting
+    return format(selectedDate.value, getDisplayFormat());
+  } catch (error) {
+    console.error("Error formatting date:", error);
+    return "";
+  }
 });
+
+// Get display format based on dateFormat prop
+const getDisplayFormat = () => {
+  // Map common formats to display formats
+  const formatMap = {
+    "yyyy-MM-dd": "dd/MM/yyyy",
+    "MM/dd/yyyy": "MM/dd/yyyy",
+    "dd/MM/yyyy": "dd/MM/yyyy",
+    "yyyy/MM/dd": "dd/MM/yyyy",
+  };
+  return formatMap[props.dateFormat] || "dd/MM/yyyy";
+};
 
 const calendarDays = computed(() => {
   const firstDay = new Date(currentYear.value, currentMonth.value, 1);
@@ -290,7 +302,15 @@ const handleInputBlur = () => setTimeout(() => emit("blur"), 150);
 
 const selectDate = (dateObj) => {
   selectedDate.value = dateObj.date;
-  emit("update:modelValue", format(new Date(dateObj.date), props.dateFormat));
+  try {
+    // Always emit in the specified format
+    const formattedDate = format(dateObj.date, props.dateFormat);
+    emit("update:modelValue", formattedDate);
+  } catch (error) {
+    console.error("Error formatting selected date:", error);
+    // Fallback to ISO string for compatibility
+    emit("update:modelValue", dateObj.date.toISOString().split("T")[0]);
+  }
   closeCalendar();
 };
 
@@ -384,11 +404,37 @@ watch(
   () => props.modelValue,
   (newValue) => {
     if (newValue) {
-      const date = new Date(newValue);
-      if (!isNaN(date.getTime())) {
-        selectedDate.value = date;
-        currentMonth.value = date.getMonth();
-        currentYear.value = date.getFullYear();
+      let date = null;
+
+      try {
+        // Try to parse with the specified format first
+        if (props.dateFormat && props.dateFormat !== "yyyy-MM-dd") {
+          date = parse(newValue, props.dateFormat, new Date());
+        }
+
+        // If parsing failed or format is ISO, try direct Date constructor
+        if (!date || !isValid(date)) {
+          date = new Date(newValue);
+        }
+
+        // Additional fallback for DD/MM/YYYY format
+        if (!isValid(date) && /^\d{2}\/\d{2}\/\d{4}$/.test(newValue)) {
+          const [day, month, year] = newValue.split("/");
+          date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+        }
+
+        // Validate the parsed date
+        if (isValid(date)) {
+          selectedDate.value = date;
+          currentMonth.value = date.getMonth();
+          currentYear.value = date.getFullYear();
+        } else {
+          console.warn("Invalid date value:", newValue);
+          selectedDate.value = null;
+        }
+      } catch (error) {
+        console.error("Error parsing date:", error, newValue);
+        selectedDate.value = null;
       }
     } else {
       selectedDate.value = null;
@@ -396,6 +442,14 @@ watch(
   },
   { immediate: true }
 );
+
+// Watch for selectedDate changes to emit updates
+watch(selectedDate, (newDate) => {
+  if (!newDate) {
+    // When date is cleared, emit empty string
+    emit("update:modelValue", "");
+  }
+});
 
 // Watch for calendar visibility changes to update positioning
 watch(showCalendar, (isVisible) => {

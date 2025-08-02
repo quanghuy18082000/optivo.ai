@@ -23,11 +23,11 @@ export function usePermissions() {
 
   // Watch auth state changes to clear permissions cache
   watch(() => authStore.isAuthenticated, (isAuthenticated, wasAuthenticated) => {
-    console.log('🔍 Auth state changed:', { isAuthenticated, wasAuthenticated })
+
     
     if (!isAuthenticated && wasAuthenticated) {
       // User logged out - clear permissions cache
-      console.log('🔄 User logged out, clearing permissions cache')
+
       clearPermissionsCache()
     }
   })
@@ -56,17 +56,12 @@ export function usePermissions() {
     refetchOnReconnect: true, // Refetch when network reconnects
     refetchInterval: 3 * 60 * 1000, // Auto refetch every 3 minutes (reduced from 5)
     enabled: computed(() => {
-      console.log('🔍 Query enabled check:', {
-        isAuthenticated: authStore.isAuthenticated,
-        shouldEnable: authStore.isAuthenticated
-      })
       return authStore.isAuthenticated
     })
   })
 
   // Function to manually refetch permissions
   const refetchPermissions = async (force = false) => {
-    console.log('🔄 Manually refetching permissions (force:', force, ')')
     try {
       if (force) {
         // Force refresh by calling the service directly
@@ -93,7 +88,6 @@ export function usePermissions() {
   // Ensure permissions are loaded on component mount
   onMounted(() => {
     if (authStore.isAuthenticated && !isReady.value) {
-      console.log('🔄 Component mounted, ensuring permissions are loaded')
       refetchPermissions()
     }
   })

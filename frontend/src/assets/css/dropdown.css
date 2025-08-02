@@ -1,0 +1,78 @@
+/* Dropdown Components Styles */
+
+/* Prevent body scroll when dropdown is open on mobile */
+body.select-open,
+body.multiselect-open,
+body.datepicker-open {
+  overflow: hidden;
+}
+
+/* Mobile responsive styles */
+@media (max-width: 640px) {
+  .select-dropdown,
+  .multiselect-dropdown {
+    max-width: calc(100vw - 20px) !important;
+    width: 300px !important;
+  }
+}
+
+/* Smooth transitions for dropdown animations */
+.select-dropdown,
+.multiselect-dropdown {
+  transition: opacity 0.15s ease-out, transform 0.15s ease-out;
+  transform-origin: top;
+}
+
+/* Custom scrollbar for dropdown */
+.select-dropdown::-webkit-scrollbar,
+.multiselect-dropdown::-webkit-scrollbar {
+  width: 6px;
+}
+
+.select-dropdown::-webkit-scrollbar-track,
+.multiselect-dropdown::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+.select-dropdown::-webkit-scrollbar-thumb,
+.multiselect-dropdown::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+.select-dropdown::-webkit-scrollbar-thumb:hover,
+.multiselect-dropdown::-webkit-scrollbar-thumb:hover {
+  background: #a1a1a1;
+}
+
+/* Focus styles for better accessibility */
+.select-dropdown div:focus,
+.multiselect-dropdown div:focus {
+  outline: 2px solid #3b82f6;
+  outline-offset: -2px;
+}
+
+/* Overlay styles */
+.select-overlay,
+.multiselect-overlay {
+  backdrop-filter: blur(0px);
+}
+
+/* Animation classes for future use */
+.dropdown-enter-active,
+.dropdown-leave-active {
+  transition: all 0.15s ease;
+}
+
+.dropdown-enter-from,
+.dropdown-leave-to {
+  opacity: 0;
+  transform: translateY(-10px) scale(0.95);
+}
+
+.dropdown-enter-to,
+.dropdown-leave-from {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}

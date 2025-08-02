@@ -224,12 +224,10 @@ const loadMemberOptions = async () => {
 // Event handlers
 const handleProjectChange = (values, options) => {
   // Handle project selection change if needed
-  console.log("Projects changed:", { values, options });
 };
 
 const handleMemberChange = (values, options) => {
   // Handle member selection change if needed
-  console.log("Members changed:", { values, options });
 };
 
 // Panel methods

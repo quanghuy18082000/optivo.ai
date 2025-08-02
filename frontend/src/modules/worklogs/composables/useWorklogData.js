@@ -113,6 +113,7 @@ export function useWorklogData() {
       // Add to total duration for this date
       worklogsByDate[date].totalDuration += durationInMinutes
 
+
       // Create entry for this worklog
       const entry = {
         id: `${worklog.id}-entry`,
@@ -120,10 +121,12 @@ export function useWorklogData() {
         project_id: worklog.project_id,
         project_name: worklog.project_name || getProjectName(worklog.project_id),
         category: worklog.category || 'Uncategorized',
+        // category_type: worklog.
         duration: durationInMinutes,
         formattedDuration: formatDuration(durationInMinutes),
         percentOfDay: percentOfDay,
         time_spent: `${percentOfDay}% (${formatDuration(durationInMinutes)})`,
+
         progress: worklog.progress
           ? Math.round(worklog.progress * 100)
           : percentOfDay,
@@ -197,10 +200,11 @@ export function useWorklogData() {
                 if (categoryData && typeof categoryData === 'object') {
                   const workTimeHours = categoryData.work_time || 0
                   const progress = categoryData.progress || 0
+                  const isSuggested = categoryData.is_suggested ? '(AI)' : ' '
                   const durationInMinutes = Math.round(workTimeHours * 60)
                   totalDuration += durationInMinutes
 
-                  const percentOfDay = Math.round((durationInMinutes / (worktimeOfday * 60)) * 100)
+                  const percentOfDay = (durationInMinutes / (worktimeOfday * 60) * 100).toFixed(1)
 
                   entries.push({
                     id: `${date}-${projectName}-${category}`,
@@ -208,6 +212,7 @@ export function useWorklogData() {
                     project_id: projectName, // Use project name as ID for now
                     project_name: projectName,
                     category: category,
+                    category_type: isSuggested,
                     duration: durationInMinutes,
                     formattedDuration: formatDuration(durationInMinutes),
                     percentOfDay: percentOfDay,
@@ -222,7 +227,7 @@ export function useWorklogData() {
         })
       })
 
-      const totalPercentOfDay = Math.round((totalDuration / (worktimeOfday * 60)) * 100)
+      const totalPercentOfDay = (totalDuration / (worktimeOfday * 60) * 100).toFixed(1)
 
       result.push({
         id: date,

@@ -9,6 +9,9 @@ import vue3GoogleLogin from 'vue3-google-login'
 import '@unocss/reset/tailwind.css'
 import 'uno.css'
 
+// Import custom CSS
+import '@/assets/css/dropdown.css'
+
 // Import Vue Toastification
 import Toast from "vue-toastification";
 import "vue-toastification/dist/index.css";

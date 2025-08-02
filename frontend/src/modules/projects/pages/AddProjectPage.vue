@@ -213,26 +213,32 @@ const validateStep1 = () => {
   }
 
   // Date validation
-  if (!formData.value.start_date) {
+  if (!formData.value.start_date || formData.value.start_date.trim() === "") {
     newErrors.start_date = "Start date is required";
   } else {
-    // Validate date format
-    const startDateValid =
-      /^\d{4}-\d{2}-\d{2}$/.test(formData.value.start_date) &&
-      !isNaN(new Date(formData.value.start_date).getTime());
-    if (!startDateValid) {
+    // Validate date format - accept both YYYY-MM-DD and DD/MM/YYYY formats
+    const isISOFormat = /^\d{4}-\d{2}-\d{2}$/.test(formData.value.start_date);
+    const isDDMMYYYYFormat = /^\d{2}\/\d{2}\/\d{4}$/.test(
+      formData.value.start_date
+    );
+    const dateObj = new Date(formData.value.start_date);
+
+    if (!(isISOFormat || isDDMMYYYYFormat) || isNaN(dateObj.getTime())) {
       newErrors.start_date = "Invalid date format";
     }
   }
 
-  if (!formData.value.end_date) {
+  if (!formData.value.end_date || formData.value.end_date.trim() === "") {
     newErrors.end_date = "End date is required";
   } else {
-    // Validate date format
-    const endDateValid =
-      /^\d{4}-\d{2}-\d{2}$/.test(formData.value.end_date) &&
-      !isNaN(new Date(formData.value.end_date).getTime());
-    if (!endDateValid) {
+    // Validate date format - accept both YYYY-MM-DD and DD/MM/YYYY formats
+    const isISOFormat = /^\d{4}-\d{2}-\d{2}$/.test(formData.value.end_date);
+    const isDDMMYYYYFormat = /^\d{2}\/\d{2}\/\d{4}$/.test(
+      formData.value.end_date
+    );
+    const dateObj = new Date(formData.value.end_date);
+
+    if (!(isISOFormat || isDDMMYYYYFormat) || isNaN(dateObj.getTime())) {
       newErrors.end_date = "Invalid date format";
     }
   }

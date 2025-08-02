@@ -23,7 +23,7 @@ export const getPositions = async () => {
 export const getUserPermissions = async () => {
   try {
     const response = await get('/system-config/users/combined-roles/me')
-    console.log('🔍 getUserPermissions raw response:', response)
+
     
     // The API returns complex permission structure with roles and project access
     return response.data || { data: { roles: [], project_access: [] } }

@@ -14,6 +14,18 @@ const routes = [
   ...projectRoutes,
   ...systemConfigRoutes,
   {
+    path: "/dropdown-demo",
+    name: "DropdownDemo",
+    component: () => import("@/pages/DropdownDemoPage.vue"),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/datepicker-test",
+    name: "DatePickerTest",
+    component: () => import("@/pages/DatePickerTestPage.vue"),
+    meta: { requiresAuth: true },
+  },
+  {
     path: "/unauthorized",
     name: "Unauthorized",
     component: () => import("@/pages/UnauthorizedPage.vue"),
@@ -60,29 +72,21 @@ router.beforeEach(async (to, from, next) => {
   // Check permissions for authenticated users
   if (authStore.isAuthenticated && to.meta.requiredPermissions) {
     try {
-      console.log('🔍 Checking permissions for route:', to.path)
-      console.log('🔍 Required permissions:', to.meta.requiredPermissions)
-      
       // Refresh permissions on route change, but respect cache if recent
       // This ensures we have up-to-date permissions while avoiding excessive API calls
       await fetchUserPermissions()
       
       // Check if user has any of the required permissions
       if (!hasAnyPermission(to.meta.requiredPermissions)) {
-        console.log('❌ Access denied. Required permissions:', to.meta.requiredPermissions)
         // Try force refresh once in case permissions were recently updated
-        console.log('🔄 Retrying with fresh permissions...')
         await fetchUserPermissions(true)
         
         // Check again with fresh permissions
         if (!hasAnyPermission(to.meta.requiredPermissions)) {
-          console.log('❌ Access still denied after refresh. Required permissions:', to.meta.requiredPermissions)
           next("/unauthorized")
           return
         }
       }
-      
-      console.log('✅ Permission check passed for:', to.path)
     } catch (error) {
       console.error('❌ Permission check failed:', error)
       next("/unauthorized")
@@ -96,7 +100,6 @@ router.beforeEach(async (to, from, next) => {
 // Clear permissions cache function
 export const clearPermissions = () => {
   // Implementation for clearing permissions cache
-  console.log("Permissions cache cleared")
 }
 
 export default router
