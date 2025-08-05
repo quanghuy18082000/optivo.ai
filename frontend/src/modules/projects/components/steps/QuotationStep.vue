@@ -38,6 +38,8 @@
                 v-model="quotation.position_id"
                 :options="getAvailablePositionsForRow(index)"
                 placeholder="Select position"
+                searchable
+                search-placeholder="Search positions..."
                 :error="!!errors[`quotations.${index}.position_id`]"
                 :error-message="errors[`quotations.${index}.position_id`]"
                 :disabled="props.isLoadingPositions"

@@ -76,6 +76,8 @@
               v-model="selectedTimePeriod"
               :options="timePeriodOptions"
               placeholder="Select time period"
+              searchable
+              search-placeholder="Search time periods..."
               @change="(option) => handleTimePeriodChange(option.value)"
             />
           </div>

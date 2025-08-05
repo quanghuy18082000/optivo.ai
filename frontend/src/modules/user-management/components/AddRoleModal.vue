@@ -201,11 +201,11 @@ const handleSubmit = async () => {
     };
 
     emit("success", roleData);
-    closeModal();
   } catch (error) {
     console.error("Error in form submission:", error);
   } finally {
     loading.value = false;
+    closeModal();
   }
 };
 

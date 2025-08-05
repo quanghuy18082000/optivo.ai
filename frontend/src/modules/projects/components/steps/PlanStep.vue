@@ -38,6 +38,8 @@
                   v-model="plan.memberId"
                   :options="combinedMemberOptions"
                   placeholder="Select team member"
+                  searchable
+                  search-placeholder="Search team members..."
                   :error="!!errors[`plans.${index}.memberId`]"
                   :error-message="errors[`plans.${index}.memberId`]"
                   :disabled="isLoadingUsers"
@@ -49,6 +51,8 @@
                 v-model="plan.position_id"
                 :options="positionOptions"
                 placeholder="Select position"
+                searchable
+                search-placeholder="Search positions..."
                 :error="!!errors[`plans.${index}.position_id`]"
                 :error-message="errors[`plans.${index}.position_id`]"
                 :disabled="props.isLoadingPositions"
@@ -195,7 +199,7 @@ import Select from "@/components/ui/Select.vue";
 import DatePicker from "@/components/ui/DatePicker.vue";
 import Button from "@/components/ui/Button.vue";
 import PlanTimeline from "../PlanTimeline.vue";
-import { getUsers } from "@/services/userService.js";
+import { getUsersForDropdown } from "@/services/userService.js";
 
 const props = defineProps({
   formData: {
@@ -255,7 +259,7 @@ const fetchUsers = async () => {
   userError.value = null;
 
   try {
-    const response = await getUsers();
+    const response = await getUsersForDropdown();
     if (response && Array.isArray(response.data)) {
       // Transform the API response to the format expected by the Select component
       apiUsers.value = response.data.map((user) => ({

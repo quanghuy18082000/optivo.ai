@@ -43,6 +43,8 @@
                   v-model="projectStatuses[project.id]"
                   :options="getAvailableStatusOptions(project.status)"
                   :placeholder="`Select new status...`"
+                  searchable
+                  search-placeholder="Search status..."
                   size="sm"
                 />
               </div>

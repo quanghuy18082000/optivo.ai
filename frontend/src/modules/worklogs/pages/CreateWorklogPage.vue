@@ -348,6 +348,8 @@ onMounted(() => {
                 v-model="group.value.projectId"
                 :options="getAvailableProjectOptions(groupIndex)"
                 placeholder="Select project"
+                searchable
+                search-placeholder="Search projects..."
                 :disabled="isFormLoading"
                 :error="
                   hasAttemptedSubmit &&

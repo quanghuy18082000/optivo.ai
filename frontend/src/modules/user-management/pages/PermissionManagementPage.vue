@@ -76,16 +76,38 @@
             <div
               v-for="role in roles"
               :key="role.id"
-              @click="selectRole(role)"
-              class="p-3 rounded-lg cursor-pointer transition-colors"
+              class="group p-3 rounded-lg cursor-pointer transition-colors relative"
               :class="
                 selectedRole?.id === role.id
                   ? 'bg-blue-50 border-2 border-blue-200'
                   : 'bg-gray-50 hover:bg-gray-100 border-2 border-transparent'
               "
             >
-              <div class="font-medium text-gray-900">{{ role.name }}</div>
-              <div class="text-sm text-gray-500">{{ role.description }}</div>
+              <div @click="selectRole(role)" class="pr-8">
+                <div class="font-medium text-gray-900">{{ role.name }}</div>
+                <div class="text-sm text-gray-500">{{ role.description }}</div>
+              </div>
+
+              <!-- Delete Button (Hidden by default, shown on hover) -->
+              <button
+                @click.stop="confirmDeleteRole(role)"
+                class="absolute top-3 right-3 p-1 text-gray-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-all duration-200 rounded hover:bg-red-50"
+                :title="`Delete ${role.name}`"
+              >
+                <svg
+                  class="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                  />
+                </svg>
+              </button>
             </div>
 
             <!-- Empty State -->
@@ -325,11 +347,23 @@
       @close="showAddRoleModal = false"
       @success="handleCreateRole"
     />
+
+    <!-- Delete Role Confirmation Modal -->
+    <ConfirmModal
+      v-model="showDeleteConfirm"
+      :title="$t('permission_management.delete_role')"
+      :message="deleteConfirmMessage"
+      :confirm-text="$t('common.delete')"
+      :cancel-text="$t('common.cancel')"
+      confirm-variant="danger"
+      :loading="deletingRole"
+      @confirm="handleDeleteRole"
+    />
   </UserManagementLayout>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, watch } from "vue";
 import { useToast } from "@/composables/useToast";
 import { useI18n } from "vue-i18n";
 import UserManagementLayout from "../layouts/UserManagementLayout.vue";
@@ -338,7 +372,8 @@ import Avatar from "@/components/ui/Avatar.vue";
 import Badge from "@/components/ui/Badge.vue";
 import Select from "@/components/ui/Select.vue";
 import MultiSelect from "@/components/ui/MultiSelect.vue";
-import { getUsers } from "@/services/userService";
+import ConfirmModal from "@/components/ui/ConfirmModal.vue";
+import { getUsersForDropdown } from "@/services/userService";
 import {
   createRole,
   getRoles,
@@ -346,6 +381,7 @@ import {
   updateRolePermissions,
   assignRolesToUser,
   getPermissions,
+  deleteRole,
 } from "@/services/roleService";
 import { useAuthStore } from "@/modules/auth/store";
 import {
@@ -369,6 +405,15 @@ const selectedRole = ref(null);
 const selectedUserId = ref("");
 const selectedRoleIds = ref([]);
 const showAddRoleModal = ref(false);
+
+// Delete role states
+const showDeleteConfirm = ref(false);
+const deletingRole = ref(false);
+const roleToDelete = ref(null);
+const deleteConfirmMessage = computed(() => {
+  if (!roleToDelete.value) return "";
+  return `Are you sure you want to delete the role "${roleToDelete.value.name}"? This action cannot be undone.`;
+});
 
 // Data from API
 const roles = ref([]);
@@ -611,7 +656,7 @@ const removeRoleAssignment = (assignment) => {
 const fetchUsers = async () => {
   try {
     loading.value = true;
-    const response = await getUsers();
+    const response = await getUsersForDropdown();
     users.value = response.data;
   } catch (error) {
     console.error("Error fetching users:", error);
@@ -692,6 +737,56 @@ const handleCreateRole = async (roleData) => {
   } catch (error) {
     console.error("Error creating role:", error);
     toast.error(error?.message || "Failed to create role", "error");
+  }
+};
+
+// Delete role functions
+const confirmDeleteRole = (role) => {
+  roleToDelete.value = role;
+  showDeleteConfirm.value = true;
+};
+
+// Watch for modal close to reset roleToDelete
+watch(showDeleteConfirm, (isOpen) => {
+  if (!isOpen) {
+    roleToDelete.value = null;
+  }
+});
+
+const handleDeleteRole = async () => {
+  if (!roleToDelete.value) return;
+
+  // Store reference to avoid null access after modal closes
+  const roleToDeleteRef = { ...roleToDelete.value };
+
+  try {
+    deletingRole.value = true;
+
+    await deleteRole(roleToDeleteRef.id);
+
+    // If the deleted role was selected, clear selection
+    if (selectedRole.value?.id === roleToDeleteRef.id) {
+      selectedRole.value = null;
+    }
+
+    // Refresh roles list
+    await fetchRoles();
+
+    toast.success(
+      `Role "${roleToDeleteRef.name}" deleted successfully`,
+      "success"
+    );
+
+    // Close modal (roleToDelete will be reset by watcher)
+    showDeleteConfirm.value = false;
+  } catch (error) {
+    console.error("Error deleting role:", error);
+    toast.error(
+      error?.message || `Failed to delete role "${roleToDeleteRef.name}"`,
+      "error"
+    );
+  } finally {
+    deletingRole.value = false;
   }
 };
 

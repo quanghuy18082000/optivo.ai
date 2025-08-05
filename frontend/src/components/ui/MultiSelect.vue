@@ -102,26 +102,31 @@
       <div
         ref="dropdownRef"
         :style="popupStyle"
-        class="bg-white border border-gray-300 rounded-md shadow-lg overflow-auto multiselect-dropdown"
+        class="bg-white border border-gray-300 rounded-md shadow-lg multiselect-dropdown flex flex-col"
+        :class="{ 'min-h-[200px]': filteredOptions.length > 0 }"
         @click.stop
       >
-        <!-- Search Input -->
-        <div v-if="searchable" class="p-2 border-b border-gray-200">
+        <!-- Sticky Search Input -->
+        <div
+          v-if="searchable"
+          class="sticky top-0 z-10 bg-white p-3 border-b border-gray-200 rounded-t-md flex-shrink-0"
+        >
           <input
             ref="searchInputRef"
             v-model="searchQuery"
             type="text"
             :placeholder="searchPlaceholder"
-            class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+            class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
             @click.stop
             @keydown.escape.prevent="closeDropdown"
           />
         </div>
 
-        <!-- Select All Option -->
+        <!-- Sticky Select All Option -->
         <div
           v-if="showSelectAll && filteredOptions.length > 0"
-          class="px-3 py-2 cursor-pointer hover:bg-gray-100 border-b border-gray-200"
+          class="sticky z-10 bg-white px-3 py-2 cursor-pointer hover:bg-gray-50 border-b border-gray-200 flex-shrink-0"
+          :class="searchable ? 'top-[61px]' : 'top-0'"
           @click.stop="handleSelectAllClick"
         >
           <div class="flex items-center gap-2">
@@ -136,12 +141,18 @@
           </div>
         </div>
 
-        <!-- Options List -->
-        <div>
+        <!-- Scrollable Options List -->
+        <div
+          class="overflow-y-auto flex-1"
+          :style="{
+            maxHeight: maxHeight + 'px',
+            minHeight: getMinHeight() + 'px',
+          }"
+        >
           <div
             v-for="option in filteredOptions"
             :key="option.value"
-            class="px-3 py-2 cursor-pointer hover:bg-gray-100 flex items-center gap-2"
+            class="px-3 py-2 cursor-pointer hover:bg-gray-100 flex items-center gap-2 transition-colors"
             @click.stop="handleOptionClick(option)"
           >
             <input
@@ -171,7 +182,6 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch } from "vue";
-import { useDropdownPosition } from "@/composables/useDropdownPosition";
 import TruncateText from "./TruncateText.vue";
 
 // Props
@@ -233,7 +243,7 @@ const triggerRef = ref(null);
 const dropdownRef = ref(null);
 const searchInputRef = ref(null);
 
-const { popupStyle, updatePosition } = useDropdownPosition();
+const popupStyle = ref({});
 
 // Computed
 const selectedItems = computed(() => {
@@ -280,10 +290,13 @@ const toggleDropdown = () => {
     searchQuery.value = "";
     // Add class to body to prevent scrolling on mobile
     document.body.classList.add("multiselect-open");
-    updatePosition(triggerRef.value, dropdownRef.value, {
-      maxHeight: props.maxHeight,
-      preferredPosition: "bottom",
-    });
+
+    // Position dropdown after DOM update
+    setTimeout(() => {
+      positionDropdown();
+      // Re-position after a short delay to ensure DOM is fully rendered
+      setTimeout(() => positionDropdown(), 10);
+    }, 0);
 
     // Focus search input if searchable
     if (props.searchable) {
@@ -375,6 +388,99 @@ const toggleSelectAll = () => {
   }
 };
 
+const getMinHeight = () => {
+  // Base min height for options list
+  const baseMinHeight = 120;
+
+  // If no options, return smaller height
+  if (filteredOptions.value.length === 0) {
+    return 60;
+  }
+
+  // If few options, calculate based on option count
+  if (filteredOptions.value.length <= 3) {
+    return Math.min(filteredOptions.value.length * 40 + 20, baseMinHeight);
+  }
+
+  return baseMinHeight;
+};
+
+const positionDropdown = () => {
+  if (!triggerRef.value || !dropdownRef.value) return;
+
+  const triggerRect = triggerRef.value.getBoundingClientRect();
+  const viewportHeight = window.innerHeight;
+  const viewportWidth = window.innerWidth;
+  const isMobile = viewportWidth < 640; // sm breakpoint
+
+  if (isMobile) {
+    // On mobile, center the dropdown
+    popupStyle.value = {
+      top: "50%",
+      left: "50%",
+      transform: "translate(-50%, -50%)",
+      position: "fixed",
+      maxWidth: "calc(100vw - 20px)",
+      width: "300px",
+      zIndex: 50,
+    };
+    return;
+  }
+
+  const dropdownWidth = Math.max(triggerRect.width, 200); // At least as wide as trigger
+  const searchHeight = props.searchable ? 60 : 0;
+  const selectAllHeight = props.showSelectAll ? 40 : 0;
+  const dropdownHeight = Math.min(
+    props.maxHeight + searchHeight + selectAllHeight,
+    400
+  ); // Estimated height
+
+  // Calculate vertical position
+  const spaceBelow = viewportHeight - triggerRect.bottom - 10; // 10px margin
+  const spaceAbove = triggerRect.top - 10; // 10px margin
+  const shouldOpenUp =
+    spaceBelow < dropdownHeight && spaceAbove > dropdownHeight;
+
+  // Calculate horizontal position
+  let left = triggerRect.left;
+  const spaceRight = viewportWidth - triggerRect.left;
+
+  // If dropdown would overflow on the right, align it to the right edge of trigger
+  if (spaceRight < dropdownWidth) {
+    left = triggerRect.right - dropdownWidth;
+  }
+
+  // Ensure dropdown doesn't go off-screen on the left
+  if (left < 10) {
+    left = 10;
+  }
+
+  // Ensure dropdown doesn't go off-screen on the right
+  if (left + dropdownWidth > viewportWidth - 10) {
+    left = viewportWidth - dropdownWidth - 10;
+  }
+
+  // Calculate top position
+  let top;
+  if (shouldOpenUp) {
+    top = Math.max(10, triggerRect.top - dropdownHeight - 5);
+  } else {
+    top = Math.min(
+      viewportHeight - dropdownHeight - 10,
+      triggerRect.bottom + 5
+    );
+  }
+
+  popupStyle.value = {
+    top: `${top}px`,
+    left: `${left}px`,
+    width: `${Math.max(dropdownWidth, triggerRect.width)}px`,
+    position: "fixed",
+    transform: "none",
+    zIndex: 50,
+  };
+};
+
 const handleEscape = (e) => {
   if (e.key === "Escape" && isOpen.value) {
     closeDropdown();
@@ -382,21 +488,15 @@ const handleEscape = (e) => {
 };
 
 const updateOnResizeOrScroll = () => {
-  if (isOpen.value && triggerRef.value && dropdownRef.value) {
-    updatePosition(triggerRef.value, dropdownRef.value, {
-      maxHeight: props.maxHeight,
-      preferredPosition: "bottom",
-    });
+  if (isOpen.value) {
+    positionDropdown();
   }
 };
 
 // Watch for dropdown visibility changes to update positioning
 watch(isOpen, (isVisible) => {
   if (isVisible) {
-    updatePosition(triggerRef.value, dropdownRef.value, {
-      maxHeight: props.maxHeight,
-      preferredPosition: "bottom",
-    });
+    setTimeout(() => positionDropdown(), 0);
   }
 });
 
@@ -415,3 +515,111 @@ onUnmounted(() => {
   document.body.classList.remove("multiselect-open");
 });
 </script>
+
+<style scoped>
+/* Custom scrollbar for dropdown */
+.multiselect-dropdown .overflow-y-auto::-webkit-scrollbar {
+  width: 6px;
+}
+
+.multiselect-dropdown .overflow-y-auto::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 3px;
+}
+
+.multiselect-dropdown .overflow-y-auto::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+.multiselect-dropdown .overflow-y-auto::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Ensure sticky elements have proper background */
+.sticky {
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+/* Smooth transitions for hover states */
+.multiselect-dropdown .transition-colors {
+  transition: background-color 0.15s ease-in-out, color 0.15s ease-in-out;
+}
+
+/* Focus ring for search input */
+.multiselect-dropdown input[type="text"]:focus {
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Checkbox styling improvements */
+.multiselect-dropdown input[type="checkbox"] {
+  transition: all 0.15s ease-in-out;
+}
+
+.multiselect-dropdown input[type="checkbox"]:focus {
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Selected items styling improvements */
+.inline-flex.items-center {
+  transition: all 0.15s ease-in-out;
+}
+
+.inline-flex.items-center:hover {
+  background-color: rgba(59, 130, 246, 0.15);
+}
+
+/* Dropdown sizing improvements */
+.multiselect-dropdown {
+  min-width: 200px;
+  max-width: 400px;
+}
+
+.multiselect-dropdown.min-h-\[200px\] {
+  min-height: 200px !important;
+}
+
+/* Ensure proper flex behavior */
+.multiselect-dropdown .flex-shrink-0 {
+  flex-shrink: 0;
+}
+
+.multiselect-dropdown .flex-1 {
+  flex: 1 1 auto;
+  min-height: 0; /* Allow flex item to shrink below content size */
+}
+
+/* Mobile optimizations */
+@media (max-width: 640px) {
+  .multiselect-dropdown {
+    max-width: calc(100vw - 2rem);
+    min-width: 280px;
+  }
+
+  .sticky {
+    padding: 0.75rem;
+  }
+
+  /* Adjust selected items display on mobile */
+  .inline-flex.items-center {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+  }
+
+  /* Adjust min-height for mobile */
+  .multiselect-dropdown.min-h-\[200px\] {
+    min-height: 180px !important;
+  }
+}
+
+/* Improve Select All section visibility */
+.sticky.top-0:nth-child(2) {
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+/* Better visual separation for sticky elements */
+.sticky + .overflow-y-auto {
+  border-top: 1px solid #e5e7eb;
+}
+</style>

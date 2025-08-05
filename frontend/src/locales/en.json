@@ -210,6 +210,7 @@
     "role_name_placeholder": "Enter role name",
     "role_description_placeholder": "Enter role description (optional)",
     "role_created_success": "Role created successfully",
-    "role_create_error": "Failed to create role"
+    "role_create_error": "Failed to create role",
+    "delete_role": "Delete Role"
   }
 }

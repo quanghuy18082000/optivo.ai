@@ -144,7 +144,7 @@ import MultiSelect from "@/components/ui/MultiSelect.vue";
 import DatePicker from "@/components/ui/DatePicker.vue";
 import Button from "@/components/ui/Button.vue";
 import { getProjects } from "@/modules/worklogs/services/worklogService";
-import { getUsers } from "@/services/userService";
+import { getUsersForDropdown } from "@/services/userService";
 
 const props = defineProps({
   isOpen: {
@@ -203,10 +203,10 @@ const loadProjectOptions = async () => {
 const loadMemberOptions = async () => {
   try {
     isLoadingMembers.value = true;
-    const response = await getUsers();
+    const response = await getUsersForDropdown();
 
     // Transform users data to options format
-    // getUsers returns { message: "string", data: [{ user_id: 0, name: "string" }] }
+    // getUsersForDropdown returns { message: "string", data: [{ user_id: 0, name: "string" }] }
     const users = response?.data || [];
     memberOptions.value = users.map((user) => ({
       label: user.name,

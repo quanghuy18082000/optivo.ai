@@ -13,6 +13,7 @@ export const getUsers = async (params = {}) => {
     const queryParams = {
       page: params.page || 1,
       size: params.size || 10,
+      ...params, // Spread other params like search, etc.
     };
 
     const response = await get('/users/', queryParams );
@@ -26,5 +27,29 @@ export const getUsers = async (params = {}) => {
   } catch (error) {
     console.error('API Error:', error);
     throw new Error(error.response?.data?.message || error.message || 'Failed to fetch users');
+  }
+}
+
+/**
+ * Fetch all users for dropdown/select components (no pagination)
+ * @param {Object} params - Query parameters (optional search, etc.)
+ * @returns {Promise<Object>} Object with message and data array
+ */
+export const getUsersForDropdown = async (params = {}) => {
+  try {
+    // Set large size to get all users for dropdown
+    const queryParams = {
+      page: 1,
+      size: 100, // Large number to get all users
+      ...params, // Spread other params like search, etc.
+    };
+
+    const response = await get('/users/', queryParams );
+    
+    // Return the same format as getUsers but with all users
+    return response.data || { message: "Success", data: [], pagination: {} };
+  } catch (error) {
+    console.error('API Error:', error);
+    throw new Error(error.response?.data?.message || error.message || 'Failed to fetch users for dropdown');
   }
 }

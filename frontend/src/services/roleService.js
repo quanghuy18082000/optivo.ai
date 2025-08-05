@@ -102,9 +102,7 @@ export const getPermissions = async () => {
  */
 export const updateRolePermissions = async (roleId, permissionIds) => {
   try {
-    const response = await post(`/system-config/roles/${roleId}/permissions`, {
-      permission_ids: permissionIds
-    })
+    const response = await put(`/system-config/roles/${roleId}/permissions`, permissionIds)
     return response.data || { data: {} }
   } catch (error) {
     console.error('API Error:', error);
