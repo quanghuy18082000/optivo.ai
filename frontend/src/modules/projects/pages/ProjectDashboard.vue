@@ -267,7 +267,7 @@ import { usePageInitLoading } from "@/composables/usePageLoading";
 
 const authStore = useAuthStore();
 const router = useRouter();
-const { showToast } = useToast();
+const toast = useToast();
 const { hasPermission, PERMISSIONS } = usePermissions();
 
 // Page loading management
@@ -334,8 +334,6 @@ const handleResetFilters = () => {
 const addNewProject = () => {
   router.push("/projects/add");
 };
-
-const toast = useToast();
 
 const handleProjectDeleted = (project) => {
   toast.success(`Project "${project.name}" was successfully deleted`);
@@ -438,10 +436,10 @@ const handleExportCSV = async () => {
     document.body.removeChild(link);
     window.URL.revokeObjectURL(url);
 
-    showToast.success("CSV file downloaded successfully");
+    toast.success("CSV file downloaded successfully");
   } catch (error) {
     console.error("Export CSV error:", error);
-    showToast.error(error.message || "Failed to export CSV");
+    toast.error(error.message || "Failed to export CSV");
   } finally {
     isExporting.value = false;
   }

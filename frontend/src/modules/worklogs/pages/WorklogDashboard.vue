@@ -219,52 +219,6 @@
       </div>
       <!-- Worklog Table -->
       <WorklogTable v-else :worklogs="worklogs" />
-
-      <!-- Pagination -->
-      <div
-        v-if="pagination.total_pages > 1 && !isLoading"
-        class="flex items-center justify-between"
-      >
-        <div class="text-sm text-gray-700">
-          Showing {{ (pagination.page - 1) * pagination.limit + 1 }} to
-          {{ Math.min(pagination.page * pagination.limit, pagination.total) }}
-          of {{ pagination.total }} results
-        </div>
-
-        <div class="flex items-center gap-2">
-          <Button
-            variant="secondary"
-            :disabled="pagination.page <= 1"
-            @click="handleChangePage(pagination.page - 1)"
-          >
-            Previous
-          </Button>
-
-          <div class="flex items-center gap-1">
-            <button
-              v-for="page in visiblePages"
-              :key="page"
-              @click="handleChangePage(page)"
-              class="px-3 py-2 text-sm rounded-md transition-colors"
-              :class="[
-                page === pagination.page
-                  ? 'bg-blue-600 text-white'
-                  : 'text-gray-700 hover:bg-gray-100',
-              ]"
-            >
-              {{ page }}
-            </button>
-          </div>
-
-          <Button
-            variant="secondary"
-            :disabled="pagination.page >= pagination.total_pages"
-            @click="handleChangePage(pagination.page + 1)"
-          >
-            Next
-          </Button>
-        </div>
-      </div>
     </div>
 
     <!-- Filter Panel -->

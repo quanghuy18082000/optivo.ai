@@ -7,12 +7,14 @@ import authRoutes from "@/modules/auth/routes"
 import projectRoutes from "@/modules/projects/routes"
 import worklogRoutes from "@/modules/worklogs/routes"
 import systemConfigRoutes from "@/modules/system-config/routes"
+import userManagementRoutes from "@/modules/user-management/routes"
 
 const routes = [
   ...authRoutes,
   ...worklogRoutes,
   ...projectRoutes,
   ...systemConfigRoutes,
+  ...userManagementRoutes,
   {
     path: "/dropdown-demo",
     name: "DropdownDemo",
@@ -23,6 +25,30 @@ const routes = [
     path: "/datepicker-test",
     name: "DatePickerTest",
     component: () => import("@/pages/DatePickerTestPage.vue"),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/api-pagination-demo",
+    name: "ApiPaginationDemo",
+    component: () => import("@/components/test/ApiPaginationDemo.vue"),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/select-demo",
+    name: "SelectDemo",
+    component: () => import("@/components/ui/SelectDemo.vue"),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/assign-role-demo",
+    name: "AssignRoleDemo",
+    component: () => import("@/components/ui/AssignRoleDemo.vue"),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/user-search-demo",
+    name: "UserSearchDemo",
+    component: () => import("@/components/ui/UserSearchDemo.vue"),
     meta: { requiresAuth: true },
   },
   {

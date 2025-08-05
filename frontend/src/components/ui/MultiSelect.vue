@@ -108,11 +108,13 @@
         <!-- Search Input -->
         <div v-if="searchable" class="p-2 border-b border-gray-200">
           <input
+            ref="searchInputRef"
             v-model="searchQuery"
             type="text"
-            placeholder="Search options..."
+            :placeholder="searchPlaceholder"
             class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
             @click.stop
+            @keydown.escape.prevent="closeDropdown"
           />
         </div>
 
@@ -202,6 +204,10 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  searchPlaceholder: {
+    type: String,
+    default: "Search options...",
+  },
   showSelectAll: {
     type: Boolean,
     default: false,
@@ -225,6 +231,7 @@ const searchQuery = ref("");
 const containerRef = ref(null);
 const triggerRef = ref(null);
 const dropdownRef = ref(null);
+const searchInputRef = ref(null);
 
 const { popupStyle, updatePosition } = useDropdownPosition();
 
@@ -277,6 +284,13 @@ const toggleDropdown = () => {
       maxHeight: props.maxHeight,
       preferredPosition: "bottom",
     });
+
+    // Focus search input if searchable
+    if (props.searchable) {
+      setTimeout(() => {
+        searchInputRef.value?.focus();
+      }, 100);
+    }
   } else {
     // Remove class from body
     document.body.classList.remove("multiselect-open");
