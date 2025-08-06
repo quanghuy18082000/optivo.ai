@@ -14,7 +14,7 @@ const projectRoutes = [
     component: () => import("./pages/AddProjectPage.vue"),
     meta: { 
       requiresAuth: true,
-      requiredPermissions: ['project.add_user']  // Dựa trên data: project.create
+      requiredPermissions: ['project.create']  // Fixed: Use correct permission name
     },
   },
   {

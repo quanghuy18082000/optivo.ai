@@ -68,7 +68,7 @@
             {{ $t("user_management.columns.status") }}
           </th>
           <th
-            class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+            class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-48"
           >
             {{ $t("user_management.columns.actions") }}
           </th>
@@ -144,17 +144,46 @@
 
             <!-- Actions -->
             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-              <div class="flex items-center space-x-2">
+              <div class="flex flex-col space-y-1">
+                <!-- Assign/Change Role Button -->
+                <button
+                  @click="openAssignRoleModal(user)"
+                  class="inline-flex items-center px-2 py-1 text-xs font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200 transition-colors"
+                  :title="
+                    user.role ? `Change role: ${user.role}` : 'Assign role'
+                  "
+                >
+                  <svg
+                    class="w-3 h-3 mr-1"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                    />
+                  </svg>
+                  {{
+                    user.role
+                      ? $t("user_management.change_role")
+                      : $t("user_management.assign_role")
+                  }}
+                </button>
+
+                <!-- Remove Role Button -->
                 <button
                   v-if="user.role && user.role_id"
                   @click="removeUserRole(user)"
                   :disabled="removingRole === user.id"
-                  class="flex items-center space-x-1 text-red-600 hover:text-red-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  class="inline-flex items-center px-2 py-1 text-xs font-medium rounded-md text-red-700 bg-red-100 hover:bg-red-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   :title="`Remove role: ${user.role}`"
                 >
                   <svg
                     v-if="removingRole === user.id"
-                    class="animate-spin w-4 h-4"
+                    class="animate-spin w-3 h-3 mr-1"
                     fill="none"
                     viewBox="0 0 24 24"
                   >
@@ -174,7 +203,7 @@
                   </svg>
                   <svg
                     v-else
-                    class="w-4 h-4"
+                    class="w-3 h-3 mr-1"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -186,10 +215,8 @@
                       d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
                     ></path>
                   </svg>
+                  {{ $t("user_management.remove_role") }}
                 </button>
-                <span v-else class="text-xs text-gray-400 italic">
-                  No role assigned
-                </span>
               </div>
             </td>
           </tr>
@@ -226,6 +253,15 @@
       @reset="handleResetFilters"
     />
 
+    <!-- Assign Role Modal -->
+    <AssignRoleModal
+      :show="showAssignRoleModal"
+      :user="selectedUserForRole"
+      :roles="roles"
+      @close="closeAssignRoleModal"
+      @success="handleRoleAssignment"
+    />
+
     <!-- Remove Role Confirmation Modal -->
     <ConfirmModal
       v-model="showRemoveRoleModal"
@@ -250,13 +286,19 @@ import Pagination from "@/components/ui/Pagination.vue";
 import PageSizeSelector from "@/components/ui/PageSizeSelector.vue";
 import ConfirmModal from "@/components/ui/ConfirmModal.vue";
 import UserFilters from "../components/UserFilters.vue";
+import AssignRoleModal from "../components/AssignRoleModal.vue";
 import { getUsers } from "@/services/userService";
-import { unassignRoleFromUser } from "@/services/roleService";
+import {
+  unassignRoleFromUser,
+  assignRolesToUser,
+  getRoles,
+} from "@/services/roleService";
 
 const toast = useToast();
 
 const loading = ref(false);
 const users = ref([]);
+const roles = ref([]);
 const showFilters = ref(false);
 const removingRole = ref(null);
 const showRemoveRoleModal = ref(false);
@@ -265,6 +307,10 @@ const removeRoleModalData = ref({
   message: "",
   user: null,
 });
+
+// Assign role modal state
+const showAssignRoleModal = ref(false);
+const selectedUserForRole = ref(null);
 const filters = ref({
   search: "",
   // Other filters are temporarily disabled
@@ -494,7 +540,60 @@ const handlePageSizeChange = (size) => {
   setPageSize(size);
 };
 
+// Assign role methods
+const openAssignRoleModal = (user) => {
+  selectedUserForRole.value = user;
+  showAssignRoleModal.value = true;
+};
+
+const closeAssignRoleModal = () => {
+  showAssignRoleModal.value = false;
+  selectedUserForRole.value = null;
+};
+
+const handleRoleAssignment = async (assignmentData) => {
+  try {
+    // Call API to assign role to user
+    await assignRolesToUser(assignmentData.userId, [assignmentData.roleId]);
+
+    toast.success(
+      `Role "${assignmentData.roleName}" has been successfully assigned to user "${selectedUserForRole.value.name}".`,
+      "success"
+    );
+
+    // Refresh the users list to reflect changes
+    await fetchUsers();
+  } catch (error) {
+    console.error("Error assigning role to user:", error);
+    const errorMessage =
+      error.message ||
+      `Failed to assign role to user "${selectedUserForRole.value.name}". Please try again.`;
+    toast.error(errorMessage, "error");
+  }
+};
+
+// Fetch roles for the assign role modal
+const fetchRoles = async () => {
+  try {
+    const response = await getRoles();
+    if (response.data) {
+      roles.value = response.data;
+    }
+  } catch (error) {
+    console.error("Error fetching roles:", error);
+    // Fallback to mock roles for development
+    roles.value = [
+      { id: 1, name: "Admin", description: "Full system access" },
+      { id: 2, name: "Manager", description: "Team management access" },
+      { id: 3, name: "Developer", description: "Development access" },
+      { id: 4, name: "QA", description: "Quality assurance access" },
+      { id: 5, name: "Designer", description: "Design access" },
+    ];
+  }
+};
+
 onMounted(() => {
   fetchUsers();
+  fetchRoles();
 });
 </script>

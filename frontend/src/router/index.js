@@ -98,17 +98,19 @@ router.beforeEach(async (to, from, next) => {
   // Check permissions for authenticated users
   if (authStore.isAuthenticated && to.meta.requiredPermissions) {
     try {
-      // Refresh permissions on route change, but respect cache if recent
-      // This ensures we have up-to-date permissions while avoiding excessive API calls
-      await fetchUserPermissions()
+      // First check with cached permissions (no API call if cache is fresh)
+      let hasAccess = hasAnyPermission(to.meta.requiredPermissions)
       
-      // Check if user has any of the required permissions
-      if (!hasAnyPermission(to.meta.requiredPermissions)) {
-        // Try force refresh once in case permissions were recently updated
-        await fetchUserPermissions(true)
+      if (!hasAccess) {
+        // Only make API call if we don't have access with cached permissions
+        console.log('🔄 Refreshing permissions for route access check')
+        await fetchUserPermissions(true) // Force refresh once
         
         // Check again with fresh permissions
-        if (!hasAnyPermission(to.meta.requiredPermissions)) {
+        hasAccess = hasAnyPermission(to.meta.requiredPermissions)
+        
+        if (!hasAccess) {
+          console.log('❌ Access denied to route:', to.path)
           next("/unauthorized")
           return
         }

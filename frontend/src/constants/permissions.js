@@ -20,7 +20,9 @@ export const ROLE_PERMISSIONS = {
   ASSIGN_PERMISSION_TO_ROLE: "role_permission.assign_permission_to_role",
   REMOVE_PERMISSION_FROM_ROLE: "role_permission.remove_permission_from_role",
   ASSIGN_USER_TO_ROLE: "role_permission.assign_user_to_role",
-  REMOVE_USER_FROM_ROLE: "role_permission.remove_user_from_role"
+  REMOVE_USER_FROM_ROLE: "role_permission.remove_user_from_role",
+  DELETE_ROLE: "role_permission.delete_role",
+  ROLE_UPDATE: "role_permission.role_update"
 }
 
 export const PROJECT_PERMISSIONS = {
@@ -95,6 +97,8 @@ export const PERMISSION_DISPLAY_NAMES = {
   "role_permission.remove_permission_from_role": "Remove Permission from Role",
   "role_permission.assign_user_to_role": "Assign User to Role",
   "role_permission.remove_user_from_role": "Remove User from Role",
+  "role_permission.delete_role": "Delete Role",
+  "role_permission.role_update": "Update Role",
 
   // Project permissions
   "project.create": "Create Project",
@@ -168,7 +172,7 @@ export const PERMISSION_GROUPS = {
     PROJECT_PERMISSIONS.ADD_USER,
     PROJECT_PERMISSIONS.DELETE_USER,
     PROJECT_PERMISSIONS.ASSIGN_ROLE,
-    PROJECT_PERMISSIONS.VIEW_MEMBER_ANY,
+    PROJECT_PERMISSIONS.VIEW_MEMBER,
     WORKLOG_PERMISSIONS.VIEW_ANY,
     WORKLOG_PERMISSIONS.UPDATE_ANY,
     WORKLOG_PERMISSIONS.DELETE_ANY
@@ -180,7 +184,7 @@ export const PERMISSION_GROUPS = {
     WORKLOG_PERMISSIONS.VIEW_OWN,
     WORKLOG_PERMISSIONS.UPDATE_OWN,
     WORKLOG_PERMISSIONS.DELETE_OWN,
-    PROJECT_PERMISSIONS.VIEW_MEMBER_OWN,
+    PROJECT_PERMISSIONS.VIEW_MEMBER,
     ROLE_PERMISSIONS.VIEW_OWN
   ]
 }

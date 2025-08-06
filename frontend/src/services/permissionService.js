@@ -9,8 +9,8 @@ let permissionsCache = {
   isLoading: false
 }
 
-// Cache duration (2 minutes) - reduced for more frequent updates
-const CACHE_DURATION = 2 * 60 * 1000
+// Cache duration (5 minutes) - increased to reduce API calls
+const CACHE_DURATION = 5 * 60 * 1000
 
 /**
  * Extract all permission names from API response
@@ -59,14 +59,25 @@ export const fetchUserPermissions = async (forceRefresh = false) => {
 
   // Prevent multiple simultaneous requests
   if (permissionsCache.isLoading) {
-    // Wait for current request to complete
-    while (permissionsCache.isLoading) {
+    console.log('⏳ Permission request already in progress, waiting...')
+    // Wait for current request to complete with timeout
+    let waitTime = 0
+    const maxWaitTime = 10000 // 10 seconds max wait
+    while (permissionsCache.isLoading && waitTime < maxWaitTime) {
       await new Promise(resolve => setTimeout(resolve, 100))
+      waitTime += 100
     }
+    
+    if (waitTime >= maxWaitTime) {
+      console.warn('⚠️ Permission request timeout, resetting loading state')
+      permissionsCache.isLoading = false
+    }
+    
     return permissionsCache
   }
 
   try {
+    console.log('🔄 Fetching user permissions from API...', { forceRefresh, cacheAge: cacheAge ? `${Math.round(cacheAge / 1000)}s` : 'none' })
     permissionsCache.isLoading = true
     
     const response = await getUserPermissions()
@@ -83,6 +94,11 @@ export const fetchUserPermissions = async (forceRefresh = false) => {
       
       // Update cache
       permissionsCache = transformedPermissions
+      console.log('✅ Permissions cached successfully', { 
+        globalRoles: transformedPermissions.globalRoles.length,
+        projectAccess: transformedPermissions.projectAccess.length,
+        allPermissions: transformedPermissions.allPermissions.length
+      })
       
       return permissionsCache
     } else {

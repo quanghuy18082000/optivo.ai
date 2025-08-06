@@ -173,7 +173,14 @@
       "projects": "Dự án",
       "status": "Trạng thái",
       "actions": "Thao tác"
-    }
+    },
+    "assign_role": "Gán vai trò",
+    "change_role": "Đổi vai trò",
+    "remove_role": "Xóa vai trò",
+    "select_role": "Chọn vai trò",
+    "choose_role": "Chọn một vai trò",
+    "role_change_warning": "Cảnh báo thay đổi vai trò",
+    "current_role_will_be_replaced": "Vai trò hiện tại '{currentRole}' sẽ được thay thế bằng vai trò mới."
   },
   "permission_management": {
     "title": "Quản lý phân quyền",
@@ -208,6 +215,9 @@
     "role_name_placeholder": "Nhập tên vai trò",
     "role_description_placeholder": "Nhập mô tả vai trò (tùy chọn)",
     "role_created_success": "Tạo vai trò thành công",
-    "role_create_error": "Không thể tạo vai trò"
+    "role_create_error": "Không thể tạo vai trò",
+    "delete_role": "Xóa vai trò",
+    "role_assignment_moved": "Đã chuyển chức năng gán vai trò",
+    "role_assignment_moved_description": "Chức năng gán vai trò đã được chuyển sang trang Quản lý người dùng để có trải nghiệm tốt hơn. Bây giờ bạn có thể gán vai trò trực tiếp từ danh sách người dùng."
   }
 }

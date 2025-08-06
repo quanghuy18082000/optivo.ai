@@ -43,6 +43,8 @@ export function usePermissionHelpers() {
     canViewOwn: hasPermission(ROLE_PERMISSIONS.VIEW_OWN),
     canViewAny: hasPermission(ROLE_PERMISSIONS.VIEW_ANY),
     canCreate: hasPermission(ROLE_PERMISSIONS.CREATE),
+    canUpdate: hasPermission(ROLE_PERMISSIONS.ROLE_UPDATE),
+    canDelete: hasPermission(ROLE_PERMISSIONS.DELETE_ROLE),
     canAssignPermissionToRole: hasPermission(ROLE_PERMISSIONS.ASSIGN_PERMISSION_TO_ROLE),
     canRemovePermissionFromRole: hasPermission(ROLE_PERMISSIONS.REMOVE_PERMISSION_FROM_ROLE),
     canAssignUserToRole: hasPermission(ROLE_PERMISSIONS.ASSIGN_USER_TO_ROLE),
@@ -63,16 +65,13 @@ export function usePermissionHelpers() {
   const projectPermissions = computed(() => ({
     canCreate: hasPermission(PROJECT_PERMISSIONS.CREATE),
     canAddUser: hasPermission(PROJECT_PERMISSIONS.ADD_USER),
-    canUpdateProject: hasPermission(PROJECT_PERMISSIONS.UPDATE_PROJECT),
+    canUpdate: hasPermission(PROJECT_PERMISSIONS.UPDATE),
+    canDelete: hasPermission(PROJECT_PERMISSIONS.DELETE),
     canDeleteUser: hasPermission(PROJECT_PERMISSIONS.DELETE_USER),
     canAssignRole: hasPermission(PROJECT_PERMISSIONS.ASSIGN_ROLE),
     canCreateRole: hasPermission(PROJECT_PERMISSIONS.CREATE_ROLE),
-    canViewMemberOwn: hasPermission(PROJECT_PERMISSIONS.VIEW_MEMBER_OWN),
-    canViewMemberAny: hasPermission(PROJECT_PERMISSIONS.VIEW_MEMBER_ANY),
-    canViewMembers: hasAnyPermission([
-      PROJECT_PERMISSIONS.VIEW_MEMBER_OWN, 
-      PROJECT_PERMISSIONS.VIEW_MEMBER_ANY
-    ]),
+    canViewMember: hasPermission(PROJECT_PERMISSIONS.VIEW_MEMBER),
+    canViewMemberQuotation: hasPermission(PROJECT_PERMISSIONS.VIEW_MEMBER_QUOTATION),
     canManageUsers: hasAllPermissions([
       PROJECT_PERMISSIONS.ADD_USER,
       PROJECT_PERMISSIONS.DELETE_USER,
@@ -98,16 +97,13 @@ export function usePermissionHelpers() {
   // Project-specific permission helpers
   const getProjectPermissions = (projectId) => ({
     canAddUser: hasProjectPermission(projectId, PROJECT_PERMISSIONS.ADD_USER),
-    canUpdateProject: hasProjectPermission(projectId, PROJECT_PERMISSIONS.UPDATE_PROJECT),
+    canUpdate: hasProjectPermission(projectId, PROJECT_PERMISSIONS.UPDATE),
+    canDelete: hasProjectPermission(projectId, PROJECT_PERMISSIONS.DELETE),
     canDeleteUser: hasProjectPermission(projectId, PROJECT_PERMISSIONS.DELETE_USER),
     canAssignRole: hasProjectPermission(projectId, PROJECT_PERMISSIONS.ASSIGN_ROLE),
     canCreateRole: hasProjectPermission(projectId, PROJECT_PERMISSIONS.CREATE_ROLE),
-    canViewMemberOwn: hasProjectPermission(projectId, PROJECT_PERMISSIONS.VIEW_MEMBER_OWN),
-    canViewMemberAny: hasProjectPermission(projectId, PROJECT_PERMISSIONS.VIEW_MEMBER_ANY),
-    canViewMembers: hasAnyPermission([
-      PROJECT_PERMISSIONS.VIEW_MEMBER_OWN, 
-      PROJECT_PERMISSIONS.VIEW_MEMBER_ANY
-    ]) || hasProjectPermission(projectId, PROJECT_PERMISSIONS.VIEW_MEMBER_ANY),
+    canViewMember: hasProjectPermission(projectId, PROJECT_PERMISSIONS.VIEW_MEMBER),
+    canViewMemberQuotation: hasProjectPermission(projectId, PROJECT_PERMISSIONS.VIEW_MEMBER_QUOTATION),
     canManageUsers: hasProjectPermission(projectId, PROJECT_PERMISSIONS.ADD_USER) && 
                    hasProjectPermission(projectId, PROJECT_PERMISSIONS.DELETE_USER) &&
                    hasProjectPermission(projectId, PROJECT_PERMISSIONS.ASSIGN_ROLE)

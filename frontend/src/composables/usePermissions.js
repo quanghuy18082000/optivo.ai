@@ -1,5 +1,4 @@
-import { ref, computed, watch, onMounted } from 'vue'
-import { useQuery } from '@tanstack/vue-query'
+import { ref, computed, watch } from 'vue'
 import { useLoadingIntegration, LOADING_KEYS } from '@/composables/useLoadingIntegration.js'
 import { useAuthStore } from '@/modules/auth/store'
 import { 
@@ -13,6 +12,9 @@ import {
   getPermissionsCache
 } from '@/services/permissionService.js'
 
+// Global flag to prevent multiple initialization calls
+let isInitializing = false
+
 export function usePermissions() {
   const authStore = useAuthStore()
   const isLoading = ref(false)
@@ -23,58 +25,57 @@ export function usePermissions() {
 
   // Watch auth state changes to clear permissions cache
   watch(() => authStore.isAuthenticated, (isAuthenticated, wasAuthenticated) => {
-
-    
     if (!isAuthenticated && wasAuthenticated) {
-      // User logged out - clear permissions cache
-
+      // User logged out - clear permissions cache and reset flags
       clearPermissionsCache()
+      isInitializing = false
     }
   })
 
-  // Fetch user permissions using vue-query
-  const { refetch, data } = useQuery({
-    queryKey: ['userPermissions'],
-    queryFn: async () => {
+  // Initialize permissions on first call if authenticated
+  const initializePermissions = async () => {
+    if (authStore.isAuthenticated && !isReady.value && !isInitializing) {
       try {
+        console.log('🔄 Initializing permissions...')
+        isInitializing = true
         isLoading.value = true
         error.value = null
         
-        const permissions = await fetchUserPermissions(true) // Force refresh
-        return permissions
+        await fetchUserPermissions(false)
+        console.log('✅ Permissions initialized')
       } catch (err) {
+        console.error('❌ Failed to initialize permissions:', err)
         error.value = err.message || 'Failed to load permissions'
-        throw err
       } finally {
         isLoading.value = false
+        isInitializing = false
       }
-    },
-    staleTime: 2 * 60 * 1000, // 2 minutes - reduced from 1 minute for better UX
-    cacheTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
-    refetchOnWindowFocus: true,
-    refetchOnMount: true,
-    refetchOnReconnect: true, // Refetch when network reconnects
-    refetchInterval: 3 * 60 * 1000, // Auto refetch every 3 minutes (reduced from 5)
-    enabled: computed(() => {
-      return authStore.isAuthenticated
-    })
-  })
+    }
+  }
 
   // Function to manually refetch permissions
   const refetchPermissions = async (force = false) => {
     try {
-      if (force) {
-        // Force refresh by calling the service directly
-        await fetchUserPermissions(true)
-        // Then also refetch the query to update Vue Query cache
-        await refetch()
-      } else {
-        await refetch()
-      }
+      console.log('🔄 Refetching permissions...', { force })
+      isLoading.value = true
+      error.value = null
+      
+      await fetchUserPermissions(force)
+      console.log('✅ Permissions refetched')
     } catch (error) {
       console.error('❌ Failed to refetch permissions:', error)
+      error.value = error.message || 'Failed to load permissions'
+    } finally {
+      isLoading.value = false
     }
   }
+
+  // Auto-initialize when authenticated
+  watch(() => authStore.isAuthenticated, (isAuthenticated) => {
+    if (isAuthenticated) {
+      initializePermissions()
+    }
+  }, { immediate: true })
 
   // Get current permissions from cache
   const permissions = computed(() => getPermissionsCache())
@@ -85,12 +86,8 @@ export function usePermissions() {
     return cache.lastFetched !== null && !cache.isLoading
   })
 
-  // Ensure permissions are loaded on component mount
-  onMounted(() => {
-    if (authStore.isAuthenticated && !isReady.value) {
-      refetchPermissions()
-    }
-  })
+  // Let Vue Query handle the initial fetch automatically based on enabled state
+  // No need for manual onMounted logic since Vue Query will fetch when enabled becomes true
 
   // Computed properties for easier access
   const globalRoles = computed(() => permissions.value.globalRoles || [])

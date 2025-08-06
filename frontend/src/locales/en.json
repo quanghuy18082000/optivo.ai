@@ -175,7 +175,14 @@
       "projects": "Projects",
       "status": "Status",
       "actions": "Actions"
-    }
+    },
+    "assign_role": "Assign Role",
+    "change_role": "Change Role",
+    "remove_role": "Remove Role",
+    "select_role": "Select Role",
+    "choose_role": "Choose a role",
+    "role_change_warning": "Role Change Warning",
+    "current_role_will_be_replaced": "Current role '{currentRole}' will be replaced with the new role."
   },
   "permission_management": {
     "title": "Permission Management",
@@ -211,6 +218,8 @@
     "role_description_placeholder": "Enter role description (optional)",
     "role_created_success": "Role created successfully",
     "role_create_error": "Failed to create role",
-    "delete_role": "Delete Role"
+    "delete_role": "Delete Role",
+    "role_assignment_moved": "Role Assignment Moved",
+    "role_assignment_moved_description": "Role assignment functionality has been moved to the User Management page for better user experience. You can now assign roles directly from the user list."
   }
 }
