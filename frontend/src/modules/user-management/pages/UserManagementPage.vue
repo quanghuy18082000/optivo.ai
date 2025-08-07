@@ -293,9 +293,10 @@ import {
   assignRolesToUser,
   getRoles,
 } from "@/services/roleService";
+import { useAuthStore } from "@/modules/auth/store";
 
 const toast = useToast();
-
+const authStore = useAuthStore();
 const loading = ref(false);
 const users = ref([]);
 const roles = ref([]);
@@ -575,7 +576,9 @@ const handleRoleAssignment = async (assignmentData) => {
 // Fetch roles for the assign role modal
 const fetchRoles = async () => {
   try {
-    const response = await getRoles();
+    const companyId = authStore?.user?.company_id;
+    const params = companyId ? { company_id: companyId } : {};
+    const response = await getRoles(params);
     if (response.data) {
       roles.value = response.data;
     }

@@ -1,6 +1,6 @@
 import { createRouter, createWebHistory } from "vue-router"
 import { useAuthStore } from "@/modules/auth/store"
-import { fetchUserPermissions, hasAnyPermission } from "@/services/permissionService.js"
+import { fetchUserPermissions, hasAnyPermission, hasProjectPermission } from "@/services/permissionService.js"
 
 // Import route modules
 import authRoutes from "@/modules/auth/routes"
@@ -15,42 +15,6 @@ const routes = [
   ...projectRoutes,
   ...systemConfigRoutes,
   ...userManagementRoutes,
-  {
-    path: "/dropdown-demo",
-    name: "DropdownDemo",
-    component: () => import("@/pages/DropdownDemoPage.vue"),
-    meta: { requiresAuth: true },
-  },
-  {
-    path: "/datepicker-test",
-    name: "DatePickerTest",
-    component: () => import("@/pages/DatePickerTestPage.vue"),
-    meta: { requiresAuth: true },
-  },
-  {
-    path: "/api-pagination-demo",
-    name: "ApiPaginationDemo",
-    component: () => import("@/components/test/ApiPaginationDemo.vue"),
-    meta: { requiresAuth: true },
-  },
-  {
-    path: "/select-demo",
-    name: "SelectDemo",
-    component: () => import("@/components/ui/SelectDemo.vue"),
-    meta: { requiresAuth: true },
-  },
-  {
-    path: "/assign-role-demo",
-    name: "AssignRoleDemo",
-    component: () => import("@/components/ui/AssignRoleDemo.vue"),
-    meta: { requiresAuth: true },
-  },
-  {
-    path: "/user-search-demo",
-    name: "UserSearchDemo",
-    component: () => import("@/components/ui/UserSearchDemo.vue"),
-    meta: { requiresAuth: true },
-  },
   {
     path: "/unauthorized",
     name: "Unauthorized",
@@ -67,6 +31,43 @@ const routes = [
     component: () => import("@/views/NotFoundPage.vue"),
   },
 ]
+
+/**
+ * Check route permissions with project-specific logic
+ */
+const checkRoutePermissions = async (to) => {
+  const requiredPermissions = to.meta.requiredPermissions
+  
+  // Handle different permission formats
+  if (Array.isArray(requiredPermissions)) {
+    // Simple array of permissions - check globally
+    return hasAnyPermission(requiredPermissions)
+  }
+  
+  if (typeof requiredPermissions === 'object' && requiredPermissions.anyOf) {
+    // Object with anyOf property
+    const permissions = Array.isArray(requiredPermissions.anyOf) 
+      ? requiredPermissions.anyOf 
+      : [requiredPermissions.anyOf]
+    
+    // Check if this is a project-specific route
+    const projectId = to.params.projectId
+    if (projectId) {
+      // For project routes, check permissions within that specific project
+      console.log(`🔍 Checking project-specific permissions for project ${projectId}:`, permissions)
+      const hasAccess = permissions.some(permission => hasProjectPermission(projectId, permission))
+      console.log(`${hasAccess ? '✅' : '❌'} Project permission check result:`, hasAccess)
+      return hasAccess
+    } else {
+      // For non-project routes, check globally
+      console.log('🔍 Checking global permissions:', permissions)
+      return hasAnyPermission(permissions)
+    }
+  }
+  
+  // Fallback for other formats
+  return hasAnyPermission([requiredPermissions])
+}
 
 const router = createRouter({
   history: createWebHistory(),
@@ -99,7 +100,7 @@ router.beforeEach(async (to, from, next) => {
   if (authStore.isAuthenticated && to.meta.requiredPermissions) {
     try {
       // First check with cached permissions (no API call if cache is fresh)
-      let hasAccess = hasAnyPermission(to.meta.requiredPermissions)
+      let hasAccess = await checkRoutePermissions(to)
       
       if (!hasAccess) {
         // Only make API call if we don't have access with cached permissions
@@ -107,7 +108,7 @@ router.beforeEach(async (to, from, next) => {
         await fetchUserPermissions(true) // Force refresh once
         
         // Check again with fresh permissions
-        hasAccess = hasAnyPermission(to.meta.requiredPermissions)
+        hasAccess = await checkRoutePermissions(to)
         
         if (!hasAccess) {
           console.log('❌ Access denied to route:', to.path)

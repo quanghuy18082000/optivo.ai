@@ -18,14 +18,33 @@ const projectRoutes = [
     },
   },
   {
-    path: "/projects/edit/:id",
+    path: "/projects/edit/:projectId",
     name: "edit-project",
     component: () => import("./pages/EditProjectPage.vue"),
     meta: { 
       requiresAuth: true,
-      requiredPermissions: ['project.update']  // Based on project update permission
+      requiredPermissions: {
+        anyOf: ['project.update']  // Check project-specific permission
+      }
     },
   },
+  {
+    path: "/projects/:projectId/permissions",
+    name: "project-permission-management",
+    component: () => import("./pages/ProjectPermissionManagementPage.vue"),
+    // meta: { 
+    //   requiresAuth: true,
+    //   requiredPermissions: {
+    //     anyOf: [
+    //       'project.create_role',
+    //       'project.assign_role', 
+    //       'project.add_user',
+    //       'project.delete_user'
+    //     ]
+    //   }
+    // },
+  },
+
 ]
 
 export default projectRoutes

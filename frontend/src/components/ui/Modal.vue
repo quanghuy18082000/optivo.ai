@@ -4,6 +4,7 @@
     v-if="isOpen"
     class="fixed inset-0 z-50 overflow-hidden"
     @click="handleOverlayClick"
+    style="background-color: rgba(0, 0, 0, 0.5)"
   >
     <div
       class="absolute inset-0 bg-black bg-opacity-50 transition-opacity"
@@ -81,7 +82,7 @@
 </template>
 
 <script setup>
-import { onMounted, onUnmounted } from "vue";
+import { onMounted, onUnmounted, watch } from "vue";
 
 const props = defineProps({
   isOpen: {
@@ -171,16 +172,17 @@ onUnmounted(() => {
 });
 
 // Watch for isOpen changes to handle body scroll
-import { watch } from "vue";
 watch(
   () => props.isOpen,
   (newValue) => {
+    console.log("🔍 Modal isOpen prop changed:", newValue);
     if (newValue) {
       document.body.style.overflow = "hidden";
       emit("open");
     } else {
       document.body.style.overflow = "";
     }
-  }
+  },
+  { immediate: true }
 );
 </script>

@@ -32,6 +32,11 @@ export function usePermissions() {
     }
   })
 
+  const isReady = computed(() => {
+    const cache = getPermissionsCache()
+    return cache.lastFetched !== null && !cache.isLoading
+  })
+
   // Initialize permissions on first call if authenticated
   const initializePermissions = async () => {
     if (authStore.isAuthenticated && !isReady.value && !isInitializing) {
@@ -81,10 +86,7 @@ export function usePermissions() {
   const permissions = computed(() => getPermissionsCache())
   
   // Function to check if permissions are ready
-  const isReady = computed(() => {
-    const cache = getPermissionsCache()
-    return cache.lastFetched !== null && !cache.isLoading
-  })
+ 
 
   // Let Vue Query handle the initial fetch automatically based on enabled state
   // No need for manual onMounted logic since Vue Query will fetch when enabled becomes true

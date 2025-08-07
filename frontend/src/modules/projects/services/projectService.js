@@ -96,3 +96,18 @@ export const exportProjectsMembersDetailCSV = async (requestBody = {}) => {
     throw new Error(error.response?.data?.message || error.message || 'Failed to export CSV')
   }
 }
+
+/**
+ * Get project roles
+ * @param {string|number} projectId - The project ID
+ * @returns {Promise<Object>} - The response data with roles list
+ */
+export const getProjectRoles = async (projectId) => {
+  try {
+    const response = await get(`/projects/${projectId}/roles`)
+    return response.data
+  } catch (error) {
+    console.error('API Error:', error);
+    throw new Error(error.response?.data?.message || error.message || 'Failed to fetch project roles')
+  }
+}

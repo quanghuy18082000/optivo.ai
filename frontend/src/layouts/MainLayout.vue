@@ -93,27 +93,6 @@
             </div>
           </router-link>
 
-          <router-link
-            to="/profile"
-            class="flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-blue-700 transition-colors group"
-            :class="{ 'bg-blue-700': $route.path === '/profile' }"
-          >
-            <svg
-              class="w-5 h-5 flex-shrink-0"
-              fill="currentColor"
-              viewBox="0 0 20 20"
-            >
-              <path
-                fill-rule="evenodd"
-                d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
-                clip-rule="evenodd"
-              />
-            </svg>
-            <div v-if="!isCollapsed" class="min-w-0">
-              <div class="font-medium truncate">Profile</div>
-              <div class="text-sm text-blue-200 truncate">Your account</div>
-            </div>
-          </router-link>
 
           <!-- System Configuration -->
           <router-link
@@ -161,7 +140,27 @@
               <div class="text-sm text-blue-200 truncate">Manage users</div>
             </div>
           </router-link>
-
+          <router-link
+            to="/profile"
+            class="flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-blue-700 transition-colors group"
+            :class="{ 'bg-blue-700': $route.path === '/profile' }"
+          >
+            <svg
+              class="w-5 h-5 flex-shrink-0"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+            >
+              <path
+                fill-rule="evenodd"
+                d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
+                clip-rule="evenodd"
+              />
+            </svg>
+            <div v-if="!isCollapsed" class="min-w-0">
+              <div class="font-medium truncate">Profile</div>
+              <div class="text-sm text-blue-200 truncate">Your account</div>
+            </div>
+          </router-link>
 
 
         </nav>
@@ -233,9 +232,12 @@ const canViewProjects = computed(() => {
 
 // Check if user has user management permission (using ROLE permissions)
 const canViewUserManagement = computed(() => {
+  console.log('user management', hasPermission(PERMISSIONS.ROLE.VIEW_OWN), hasPermission(PERMISSIONS.ROLE.VIEW_ANY))
   // if (!isReady.value) return false;
   return hasPermission(PERMISSIONS.ROLE.VIEW_OWN) || hasPermission(PERMISSIONS.ROLE.VIEW_ANY);
 });
+
+
 
 const toggleSidebar = () => {
   isCollapsed.value = !isCollapsed.value;

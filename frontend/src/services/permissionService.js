@@ -174,6 +174,12 @@ export const hasProjectPermission = (projectId, permissionName) => {
     p.project_id.toString() === projectId.toString()
   )
   
+  console.log(`🔍 Checking permission "${permissionName}" for project ${projectId}:`, {
+    projectFound: !!project,
+    projectPermissions: project?.permission_names || [],
+    hasPermission: project && project.permission_names && project.permission_names.includes(permissionName)
+  })
+  
   return project && project.permission_names && 
     project.permission_names.includes(permissionName)
 }
