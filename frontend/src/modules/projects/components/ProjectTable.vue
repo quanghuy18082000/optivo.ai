@@ -126,6 +126,11 @@
             <div></div>
             <div class="flex justify-end">
               <PopupMenu
+                v-if="
+                  project.can_edit ||
+                  project.can_management_role ||
+                  project.can_delete
+                "
                 v-model="projectMenus[project.id]"
                 placement="bottom-end"
                 :offset="8"
@@ -149,77 +154,72 @@
                   </button>
                 </template>
 
-                <PermissionGuard
-                  :any-of="[PERMISSIONS.PROJECT_UPDATE]"
-                  :project-id="project.id"
+                <PopupMenuItem
+                  v-if="project?.can_edit"
+                  @click="editProject(project)"
                 >
-                  <PopupMenuItem @click="editProject(project)">
-                    <template #icon>
-                      <svg
-                        class="w-4 h-4"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                        />
-                      </svg>
-                    </template>
-                    Edit Project
-                  </PopupMenuItem>
-                </PermissionGuard>
+                  <template #icon>
+                    <svg
+                      class="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                      />
+                    </svg>
+                  </template>
+                  Edit Project
+                </PopupMenuItem>
 
-                <PermissionGuard :project-id="project.id">
-                  <PopupMenuItem @click="manageProjectPermissions(project)">
-                    <template #icon>
-                      <svg
-                        class="w-4 h-4"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-                        />
-                      </svg>
-                    </template>
-                    Manage Permissions
-                  </PopupMenuItem>
-                </PermissionGuard>
-
-                <PermissionGuard
-                  :any-of="[PERMISSIONS.PROJECT_DELETE]"
-                  :project-id="project.id"
+                <PopupMenuItem
+                  v-if="project?.can_management_role"
+                  @click="manageProjectPermissions(project)"
                 >
-                  <PopupMenuItem
-                    variant="danger"
-                    @click="confirmDeleteProject(project)"
-                  >
-                    <template #icon>
-                      <svg
-                        class="w-4 h-4"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                        />
-                      </svg>
-                    </template>
-                    Delete
-                  </PopupMenuItem>
-                </PermissionGuard>
+                  <template #icon>
+                    <svg
+                      class="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                      />
+                    </svg>
+                  </template>
+                  Manage Permissions
+                </PopupMenuItem>
+
+                <PopupMenuItem
+                  v-if="project?.can_delete"
+                  variant="danger"
+                  @click="confirmDeleteProject(project)"
+                >
+                  <template #icon>
+                    <svg
+                      class="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                      />
+                    </svg>
+                  </template>
+                  Delete
+                </PopupMenuItem>
               </PopupMenu>
             </div>
           </div>

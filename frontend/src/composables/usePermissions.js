@@ -2,7 +2,8 @@ import { ref, computed, watch } from 'vue'
 import { useLoadingIntegration, LOADING_KEYS } from '@/composables/useLoadingIntegration.js'
 import { useAuthStore } from '@/modules/auth/store'
 import { 
-  fetchUserPermissions, 
+  fetchUserPermissions,
+  fetchUserPermissionsDebounced,
   hasPermission as serviceHasPermission,
   hasGlobalPermission as serviceHasGlobalPermission,
   hasAnyPermission as serviceHasAnyPermission,
@@ -132,6 +133,10 @@ export function usePermissions() {
     PROJECT_VIEW_MEMBER: 'project.view_member',
     PROJECT_VIEW_MEMBER_QUOTATION: 'project.view_member_quotation',
     
+    // Quotation permissions
+    CREATE_QUOTATION: 'project.create_quotation', // Global role
+    UPDATE_QUOTATION: 'project.update_quotation', // Project role
+    
     // Role & Permission management
     ROLE_PERMISSION_VIEW_ANY: 'role_permission.view_any',
     ROLE_PERMISSION_VIEW_OWN: 'role_permission.view_own',
@@ -177,6 +182,8 @@ export function usePermissions() {
 // Export service functions for external use (like router)
 export { 
   fetchUserPermissions,
+  fetchUserPermissionsDebounced,
+  shouldFetchPermissionsForRoute,
   hasPermission,
   hasAnyPermission,
   hasAllPermissions,

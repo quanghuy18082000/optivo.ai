@@ -1,5 +1,5 @@
 <template>
-  <div class="overflow-hidden bg-white rounded-lg shadow">
+  <div class="relative overflow-hidden bg-white rounded-lg shadow">
     <!-- Table -->
     <div class="overflow-x-auto">
       <table class="min-w-full divide-y divide-gray-200">
@@ -50,9 +50,7 @@
       class="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center"
     >
       <div class="flex items-center space-x-2">
-        <div
-          class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"
-        ></div>
+        <LoadingSpinner size="lg" class="text-blue-600" />
         <span class="text-sm text-gray-600">{{ $t("common.loading") }}</span>
       </div>
     </div>
@@ -61,6 +59,7 @@
 
 <script setup>
 import { computed } from "vue";
+import LoadingSpinner from "./LoadingSpinner.vue";
 
 const props = defineProps({
   loading: {

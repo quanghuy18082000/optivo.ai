@@ -123,13 +123,33 @@
         <div v-if="selectedRole" class="space-y-6">
           <!-- Role Permissions -->
           <div class="bg-white rounded-lg shadow p-6">
-            <h3 class="text-lg font-medium text-gray-900 mb-4">
-              {{
-                $t("permission_management.role_permissions", {
-                  role: selectedRole.name,
-                })
-              }}
-            </h3>
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-lg font-medium text-gray-900">
+                {{
+                  $t("permission_management.role_permissions", {
+                    role: selectedRole.name,
+                  })
+                }}
+              </h3>
+              <div
+                class="flex items-center space-x-2 text-sm text-blue-600 bg-blue-50 px-3 py-1 rounded-full"
+              >
+                <svg
+                  class="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  ></path>
+                </svg>
+                <span>Global Permissions Only</span>
+              </div>
+            </div>
 
             <!-- Loading Role Details -->
             <div
@@ -146,6 +166,32 @@
 
             <!-- Permission Modules -->
             <div v-else class="space-y-6">
+              <!-- No Global Permissions Message -->
+              <div
+                v-if="permissionModules.length === 0"
+                class="text-center py-12"
+              >
+                <svg
+                  class="mx-auto h-12 w-12 text-gray-400 mb-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+                  ></path>
+                </svg>
+                <h3 class="text-lg font-medium text-gray-900 mb-2">
+                  No Global Permissions Available
+                </h3>
+                <p class="text-gray-500 text-sm">
+                  There are no global permissions configured in the system yet.
+                </p>
+              </div>
+
               <div
                 v-for="module in permissionModules"
                 :key="module.key"
@@ -352,9 +398,14 @@ const permissions = ref([]);
 const permissionModules = computed(() => {
   if (!permissions.value.length) return [];
 
-  // Group permissions by scope
-  const groupedPermissions = permissions.value.reduce((acc, permission) => {
-    const scope = permission.scope || "general";
+  // Filter permissions to only show global scope
+  const globalPermissions = permissions.value.filter(
+    (permission) => permission.scope === "global"
+  );
+
+  // Group permissions by scope (only global now)
+  const groupedPermissions = globalPermissions.reduce((acc, permission) => {
+    const scope = permission.scope || "global";
     if (!acc[scope]) {
       acc[scope] = [];
     }

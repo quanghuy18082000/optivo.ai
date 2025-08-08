@@ -153,6 +153,7 @@ import PlanStep from "../components/steps/PlanStep.vue";
 import { useToast } from "@/composables/useToast";
 import { getPositions } from "@/services/systemService.js";
 import { usePageInitLoading } from "@/composables/usePageLoading";
+import { usePermissions } from "@/composables/usePermissions.js";
 
 const router = useRouter();
 const route = useRoute();
@@ -161,8 +162,16 @@ const toast = useToast();
 // Page loading management
 const { stopLoading } = usePageInitLoading("edit-project");
 
+// Permission management
+const { hasGlobalPermission, PERMISSIONS } = usePermissions();
+
+// Check if user can create quotations
+const canCreateQuotation = computed(() => {
+  return hasGlobalPermission(PERMISSIONS.CREATE_QUOTATION);
+});
+
 // Get project ID from route params
-const projectId = route.params.id;
+const projectId = route.params.projectId;
 
 // Current step state
 const currentStep = ref(1);

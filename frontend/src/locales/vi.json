@@ -37,7 +37,8 @@
     "clear_all": "Xóa tất cả",
     "user": "Người dùng",
     "actions": "Thao tác",
-    "remove": "Xóa"
+    "remove": "Xóa",
+    "close": "Đóng"
   },
   "auth": {
     "login": {
@@ -190,7 +191,13 @@
     "select_role": "Chọn vai trò",
     "choose_role": "Chọn một vai trò",
     "role_change_warning": "Cảnh báo thay đổi vai trò",
-    "current_role_will_be_replaced": "Vai trò hiện tại '{currentRole}' sẽ được thay thế bằng vai trò mới."
+    "current_role_will_be_replaced": "Vai trò hiện tại '{currentRole}' sẽ được thay thế bằng vai trò mới.",
+    "manage_roles": "Quản lý vai trò",
+    "current_roles": "Vai trò hiện tại",
+    "add_new_role": "Thêm vai trò mới",
+    "no_roles_assigned": "Chưa có vai trò nào được gán cho người dùng này",
+    "assign_single_role": "Gán vai trò đơn",
+    "remove": "Xóa"
   },
   "permission_management": {
     "title": "Quản lý phân quyền",

@@ -42,7 +42,7 @@
           >
             {{ $t("user_management.columns.role") }}
           </th>
-          <th
+          <!-- <th
             class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
           >
             {{ $t("user_management.columns.department") }}
@@ -61,7 +61,7 @@
             class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
           >
             {{ $t("user_management.columns.projects") }}
-          </th>
+          </th>-->
           <th
             class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
           >
@@ -100,17 +100,17 @@
 
             <!-- Role -->
             <td class="px-6 py-4 whitespace-nowrap">
-              <Badge :variant="getRoleBadgeVariant(user.role)">
-                {{ user.role }}
-              </Badge>
+              <MultiRoleDisplay
+                :roles="user.role || []"
+                :can-manage="true"
+                @manage-roles="openManageRolesModal(user)"
+              />
             </td>
-
-            <!-- Department -->
+            <!-- 
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
               {{ user.department }}
             </td>
 
-            <!-- Workload -->
             <td class="px-6 py-4 whitespace-nowrap">
               <div class="w-24">
                 <span class="text-xs text-gray-500 mt-1"
@@ -119,23 +119,20 @@
               </div>
             </td>
 
-            <!-- Total Hours -->
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
               {{ user.totalHours }}h
             </td>
 
-            <!-- Projects -->
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
               {{ user.projects }}
-            </td>
+            </td>-->
 
-            <!-- Status -->
             <td class="px-6 py-4 whitespace-nowrap">
               <Badge
-                :variant="user.status === 'active' ? 'success' : 'default'"
+                :variant="user.status === 'Active' ? 'success' : 'default'"
               >
                 {{
-                  user.status === "active"
+                  user.status === "Active"
                     ? $t("user_management.status_active")
                     : $t("user_management.status_inactive")
                 }}
@@ -145,13 +142,11 @@
             <!-- Actions -->
             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
               <div class="flex flex-col space-y-1">
-                <!-- Assign/Change Role Button -->
+                <!-- Manage Roles Button -->
                 <button
-                  @click="openAssignRoleModal(user)"
+                  @click="openManageRolesModal(user)"
                   class="inline-flex items-center px-2 py-1 text-xs font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200 transition-colors"
-                  :title="
-                    user.role ? `Change role: ${user.role}` : 'Assign role'
-                  "
+                  :title="$t('user_management.manage_roles')"
                 >
                   <svg
                     class="w-3 h-3 mr-1"
@@ -166,57 +161,10 @@
                       d="M12 6v6m0 0v6m0-6h6m-6 0H6"
                     />
                   </svg>
-                  {{
-                    user.role
-                      ? $t("user_management.change_role")
-                      : $t("user_management.assign_role")
-                  }}
+                  {{ $t("user_management.manage_roles") }}
                 </button>
 
-                <!-- Remove Role Button -->
-                <button
-                  v-if="user.role && user.role_id"
-                  @click="removeUserRole(user)"
-                  :disabled="removingRole === user.id"
-                  class="inline-flex items-center px-2 py-1 text-xs font-medium rounded-md text-red-700 bg-red-100 hover:bg-red-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  :title="`Remove role: ${user.role}`"
-                >
-                  <svg
-                    v-if="removingRole === user.id"
-                    class="animate-spin w-3 h-3 mr-1"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                  >
-                    <circle
-                      class="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      stroke-width="4"
-                    ></circle>
-                    <path
-                      class="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                    ></path>
-                  </svg>
-                  <svg
-                    v-else
-                    class="w-3 h-3 mr-1"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                    ></path>
-                  </svg>
-                  {{ $t("user_management.remove_role") }}
-                </button>
+                <!-- Legacy Assign Role Button (for backward compatibility) -->
               </div>
             </td>
           </tr>
@@ -262,6 +210,15 @@
       @success="handleRoleAssignment"
     />
 
+    <!-- Manage Roles Modal -->
+    <ManageRolesModal
+      :show="showManageRolesModal"
+      :user="selectedUserForRoleManagement"
+      :roles="roles"
+      @close="closeManageRolesModal"
+      @success="handleRoleManagementSuccess"
+    />
+
     <!-- Remove Role Confirmation Modal -->
     <ConfirmModal
       v-model="showRemoveRoleModal"
@@ -287,6 +244,8 @@ import PageSizeSelector from "@/components/ui/PageSizeSelector.vue";
 import ConfirmModal from "@/components/ui/ConfirmModal.vue";
 import UserFilters from "../components/UserFilters.vue";
 import AssignRoleModal from "../components/AssignRoleModal.vue";
+import ManageRolesModal from "../components/ManageRolesModal.vue";
+import MultiRoleDisplay from "../components/MultiRoleDisplay.vue";
 import { getUsers } from "@/services/userService";
 import {
   unassignRoleFromUser,
@@ -312,6 +271,10 @@ const removeRoleModalData = ref({
 // Assign role modal state
 const showAssignRoleModal = ref(false);
 const selectedUserForRole = ref(null);
+
+// Manage roles modal state
+const showManageRolesModal = ref(false);
+const selectedUserForRoleManagement = ref(null);
 const filters = ref({
   search: "",
   // Other filters are temporarily disabled
@@ -381,16 +344,86 @@ const fetchUsers = async (resetPage = false) => {
     // Update users and pagination from API response
     if (response.data) {
       // Transform API data and add mock data for missing fields
-      users.value = response.data.map((user, index) => ({
-        ...user,
-        role: ["Admin", "Manager", "Developer", "QA", "Designer"][index % 5],
-        role_id: (index % 5) + 1, // Mock role IDs 1-5
-        department: ["IT", "Sales", "Marketing", "Design", "HR"][index % 5],
-        workload: Math.floor(Math.random() * 40) + 60, // 60-100%
-        totalHours: Math.floor(Math.random() * 80) + 120, // 120-200h
-        projects: Math.floor(Math.random() * 5) + 1, // 1-5 projects
-        avatar: null, // Will use initials from Avatar component
-      }));
+      users.value = response.data.map((user, index) => {
+        // Mock multi-role data structure
+        const mockRoles = [
+          {
+            id: 1,
+            name: "Admin",
+            description: "Full system access",
+            company_id: 1,
+            permissions: null,
+          },
+          {
+            id: 2,
+            name: "Manager",
+            description: "Team management access",
+            company_id: 1,
+            permissions: null,
+          },
+          {
+            id: 3,
+            name: "Developer",
+            description: "Development access",
+            company_id: 1,
+            permissions: null,
+          },
+          {
+            id: 4,
+            name: "QA",
+            description: "Quality assurance access",
+            company_id: 1,
+            permissions: null,
+          },
+          {
+            id: 5,
+            name: "Designer",
+            description: "Design access",
+            company_id: 1,
+            permissions: null,
+          },
+          {
+            id: 6,
+            name: "Employee",
+            description: "Default Role",
+            company_id: 1,
+            permissions: null,
+          },
+          {
+            id: 7,
+            name: "Test",
+            description: null,
+            company_id: 1,
+            permissions: null,
+          },
+        ];
+
+        // Assign 1-3 random roles to each user
+        const numRoles = Math.floor(Math.random() * 3) + 1;
+        const userRoles = [];
+        const usedRoleIds = new Set();
+
+        for (let i = 0; i < numRoles; i++) {
+          let roleIndex;
+          do {
+            roleIndex = Math.floor(Math.random() * mockRoles.length);
+          } while (usedRoleIds.has(roleIndex));
+
+          usedRoleIds.add(roleIndex);
+          userRoles.push(mockRoles[roleIndex]);
+        }
+
+        return {
+          ...user,
+          role: userRoles, // Multi-role array
+          role_id: userRoles[0]?.id, // Keep for backward compatibility
+          department: ["IT", "Sales", "Marketing", "Design", "HR"][index % 5],
+          workload: Math.floor(Math.random() * 40) + 60, // 60-100%
+          totalHours: Math.floor(Math.random() * 80) + 120, // 120-200h
+          projects: Math.floor(Math.random() * 5) + 1, // 1-5 projects
+          avatar: null, // Will use initials from Avatar component
+        };
+      });
     }
 
     if (response.pagination) {
@@ -407,20 +440,89 @@ const fetchUsers = async (resetPage = false) => {
     toast.error("user_management.fetch_error", "error");
 
     // Fallback to mock data for development/testing
-    const mockUsers = Array.from({ length: 25 }, (_, index) => ({
-      id: index + 1,
-      user_id: index + 1,
-      name: `User ${index + 1}`,
-      email: `user${index + 1}@example.com`,
-      role: ["Admin", "Manager", "Developer", "QA", "Designer"][index % 5],
-      role_id: (index % 5) + 1, // Mock role IDs 1-5
-      department: ["IT", "Sales", "Marketing", "Design", "HR"][index % 5],
-      status: index % 3 === 0 ? "inactive" : "active",
-      workload: Math.floor(Math.random() * 40) + 60,
-      totalHours: Math.floor(Math.random() * 80) + 120,
-      projects: Math.floor(Math.random() * 5) + 1,
-      avatar: null,
-    }));
+    const mockRoles = [
+      {
+        id: 1,
+        name: "Admin",
+        description: "Full system access",
+        company_id: 1,
+        permissions: null,
+      },
+      {
+        id: 2,
+        name: "Manager",
+        description: "Team management access",
+        company_id: 1,
+        permissions: null,
+      },
+      {
+        id: 3,
+        name: "Developer",
+        description: "Development access",
+        company_id: 1,
+        permissions: null,
+      },
+      {
+        id: 4,
+        name: "QA",
+        description: "Quality assurance access",
+        company_id: 1,
+        permissions: null,
+      },
+      {
+        id: 5,
+        name: "Designer",
+        description: "Design access",
+        company_id: 1,
+        permissions: null,
+      },
+      {
+        id: 6,
+        name: "Employee",
+        description: "Default Role",
+        company_id: 1,
+        permissions: null,
+      },
+      {
+        id: 7,
+        name: "Test",
+        description: null,
+        company_id: 1,
+        permissions: null,
+      },
+    ];
+
+    const mockUsers = Array.from({ length: 25 }, (_, index) => {
+      // Assign 1-3 random roles to each user
+      const numRoles = Math.floor(Math.random() * 3) + 1;
+      const userRoles = [];
+      const usedRoleIds = new Set();
+
+      for (let i = 0; i < numRoles; i++) {
+        let roleIndex;
+        do {
+          roleIndex = Math.floor(Math.random() * mockRoles.length);
+        } while (usedRoleIds.has(roleIndex));
+
+        usedRoleIds.add(roleIndex);
+        userRoles.push(mockRoles[roleIndex]);
+      }
+
+      return {
+        id: index + 1,
+        user_id: index + 1,
+        name: `User ${index + 1}`,
+        email: `user${index + 1}@example.com`,
+        role: userRoles, // Multi-role array
+        role_id: userRoles[0]?.id, // Keep for backward compatibility
+        department: ["IT", "Sales", "Marketing", "Design", "HR"][index % 5],
+        status: index % 3 === 0 ? "inactive" : "active",
+        workload: Math.floor(Math.random() * 40) + 60,
+        totalHours: Math.floor(Math.random() * 80) + 120,
+        projects: Math.floor(Math.random() * 5) + 1,
+        avatar: null,
+      };
+    });
 
     // Simulate pagination
     const startIndex = (currentPage.value - 1) * pageSize.value;
@@ -441,16 +543,7 @@ const fetchUsers = async (resetPage = false) => {
   }
 };
 
-const getRoleBadgeVariant = (role) => {
-  const variants = {
-    Admin: "error",
-    Manager: "warning",
-    Developer: "primary",
-    QA: "info",
-    Designer: "secondary",
-  };
-  return variants[role] || "default";
-};
+// Removed color variants - using default gray for all roles
 
 const getWorkloadVariant = (workload) => {
   if (workload >= 90) return "error";
@@ -573,6 +666,22 @@ const handleRoleAssignment = async (assignmentData) => {
   }
 };
 
+// Manage roles methods
+const openManageRolesModal = (user) => {
+  selectedUserForRoleManagement.value = user;
+  showManageRolesModal.value = true;
+};
+
+const closeManageRolesModal = () => {
+  showManageRolesModal.value = false;
+  selectedUserForRoleManagement.value = null;
+};
+
+const handleRoleManagementSuccess = async () => {
+  // Refresh the users list to reflect changes
+  await fetchUsers();
+};
+
 // Fetch roles for the assign role modal
 const fetchRoles = async () => {
   try {
@@ -591,6 +700,8 @@ const fetchRoles = async () => {
       { id: 3, name: "Developer", description: "Development access" },
       { id: 4, name: "QA", description: "Quality assurance access" },
       { id: 5, name: "Designer", description: "Design access" },
+      { id: 6, name: "Employee", description: "Default Role" },
+      { id: 7, name: "Test", description: null },
     ];
   }
 };

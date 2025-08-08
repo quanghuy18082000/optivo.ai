@@ -118,6 +118,7 @@ export const PERMISSION_DISPLAY_NAMES = {
 
 // Scope display names mapping
 export const SCOPE_DISPLAY_NAMES = {
+  "global": "Global Permissions",
   "worklog": "Work Log Management",
   "role_permission": "Role & Permission Management", 
   "project": "Project Management",

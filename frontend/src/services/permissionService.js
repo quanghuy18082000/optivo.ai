@@ -9,8 +9,15 @@ let permissionsCache = {
   isLoading: false
 }
 
-// Cache duration (5 minutes) - increased to reduce API calls
-const CACHE_DURATION = 5 * 60 * 1000
+// Cache duration (2 minutes) - reduced for more frequent updates
+const CACHE_DURATION = 2 * 60 * 1000
+
+// Debounce mechanism to prevent too frequent API calls
+let debounceTimer = null
+const DEBOUNCE_DELAY = 500 // 0.5 second
+
+// Track last route to avoid unnecessary calls
+let lastRoute = null
 
 /**
  * Extract all permission names from API response
@@ -41,6 +48,54 @@ const extractAllPermissionNames = (data) => {
   }
 
   return Array.from(permissionSet)
+}
+
+/**
+ * Check if we need to fetch permissions for this route
+ */
+export const shouldFetchPermissionsForRoute = (routePath, forceRefresh = false) => {
+  const now = Date.now()
+  const cacheAge = permissionsCache.lastFetched ? now - permissionsCache.lastFetched : null
+  
+  // Always fetch if forced or no cache
+  if (forceRefresh || !permissionsCache.lastFetched) {
+    return true
+  }
+  
+  // Fetch if cache is expired
+  if (cacheAge && cacheAge > CACHE_DURATION) {
+    return true
+  }
+  
+  // Fetch if route changed (different route might need different permissions)
+  if (lastRoute !== routePath) {
+    lastRoute = routePath
+    return true
+  }
+  
+  return false
+}
+
+/**
+ * Fetch and cache user permissions with debounce
+ */
+export const fetchUserPermissionsDebounced = async (forceRefresh = false) => {
+  return new Promise((resolve, reject) => {
+    // Clear existing timer
+    if (debounceTimer) {
+      clearTimeout(debounceTimer)
+    }
+    
+    // Set new timer
+    debounceTimer = setTimeout(async () => {
+      try {
+        const result = await fetchUserPermissions(forceRefresh)
+        resolve(result)
+      } catch (error) {
+        reject(error)
+      }
+    }, DEBOUNCE_DELAY)
+  })
 }
 
 /**
@@ -188,6 +243,15 @@ export const hasProjectPermission = (projectId, permissionName) => {
  * Clear permissions cache
  */
 export const clearPermissionsCache = () => {
+  // Clear debounce timer
+  if (debounceTimer) {
+    clearTimeout(debounceTimer)
+    debounceTimer = null
+  }
+  
+  // Reset route tracking
+  lastRoute = null
+  
   permissionsCache = {
     globalRoles: [],
     projectAccess: [],

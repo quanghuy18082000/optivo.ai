@@ -37,7 +37,8 @@
     "clear_all": "Clear All",
     "user": "User",
     "actions": "Actions",
-    "remove": "Remove"
+    "remove": "Remove",
+    "close": "Close"
   },
   "auth": {
     "login": {
@@ -192,7 +193,13 @@
     "select_role": "Select Role",
     "choose_role": "Choose a role",
     "role_change_warning": "Role Change Warning",
-    "current_role_will_be_replaced": "Current role '{currentRole}' will be replaced with the new role."
+    "current_role_will_be_replaced": "Current role '{currentRole}' will be replaced with the new role.",
+    "manage_roles": "Manage Roles",
+    "current_roles": "Current Roles",
+    "add_new_role": "Add New Role",
+    "no_roles_assigned": "No roles assigned to this user",
+    "assign_single_role": "Assign Single Role",
+    "remove": "Remove"
   },
   "permission_management": {
     "title": "Permission Management",

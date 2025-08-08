@@ -165,6 +165,7 @@
           Previous Step
         </Button>
         <Button
+          v-if="canCreateQuotation"
           @click="cloneFromQuotation"
           variant="primary"
           class="bg-blue-600 hover:bg-blue-700"
@@ -185,7 +186,7 @@
         class="bg-blue-600 hover:bg-blue-700"
         :loading="isSubmitting"
       >
-        Submit (3/3)
+        Submit ({{ currentStep }}/{{ totalSteps }})
       </Button>
     </div>
   </div>
@@ -238,6 +239,18 @@ const props = defineProps({
   positionError: {
     type: String,
     default: null,
+  },
+  canCreateQuotation: {
+    type: Boolean,
+    default: true,
+  },
+  currentStep: {
+    type: Number,
+    default: 3,
+  },
+  totalSteps: {
+    type: Number,
+    default: 3,
   },
 });
 

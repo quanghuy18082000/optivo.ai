@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from "vue-router"
 import { useAuthStore } from "@/modules/auth/store"
-import { fetchUserPermissions, hasAnyPermission, hasProjectPermission } from "@/services/permissionService.js"
+import { fetchUserPermissions, hasAnyPermission, hasProjectPermission, shouldFetchPermissionsForRoute } from "@/services/permissionService.js"
+import { useGlobalLoading } from "@/composables/useGlobalLoading.js"
 
 // Import route modules
 import authRoutes from "@/modules/auth/routes"
@@ -15,6 +16,12 @@ const routes = [
   ...projectRoutes,
   ...systemConfigRoutes,
   ...userManagementRoutes,
+  {
+    path: "/permission-test",
+    name: "PermissionTest",
+    component: () => import("@/pages/PermissionTestPage.vue"),
+    meta: { requiresAuth: true }
+  },
   {
     path: "/unauthorized",
     name: "Unauthorized",
@@ -77,6 +84,7 @@ const router = createRouter({
 // Global navigation guard
 router.beforeEach(async (to, from, next) => {
   const authStore = useAuthStore()
+  const { setLoading } = useGlobalLoading()
 
   // If user is not authenticated and trying to access a protected route
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
@@ -96,28 +104,45 @@ router.beforeEach(async (to, from, next) => {
     return
   }
   
-  // Check permissions for authenticated users
-  if (authStore.isAuthenticated && to.meta.requiredPermissions) {
+  // For authenticated users, fetch permissions before route access if needed
+  if (authStore.isAuthenticated && to.meta.requiresAuth) {
+    const loadingKey = `permissions-${to.path}`
+    
     try {
-      // First check with cached permissions (no API call if cache is fresh)
-      let hasAccess = await checkRoutePermissions(to)
+      // Check if we need to fetch permissions for this route
+      const needsFetch = shouldFetchPermissionsForRoute(to.path, false)
       
-      if (!hasAccess) {
-        // Only make API call if we don't have access with cached permissions
-        console.log('🔄 Refreshing permissions for route access check')
-        await fetchUserPermissions(true) // Force refresh once
+      if (needsFetch) {
+        console.log('🔄 Fetching user permissions before route access:', to.path)
         
-        // Check again with fresh permissions
-        hasAccess = await checkRoutePermissions(to)
+        // Show loading screen
+        setLoading(loadingKey, true)
+        
+        await fetchUserPermissions(true)
+        console.log('✅ User permissions fetched successfully')
+      } else {
+        console.log('📋 Using cached permissions for route:', to.path)
+      }
+      
+      // Check permissions if route requires them
+      if (to.meta.requiredPermissions) {
+        const hasAccess = await checkRoutePermissions(to)
         
         if (!hasAccess) {
           console.log('❌ Access denied to route:', to.path)
+          setLoading(loadingKey, false) // Hide loading before redirect
           next("/unauthorized")
           return
         }
+        
+        console.log('✅ Route access granted:', to.path)
       }
+      
+      // Hide loading screen
+      setLoading(loadingKey, false)
     } catch (error) {
-      console.error('❌ Permission check failed:', error)
+      console.error('❌ Permission fetch/check failed:', error)
+      setLoading(loadingKey, false) // Hide loading on error
       next("/unauthorized")
       return
     }

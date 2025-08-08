@@ -4,7 +4,7 @@
       <div class="flex items-center gap-4">
         <h1 class="text-xl font-semibold text-gray-900">
           Add New Project - {{ stepDescriptions[currentStep - 1].title }} (Step
-          {{ currentStep }} of 3)
+          {{ currentStep }} of {{ totalSteps }})
         </h1>
       </div>
     </template>
@@ -12,7 +12,7 @@
     <template #header-right>
       <div class="flex items-center gap-4">
         <!-- Step Indicators -->
-        <StepIndicator :currentStep="currentStep" />
+        <StepIndicator :currentStep="currentStep" :totalSteps="totalSteps" />
 
         <button
           @click="goBack"
@@ -40,9 +40,9 @@
       @next="nextStep"
     />
 
-    <!-- Step 2: Quotation Input -->
+    <!-- Step 2: Quotation Input (only if user has permission) -->
     <QuotationStep
-      v-if="currentStep === 2"
+      v-if="isQuotationStep"
       :formData="formData"
       :errors="errors"
       :title="stepDescriptions[1].title"
@@ -55,18 +55,21 @@
       @refreshPositions="fetchPositions"
     />
 
-    <!-- Step 3: Plan Input -->
+    <!-- Step 3: Plan Input (or Step 2 if quotation is skipped) -->
     <PlanStep
-      v-if="currentStep === 3"
+      v-if="isPlanStep"
       :formData="formData"
       :errors="errors"
-      :title="stepDescriptions[2].title"
-      :description="stepDescriptions[2].description"
+      :title="stepDescriptions[stepDescriptions.length - 1].title"
+      :description="stepDescriptions[stepDescriptions.length - 1].description"
       :positionOptions="positionOptions"
       :memberOptions="[]"
       :isSubmitting="isSubmitting"
       :isLoadingPositions="isLoadingPositions"
       :positionError="positionError"
+      :canCreateQuotation="canCreateQuotation"
+      :currentStep="currentStep"
+      :totalSteps="totalSteps"
       @previous="previousStep"
       @submit="submitProject"
       @skipAndSubmit="skipAndSubmit"
@@ -92,6 +95,7 @@ import {
   LOADING_KEYS,
 } from "@/composables/useLoadingIntegration.js";
 import { usePageInitLoading } from "@/composables/usePageLoading";
+import { usePermissions } from "@/composables/usePermissions.js";
 
 const router = useRouter();
 const toast = useToast();
@@ -99,57 +103,132 @@ const toast = useToast();
 // Page loading management
 const { stopLoading } = usePageInitLoading("add-project");
 
+// Permission management
+const { hasGlobalPermission, PERMISSIONS } = usePermissions();
+
+// Check if user can create quotations
+const canCreateQuotation = computed(() => {
+  return hasGlobalPermission(PERMISSIONS.CREATE_QUOTATION);
+});
+
 // Current step state
 const currentStep = ref(1);
 const isSubmitting = ref(false);
 const errors = ref({});
 
-// Form data
-const formData = ref({
-  projectName: "",
-  description: "", // Added description field for API
-  start_date: "",
-  end_date: "",
-  quotations: [
-    {
-      id: uuidv4(),
-      position_id: "",
-      quantity: 1,
-      start_date: "",
-      end_date: "",
-      isContinuation: false,
-    },
-  ],
-  plans: [
-    {
-      id: uuidv4(),
-      memberId: "",
-      position_id: "",
-      allocationRate: 1,
-      start_date: "",
-      end_date: "",
-    },
-  ],
+// Form data - initialize quotations based on permissions
+const initializeFormData = () => {
+  const baseData = {
+    projectName: "",
+    description: "", // Added description field for API
+    start_date: "",
+    end_date: "",
+    plans: [
+      {
+        id: uuidv4(),
+        memberId: "",
+        position_id: "",
+        allocationRate: 1,
+        start_date: "",
+        end_date: "",
+      },
+    ],
+  };
+
+  // Only add quotations if user has permission
+  if (canCreateQuotation.value) {
+    baseData.quotations = [
+      {
+        id: uuidv4(),
+        position_id: "",
+        quantity: 1,
+        start_date: "",
+        end_date: "",
+        isContinuation: false,
+      },
+    ];
+  } else {
+    baseData.quotations = []; // Empty array if no permission
+  }
+
+  return baseData;
+};
+
+const formData = ref(initializeFormData());
+
+// Watch for permission changes and reinitialize form data if needed
+watch(canCreateQuotation, (newValue, oldValue) => {
+  if (newValue !== oldValue) {
+    // Reinitialize quotations array based on new permission
+    if (newValue && formData.value.quotations.length === 0) {
+      // Add default quotation if permission granted
+      formData.value.quotations = [
+        {
+          id: uuidv4(),
+          position_id: "",
+          quantity: 1,
+          start_date: formData.value.start_date,
+          end_date: formData.value.end_date,
+          isContinuation: false,
+        },
+      ];
+    } else if (!newValue) {
+      // Clear quotations if permission revoked
+      formData.value.quotations = [];
+    }
+  }
 });
 
-// Step descriptions
-const stepDescriptions = [
-  {
-    title: "Basic Information",
-    description:
-      "Enter the basic details of your project including name and timeline.",
-  },
-  {
-    title: "Quotation Input",
-    description:
-      "Add the positions and allocations you want to quote for this project.",
-  },
-  {
+// Step descriptions - dynamic based on permissions
+const stepDescriptions = computed(() => {
+  const steps = [
+    {
+      title: "Basic Information",
+      description:
+        "Enter the basic details of your project including name and timeline.",
+    },
+  ];
+
+  // Only add quotation step if user has permission
+  if (canCreateQuotation.value) {
+    steps.push({
+      title: "Quotation Input",
+      description:
+        "Add the positions and allocations you want to quote for this project.",
+    });
+  }
+
+  steps.push({
     title: "Team Allocation",
     description:
       "Assign team members to the positions and set their allocation percentages.",
-  },
-];
+  });
+
+  return steps;
+});
+
+// Total number of steps based on permissions
+const totalSteps = computed(() => stepDescriptions.value.length);
+
+// Step mapping based on permissions
+const getActualStep = (stepNumber) => {
+  if (!canCreateQuotation.value && stepNumber > 1) {
+    // If no quotation permission and step > 1, it's actually the plan step
+    return stepNumber + 1; // Skip quotation step (step 2)
+  }
+  return stepNumber;
+};
+
+const isQuotationStep = computed(() => {
+  return canCreateQuotation.value && currentStep.value === 2;
+});
+
+const isPlanStep = computed(() => {
+  return (
+    (canCreateQuotation.value && currentStep.value === 3) ||
+    (!canCreateQuotation.value && currentStep.value === 2)
+  );
+});
 
 // State for API positions
 const apiPositions = ref([]);
@@ -270,6 +349,12 @@ const validateStep1 = () => {
 
 const validateStep2 = () => {
   const newErrors = {};
+
+  // Skip validation if user doesn't have CREATE_QUOTATION permission
+  if (!canCreateQuotation.value) {
+    errors.value = newErrors;
+    return true;
+  }
 
   // Check if there are any quotations
   if (!formData.value.quotations || formData.value.quotations.length === 0) {
@@ -602,13 +687,15 @@ const nextStep = () => {
   if (currentStep.value === 1) {
     // The BasicInformationStep component will only emit the next event if validation passes
     isValid = true;
-  } else if (currentStep.value === 2) {
+  } else if (isQuotationStep.value) {
+    // Step 2: Quotation validation (only if user has permission)
     isValid = validateStep2();
-  } else if (currentStep.value === 3) {
+  } else if (isPlanStep.value) {
+    // Plan step validation
     isValid = validateStep3();
   }
 
-  if (isValid && currentStep.value < 3) {
+  if (isValid && currentStep.value < totalSteps.value) {
     currentStep.value++;
     errors.value = {}; // Clear errors when moving to next step
   }
@@ -647,13 +734,14 @@ const skipAndSubmit = async () => {
   // Clear previous errors
   errors.value = {};
 
-  // Validate step 1 and step 2 before skipping to submit
+  // Validate step 1
   if (!validateStep1()) {
     currentStep.value = 1;
     return;
   }
 
-  if (!validateStep2()) {
+  // Only validate step 2 if user has CREATE_QUOTATION permission
+  if (canCreateQuotation.value && !validateStep2()) {
     currentStep.value = 2;
     return;
   }
@@ -665,13 +753,14 @@ const submitProject = async (skipPlan = false) => {
   // Clear previous errors
   errors.value = {};
 
-  // Always validate step 1 and step 2
+  // Always validate step 1
   if (!validateStep1()) {
     currentStep.value = 1;
     return;
   }
 
-  if (!validateStep2()) {
+  // Only validate step 2 if user has CREATE_QUOTATION permission
+  if (canCreateQuotation.value && !validateStep2()) {
     currentStep.value = 2;
     return;
   }
@@ -692,14 +781,16 @@ const submitProject = async (skipPlan = false) => {
       end_date: formData.value.end_date,
 
       // Format quotation data according to API requirements
-      quotation: formData.value.quotations
-        .filter((q) => q.position_id) // Only include quotations with a position
-        .map((q) => ({
-          position_id: q.position_id,
-          quantity: parseFloat(q.quantity),
-          start_date: q.start_date,
-          end_date: q.end_date,
-        })),
+      quotation: canCreateQuotation.value
+        ? formData.value.quotations
+            .filter((q) => q.position_id) // Only include quotations with a position
+            .map((q) => ({
+              position_id: q.position_id,
+              quantity: parseFloat(q.quantity),
+              start_date: q.start_date,
+              end_date: q.end_date,
+            }))
+        : null, // Send null if user doesn't have permission
 
       // Format plan data according to API requirements
       plan: skipPlan
