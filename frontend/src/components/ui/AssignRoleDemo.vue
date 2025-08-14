@@ -140,11 +140,6 @@ const assignRoles = async () => {
   try {
     assigning.value = true;
 
-    console.log("Assigning roles:", {
-      userId: selectedUserId.value,
-      roleIds: selectedRoleIds.value,
-    });
-
     // Call the actual API
     const response = await assignRolesToUser(
       selectedUserId.value,

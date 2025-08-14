@@ -149,10 +149,14 @@
               <div class="flex items-center gap-2">
                 <div class="flex-1 bg-gray-200 rounded-full h-1.5">
                   <div
-                    class="bg-gray-800 h-1.5 rounded-full transition-all duration-300"
-                    :style="{ width: `${entry.progress}%` }"
+                    :class="entry.progress > 100 ? 'bg-red-500' : 'bg-gray-800'"
+                    class="h-1.5 rounded-full transition-all duration-300"
+                    :style="{ width: `${Math.min(100, entry.progress || 0)}%` }"
                   ></div>
                 </div>
+                <span class="text-xs text-gray-600 font-medium min-w-[2.5rem]">
+                  {{ entry.progress }}%
+                </span>
               </div>
             </div>
           </div>

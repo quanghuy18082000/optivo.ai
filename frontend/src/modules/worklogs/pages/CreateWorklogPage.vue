@@ -17,6 +17,7 @@ import Input from "@/components/ui/Input.vue";
 import Select from "@/components/ui/Select.vue";
 import Button from "@/components/ui/Button.vue";
 import DatePicker from "@/components/ui/DatePicker.vue";
+import HoursMinutesInput from "@/components/ui/HoursMinutesInput.vue";
 import { useWorklog } from "../composables/useWorklog";
 import { getProjects } from "../services/worklogService";
 import { useToast } from "@/composables/useToast";
@@ -115,26 +116,44 @@ const getAvailableProjectOptions = (currentGroupIndex) => {
 };
 
 // Yup Schemas for validation
-const workEntrySchema = yup
-  .object({
-    id: yup.string().required(),
-    description: yup.string().required(t("common.required")),
-    hours: yup
-      .number()
-      .typeError(t("common.required"))
-      .min(0, "Hours cannot be negative")
-      .max(23, "Max 23 hours")
-      .required(t("common.required")),
-    minutes: yup
-      .number()
-      .typeError(t("common.required"))
-      .min(0, "Minutes cannot be negative")
-      .max(59, "Max 59 minutes")
-      .required(t("common.required")),
-  })
-  .test("total-time", "Total time must be greater than 0", function (value) {
-    return value.hours * 60 + value.minutes > 0;
-  });
+const workEntrySchema = yup.object({
+  id: yup.string().required(),
+  description: yup.string().required("Description is required"),
+  hours: yup
+    .number()
+    .nullable()
+    .transform((value, originalValue) => {
+      // Convert empty string to null
+      if (
+        originalValue === "" ||
+        originalValue === null ||
+        originalValue === undefined
+      ) {
+        return null;
+      }
+      return value;
+    })
+    .min(0, "Cannot be negative")
+    .max(23, "Max 23 hours"),
+  minutes: yup
+    .number()
+    .nullable()
+    .transform((value, originalValue) => {
+      // Convert empty string to null
+      if (
+        originalValue === "" ||
+        originalValue === null ||
+        originalValue === undefined
+      ) {
+        return null;
+      }
+      return value;
+    })
+    .min(0, "Cannot be negative")
+    .max(59, "Max 59 minutes"),
+  can_edited: yup.boolean().optional(),
+  can_deleted: yup.boolean().optional(),
+});
 
 const worklogGroupSchema = yup.object({
   id: yup.string().required(),
@@ -146,12 +165,64 @@ const worklogGroupSchema = yup.object({
 });
 
 const formSchema = toTypedSchema(
-  yup.object({
-    worklogGroups: yup
-      .array()
-      .of(worklogGroupSchema)
-      .min(1, "At least one worklog group is required"),
-  })
+  yup
+    .object({
+      worklogGroups: yup
+        .array()
+        .of(worklogGroupSchema)
+        .min(1, "At least one worklog group is required"),
+    })
+    .test("total-time-validation", "Time validation", function (value) {
+      const { worklogGroups } = value;
+      const errors = [];
+
+      for (
+        let groupIndex = 0;
+        groupIndex < worklogGroups.length;
+        groupIndex++
+      ) {
+        const group = worklogGroups[groupIndex];
+
+        for (
+          let entryIndex = 0;
+          entryIndex < group.workEntries.length;
+          entryIndex++
+        ) {
+          const entry = group.workEntries[entryIndex];
+          const { hours, minutes } = entry;
+
+          // Convert null/undefined to 0 for calculation
+          const hoursValue = hours === null || hours === undefined ? 0 : hours;
+          const minutesValue =
+            minutes === null || minutes === undefined ? 0 : minutes;
+
+          if (hoursValue === 0 && minutesValue === 0) {
+            errors.push({
+              path: `worklogGroups[${groupIndex}].workEntries[${entryIndex}].hours`,
+              message: "Enter time worked",
+            });
+          }
+        }
+      }
+
+      // Create multiple errors using Yup's ValidationError
+      if (errors.length > 0) {
+        const validationError = new yup.ValidationError(
+          "Multiple time validation errors",
+          value,
+          "worklogGroups"
+        );
+
+        // Add inner errors for each field
+        validationError.inner = errors.map(
+          (error) => new yup.ValidationError(error.message, value, error.path)
+        );
+
+        throw validationError;
+      }
+
+      return true;
+    })
 );
 
 // VeeValidate form setup with validation mode set to submit
@@ -166,17 +237,17 @@ const { handleSubmit, errors, resetForm, validate } = useForm({
           {
             id: uuidv4(),
             description: "",
-            hours: 0,
-            minutes: 0,
+            hours: null,
+            minutes: null,
           },
         ],
       },
     ],
   },
   validateOnMount: false, // Don't validate on component mount
-  validateOnBlur: false, // Don't validate on blur
-  validateOnChange: false, // Don't validate on change
-  validateOnInput: false, // Don't validate on input
+  validateOnBlur: false, // Don't validate on blur initially
+  validateOnChange: false, // Don't validate on change initially
+  validateOnInput: false, // Don't validate on every keystroke
 });
 
 const { fields: worklogGroups, push, remove } = useFieldArray("worklogGroups");
@@ -198,7 +269,9 @@ const addWorklogGroup = () => {
   push({
     id: uuidv4(),
     projectId: null,
-    workEntries: [{ id: uuidv4(), description: "", hours: 0, minutes: 0 }],
+    workEntries: [
+      { id: uuidv4(), description: "", hours: null, minutes: null },
+    ],
   });
 
   // Update the selected projects map after adding a new group
@@ -209,8 +282,8 @@ const addWorkEntry = (groupIndex) => {
   worklogGroups.value[groupIndex].value.workEntries.push({
     id: uuidv4(),
     description: "",
-    hours: 0,
-    minutes: 0,
+    hours: null,
+    minutes: null,
   });
 };
 
@@ -227,8 +300,24 @@ const removeWorkEntry = (groupIndex, entryIndex) => {
 // Track if form has been submitted (for showing validation errors)
 const hasAttemptedSubmit = ref(false);
 
+// Track which fields have been touched by user
+const touchedFields = ref(new Set());
+
+// Function to mark field as touched and enable validation
+const markFieldTouched = (fieldPath) => {
+  touchedFields.value.add(fieldPath);
+};
+
+// Function to check if field should show error
+const shouldShowError = (fieldPath) => {
+  return hasAttemptedSubmit.value || touchedFields.value.has(fieldPath);
+};
+
+const isFormLoading = ref(false);
+
 // Form submission handler
 const onSubmit = handleSubmit(async (values) => {
+  isFormLoading.value = true; // Set loading state to true
   // Set submission attempt flag to true to show validation errors if any
   hasAttemptedSubmit.value = true;
 
@@ -252,18 +341,14 @@ const onSubmit = handleSubmit(async (values) => {
     hasAttemptedSubmit.value = false; // Reset submission attempt flag
     router.push("/"); // Redirect to dashboard
   } catch (err) {
-    console.error("Failed to create worklog:", err);
-
     // Show error toast
     toast.error(err.message || "Failed to create worklog");
 
     // Error message is handled by useWorklog composable's error ref
+  } finally {
+    isFormLoading.value = false; // Reset loading state
   }
 });
-
-const isFormLoading = computed(
-  () => isCreating.value || isLoadingProjects.value
-);
 
 // Watch for date changes and update URL
 watch(selectedDate, (newDate) => {
@@ -323,8 +408,7 @@ onMounted(() => {
         <div class="grid grid-cols-12 gap-4 text-sm font-medium text-gray-500">
           <div class="col-span-3">Project</div>
           <div class="col-span-5">Description</div>
-          <div class="col-span-1">Hours</div>
-          <div class="col-span-1">Minutes</div>
+          <div class="col-span-2">Time</div>
           <div class="col-span-1"></div>
           <div class="col-span-1"></div>
         </div>
@@ -352,16 +436,19 @@ onMounted(() => {
                 search-placeholder="Search projects..."
                 :disabled="isFormLoading"
                 :error="
-                  hasAttemptedSubmit &&
+                  shouldShowError(`worklogGroups[${groupIndex}].projectId`) &&
                   !!errors[`worklogGroups[${groupIndex}].projectId`]
                 "
                 :error-message="
-                  hasAttemptedSubmit
-                    ? errors[`worklogGroups[${groupIndex}].projectId`]
+                  shouldShowError(`worklogGroups[${groupIndex}].projectId`)
+                    ? errors[`worklogGroups[${groupIndex}].projectId`] || ''
                     : ''
                 "
                 class="w-full"
                 @change="updateSelectedProjects"
+                @blur="
+                  markFieldTouched(`worklogGroups[${groupIndex}].projectId`)
+                "
               />
             </div>
 
@@ -372,71 +459,101 @@ onMounted(() => {
                 placeholder="Work description"
                 :disabled="isFormLoading"
                 :error="
-                  hasAttemptedSubmit &&
+                  shouldShowError(
+                    `worklogGroups[${groupIndex}].workEntries[${entryIndex}].description`
+                  ) &&
                   !!errors[
                     `worklogGroups[${groupIndex}].workEntries[${entryIndex}].description`
                   ]
                 "
                 :error-message="
-                  hasAttemptedSubmit
+                  shouldShowError(
+                    `worklogGroups[${groupIndex}].workEntries[${entryIndex}].description`
+                  )
                     ? errors[
                         `worklogGroups[${groupIndex}].workEntries[${entryIndex}].description`
-                      ]
+                      ] || ''
                     : ''
                 "
                 class="w-full"
+                @blur="
+                  markFieldTouched(
+                    `worklogGroups[${groupIndex}].workEntries[${entryIndex}].description`
+                  )
+                "
               />
             </div>
 
-            <!-- Hours -->
-            <div class="col-span-1">
-              <Input
-                v-model.number="entry.hours"
-                type="number"
-                placeholder="00"
-                :min="0"
-                :max="23"
+            <!-- Time Input (Hours & Minutes) -->
+            <div class="col-span-2">
+              <HoursMinutesInput
+                v-model:hours="entry.hours"
+                v-model:minutes="entry.minutes"
                 :disabled="isFormLoading"
                 :error="
-                  hasAttemptedSubmit &&
+                  shouldShowError(
+                    `worklogGroups[${groupIndex}].workEntries[${entryIndex}].hours`
+                  ) &&
                   !!errors[
                     `worklogGroups[${groupIndex}].workEntries[${entryIndex}].hours`
                   ]
                 "
                 :error-message="
-                  hasAttemptedSubmit
+                  shouldShowError(
+                    `worklogGroups[${groupIndex}].workEntries[${entryIndex}].hours`
+                  )
                     ? errors[
                         `worklogGroups[${groupIndex}].workEntries[${entryIndex}].hours`
-                      ]
+                      ] || ''
                     : ''
                 "
-                class="w-full"
-              />
-            </div>
-
-            <!-- Minutes -->
-            <div class="col-span-1">
-              <Input
-                v-model.number="entry.minutes"
-                type="number"
-                placeholder="00"
-                :min="0"
-                :max="59"
-                :disabled="isFormLoading"
-                :error="
-                  hasAttemptedSubmit &&
+                :hours-error="
+                  shouldShowError(
+                    `worklogGroups[${groupIndex}].workEntries[${entryIndex}].hours`
+                  ) &&
+                  !!errors[
+                    `worklogGroups[${groupIndex}].workEntries[${entryIndex}].hours`
+                  ]
+                "
+                :hours-error-message="
+                  shouldShowError(
+                    `worklogGroups[${groupIndex}].workEntries[${entryIndex}].hours`
+                  )
+                    ? errors[
+                        `worklogGroups[${groupIndex}].workEntries[${entryIndex}].hours`
+                      ] || ''
+                    : ''
+                "
+                :minutes-error="
+                  shouldShowError(
+                    `worklogGroups[${groupIndex}].workEntries[${entryIndex}].minutes`
+                  ) &&
                   !!errors[
                     `worklogGroups[${groupIndex}].workEntries[${entryIndex}].minutes`
                   ]
                 "
-                :error-message="
-                  hasAttemptedSubmit
+                :minutes-error-message="
+                  shouldShowError(
+                    `worklogGroups[${groupIndex}].workEntries[${entryIndex}].minutes`
+                  )
                     ? errors[
                         `worklogGroups[${groupIndex}].workEntries[${entryIndex}].minutes`
-                      ]
+                      ] || ''
                     : ''
                 "
-                class="w-full"
+                @blur="
+                  (field) => {
+                    if (field === 'hours') {
+                      markFieldTouched(
+                        `worklogGroups[${groupIndex}].workEntries[${entryIndex}].hours`
+                      );
+                    } else if (field === 'minutes') {
+                      markFieldTouched(
+                        `worklogGroups[${groupIndex}].workEntries[${entryIndex}].minutes`
+                      );
+                    }
+                  }
+                "
               />
             </div>
 
@@ -503,7 +620,7 @@ onMounted(() => {
 
           <!-- Add new work description for same project -->
           <div class="grid grid-cols-12 gap-4 mt-2">
-            <div class="col-span-12">
+            <div class="col-span-10 text-right">
               <button
                 type="button"
                 @click="addWorkEntry(groupIndex)"
@@ -550,19 +667,8 @@ onMounted(() => {
                 d="M12 6v6m0 0v6m0-6h6m-6 0H6"
               />
             </svg>
-            Add a new project
+            Add a new work
           </button>
-        </div>
-
-        <!-- Error message -->
-        <div v-if="createError" class="text-center text-red-500 text-sm mt-3">
-          {{ t("common.error", { msg: createError.message }) }}
-        </div>
-        <div
-          v-if="hasAttemptedSubmit && Object.keys(errors).length > 0"
-          class="text-center text-red-500 text-sm mt-3"
-        >
-          Please correct the errors in the form.
         </div>
 
         <!-- Action Buttons -->

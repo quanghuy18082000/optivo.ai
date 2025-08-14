@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { getAccessToken, getRefreshToken, refreshTokenRequest, storeAuthTokens, clearAuthTokens } from './tokenRefresh.js';
+import { buildApiQueryString } from './urlQueryParams.js';
 
 // Get the API_URL from the environment variable
 const API_URL = import.meta.env.VITE_BASE_API_URL;
@@ -127,17 +128,64 @@ apiClient.interceptors.response.use(
   }
 );
 
-// A simple GET wrapper
-const get = (url, params = {}) => apiClient.get(url, { params });
+// Enhanced GET wrapper with proper query parameter handling
+const get = (url, params = {}) => {
+  // If no params, use simple get
+  if (!params || Object.keys(params).length === 0) {
+    return apiClient.get(url);
+  }
 
-// A simple POST wrapper
-const post = (url, data, config = {}) => apiClient.post(url, data, config);
+  // Build query string with proper array handling
+  const queryString = buildApiQueryString(params);
+  
+  // Append query string to URL
+  const separator = url.includes('?') ? '&' : '?';
+  const fullUrl = queryString ? `${url}${separator}${queryString}` : url;
+  
+  return apiClient.get(fullUrl);
+};
 
-// A simple PUT wrapper
-const put = (url, data) => apiClient.put(url, data);
+// Enhanced POST wrapper with query parameter support
+const post = (url, data, config = {}) => {
+  const { params, ...restConfig } = config;
+  
+  if (params && Object.keys(params).length > 0) {
+    const queryString = buildApiQueryString(params);
+    const separator = url.includes('?') ? '&' : '?';
+    const fullUrl = queryString ? `${url}${separator}${queryString}` : url;
+    return apiClient.post(fullUrl, data, restConfig);
+  }
+  
+  return apiClient.post(url, data, config);
+};
 
-// A simple PATCH wrapper
-const patch = (url, data) => apiClient.patch(url, data);
+// Enhanced PUT wrapper with query parameter support
+const put = (url, data, config = {}) => {
+  const { params, ...restConfig } = config;
+  
+  if (params && Object.keys(params).length > 0) {
+    const queryString = buildApiQueryString(params);
+    const separator = url.includes('?') ? '&' : '?';
+    const fullUrl = queryString ? `${url}${separator}${queryString}` : url;
+    return apiClient.put(fullUrl, data, restConfig);
+  }
+  
+  return apiClient.put(url, data, config);
+};
+
+// Enhanced PATCH wrapper with query parameter support
+const patch = (url, data, config = {}) => {
+  const { params, ...restConfig } = config;
+  
+  if (params && Object.keys(params).length > 0) {
+    const queryString = buildApiQueryString(params);
+    const separator = url.includes('?') ? '&' : '?';
+    const fullUrl = queryString ? `${url}${separator}${queryString}` : url;
+    return apiClient.patch(fullUrl, data, restConfig);
+  }
+  
+  return apiClient.patch(url, data, config);
+};
 
 // A simple DELETE wrapper
 const del = (url) => apiClient.delete(url);

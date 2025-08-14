@@ -23,6 +23,12 @@ const routes = [
     meta: { requiresAuth: true }
   },
   {
+    path: "/dropdown-test",
+    name: "DropdownTest",
+    component: () => import("@/test/DropdownTest.vue"),
+    meta: { requiresAuth: true }
+  },
+  {
     path: "/unauthorized",
     name: "Unauthorized",
     component: () => import("@/pages/UnauthorizedPage.vue"),

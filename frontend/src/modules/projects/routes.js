@@ -23,26 +23,17 @@ const projectRoutes = [
     component: () => import("./pages/EditProjectPage.vue"),
     meta: { 
       requiresAuth: true,
-      requiredPermissions: {
-        anyOf: ['project.update']  // Check project-specific permission
-      }
+      requiresProjectPermissions: true, // Will be checked in component
     },
   },
   {
     path: "/projects/:projectId/permissions",
     name: "project-permission-management",
     component: () => import("./pages/ProjectPermissionManagementPage.vue"),
-    // meta: { 
-    //   requiresAuth: true,
-    //   requiredPermissions: {
-    //     anyOf: [
-    //       'project.create_role',
-    //       'project.assign_role', 
-    //       'project.add_user',
-    //       'project.delete_user'
-    //     ]
-    //   }
-    // },
+    meta: { 
+      requiresAuth: true,
+      requiresProjectPermissions: true, // Will be checked in component
+    },
   },
 
 ]

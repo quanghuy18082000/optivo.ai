@@ -305,8 +305,17 @@ const {
 });
 
 const availableRoles = computed(() => {
-  const roles = [...new Set(users.value.map((user) => user.role))];
-  return roles.filter(Boolean);
+  const allRoles = [];
+  users.value.forEach((user) => {
+    if (user.role && Array.isArray(user.role)) {
+      user.role.forEach((role) => {
+        if (role && role.name) {
+          allRoles.push(role.name);
+        }
+      });
+    }
+  });
+  return [...new Set(allRoles)];
 });
 
 const availableDepartments = computed(() => {
@@ -343,85 +352,33 @@ const fetchUsers = async (resetPage = false) => {
 
     // Update users and pagination from API response
     if (response.data) {
-      // Transform API data and add mock data for missing fields
+      // Transform API data - use roles from API
       users.value = response.data.map((user, index) => {
-        // Mock multi-role data structure
-        const mockRoles = [
-          {
-            id: 1,
-            name: "Admin",
-            description: "Full system access",
-            company_id: 1,
-            permissions: null,
-          },
-          {
-            id: 2,
-            name: "Manager",
-            description: "Team management access",
-            company_id: 1,
-            permissions: null,
-          },
-          {
-            id: 3,
-            name: "Developer",
-            description: "Development access",
-            company_id: 1,
-            permissions: null,
-          },
-          {
-            id: 4,
-            name: "QA",
-            description: "Quality assurance access",
-            company_id: 1,
-            permissions: null,
-          },
-          {
-            id: 5,
-            name: "Designer",
-            description: "Design access",
-            company_id: 1,
-            permissions: null,
-          },
-          {
-            id: 6,
-            name: "Employee",
-            description: "Default Role",
-            company_id: 1,
-            permissions: null,
-          },
-          {
-            id: 7,
-            name: "Test",
-            description: null,
-            company_id: 1,
-            permissions: null,
-          },
-        ];
+        // Convert user roles to array format if needed
+        let userRoles = [];
 
-        // Assign 1-3 random roles to each user
-        const numRoles = Math.floor(Math.random() * 3) + 1;
-        const userRoles = [];
-        const usedRoleIds = new Set();
-
-        for (let i = 0; i < numRoles; i++) {
-          let roleIndex;
-          do {
-            roleIndex = Math.floor(Math.random() * mockRoles.length);
-          } while (usedRoleIds.has(roleIndex));
-
-          usedRoleIds.add(roleIndex);
-          userRoles.push(mockRoles[roleIndex]);
+        if (user.roles && Array.isArray(user.roles)) {
+          // If user already has roles array from API
+          userRoles = user.roles;
+        } else if (user.role) {
+          // If user has single role, convert to array
+          userRoles = Array.isArray(user.role) ? user.role : [user.role];
+        } else {
+          // If no roles, assign empty array
+          userRoles = [];
         }
 
         return {
           ...user,
-          role: userRoles, // Multi-role array
-          role_id: userRoles[0]?.id, // Keep for backward compatibility
-          department: ["IT", "Sales", "Marketing", "Design", "HR"][index % 5],
-          workload: Math.floor(Math.random() * 40) + 60, // 60-100%
-          totalHours: Math.floor(Math.random() * 80) + 120, // 120-200h
-          projects: Math.floor(Math.random() * 5) + 1, // 1-5 projects
-          avatar: null, // Will use initials from Avatar component
+          role: userRoles, // Multi-role array from API
+          role_id: userRoles[0]?.id || user.role_id, // Keep for backward compatibility
+          department:
+            user.department ||
+            ["IT", "Sales", "Marketing", "Design", "HR"][index % 5],
+          workload: user.workload || Math.floor(Math.random() * 40) + 60, // 60-100%
+          totalHours: user.totalHours || Math.floor(Math.random() * 80) + 120, // 120-200h
+          projects: user.projects || Math.floor(Math.random() * 5) + 1, // 1-5 projects
+          avatar: user.avatar || null, // Will use initials from Avatar component
         };
       });
     }
@@ -439,104 +396,15 @@ const fetchUsers = async (resetPage = false) => {
     console.error("Error fetching users:", error);
     toast.error("user_management.fetch_error", "error");
 
-    // Fallback to mock data for development/testing
-    const mockRoles = [
-      {
-        id: 1,
-        name: "Admin",
-        description: "Full system access",
-        company_id: 1,
-        permissions: null,
-      },
-      {
-        id: 2,
-        name: "Manager",
-        description: "Team management access",
-        company_id: 1,
-        permissions: null,
-      },
-      {
-        id: 3,
-        name: "Developer",
-        description: "Development access",
-        company_id: 1,
-        permissions: null,
-      },
-      {
-        id: 4,
-        name: "QA",
-        description: "Quality assurance access",
-        company_id: 1,
-        permissions: null,
-      },
-      {
-        id: 5,
-        name: "Designer",
-        description: "Design access",
-        company_id: 1,
-        permissions: null,
-      },
-      {
-        id: 6,
-        name: "Employee",
-        description: "Default Role",
-        company_id: 1,
-        permissions: null,
-      },
-      {
-        id: 7,
-        name: "Test",
-        description: null,
-        company_id: 1,
-        permissions: null,
-      },
-    ];
-
-    const mockUsers = Array.from({ length: 25 }, (_, index) => {
-      // Assign 1-3 random roles to each user
-      const numRoles = Math.floor(Math.random() * 3) + 1;
-      const userRoles = [];
-      const usedRoleIds = new Set();
-
-      for (let i = 0; i < numRoles; i++) {
-        let roleIndex;
-        do {
-          roleIndex = Math.floor(Math.random() * mockRoles.length);
-        } while (usedRoleIds.has(roleIndex));
-
-        usedRoleIds.add(roleIndex);
-        userRoles.push(mockRoles[roleIndex]);
-      }
-
-      return {
-        id: index + 1,
-        user_id: index + 1,
-        name: `User ${index + 1}`,
-        email: `user${index + 1}@example.com`,
-        role: userRoles, // Multi-role array
-        role_id: userRoles[0]?.id, // Keep for backward compatibility
-        department: ["IT", "Sales", "Marketing", "Design", "HR"][index % 5],
-        status: index % 3 === 0 ? "inactive" : "active",
-        workload: Math.floor(Math.random() * 40) + 60,
-        totalHours: Math.floor(Math.random() * 80) + 120,
-        projects: Math.floor(Math.random() * 5) + 1,
-        avatar: null,
-      };
-    });
-
-    // Simulate pagination
-    const startIndex = (currentPage.value - 1) * pageSize.value;
-    const endIndex = startIndex + pageSize.value;
-    users.value = mockUsers.slice(startIndex, endIndex);
-
-    // Mock pagination response
+    // Clear users on error
+    users.value = [];
     updatePagination({
-      page: currentPage.value,
+      page: 1,
       size: pageSize.value,
-      total: mockUsers.length,
-      total_pages: Math.ceil(mockUsers.length / pageSize.value),
-      has_next: endIndex < mockUsers.length,
-      has_previous: currentPage.value > 1,
+      total: 0,
+      total_pages: 0,
+      has_next: false,
+      has_previous: false,
     });
   } finally {
     loading.value = false;
@@ -693,16 +561,8 @@ const fetchRoles = async () => {
     }
   } catch (error) {
     console.error("Error fetching roles:", error);
-    // Fallback to mock roles for development
-    roles.value = [
-      { id: 1, name: "Admin", description: "Full system access" },
-      { id: 2, name: "Manager", description: "Team management access" },
-      { id: 3, name: "Developer", description: "Development access" },
-      { id: 4, name: "QA", description: "Quality assurance access" },
-      { id: 5, name: "Designer", description: "Design access" },
-      { id: 6, name: "Employee", description: "Default Role" },
-      { id: 7, name: "Test", description: null },
-    ];
+    toast.error("Failed to fetch roles", "error");
+    roles.value = [];
   }
 };
 

@@ -55,8 +55,7 @@
         <div class="flex items-center gap-3">
           <!-- Export CSV Button -->
           <Button
-            variant="secondary"
-            class="border-gray-300 text-gray-700 hover:bg-gray-50"
+            class="border-gray-300 bg-gray-500 hover:bg-gray-50"
             @click="handleExportCSV"
             :disabled="isExporting"
           >
@@ -219,6 +218,8 @@
         v-else
         ref="projectTableRef"
         :projects="projects"
+        :is-loading="isLoading"
+        :on-refresh="refetch"
         @project-deleted="handleProjectDeleted"
         @refresh-projects="refetch"
         @selection-changed="handleSelectionChanged"

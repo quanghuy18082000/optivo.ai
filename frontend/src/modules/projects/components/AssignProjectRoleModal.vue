@@ -260,8 +260,7 @@ const loadUsers = async () => {
     const response = await getUsersForDropdown();
     users.value = response.data || [];
   } catch (error) {
-    console.error("Error loading users:", error);
-    toast.error(t("project_permission.error_loading_users"));
+    toast.error(error.message);
   } finally {
     loadingUsers.value = false;
   }

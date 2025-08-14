@@ -16,6 +16,9 @@ export function transformProjectsData(apiData) {
   return apiData.map((project) => ({
     id: project.project.id,
     name: project.project.name,
+    can_edit: project.project.can_edit,
+    can_delete: project.project.can_delete,
+    can_management_role: project.project.can_management_role,
     status: project.project.status || 'not_started', // Default to not_started if no status
     start_date: project.project.start_date,
     end_date: project.project.end_date,

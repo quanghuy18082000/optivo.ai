@@ -63,7 +63,7 @@
         </h3>
         <p class="mt-1 text-sm text-gray-500">{{ error }}</p>
         <button
-          @click="fetchWorklogDetail"
+          @click="() => fetchWorklogDetail(true)"
           class="mt-4 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
         >
           Try Again
@@ -201,10 +201,10 @@
         >
           <div class="col-span-2">Project</div>
           <div class="col-span-2">Category</div>
-          <div class="col-span-4">Description</div>
+          <div class="col-span-3">Description</div>
           <div class="col-span-1">Hours</div>
           <div class="col-span-1">Minutes</div>
-          <!-- <div class="col-span-2">Actions</div> -->
+          <div class="col-span-3">Actions</div>
         </div>
       </div>
 
@@ -242,7 +242,7 @@
               </div>
 
               <!-- Description -->
-              <div class="col-span-4">
+              <div class="col-span-3">
                 <TruncateText
                   :name="entry.description || 'No description'"
                   text-class="text-sm text-gray-900"
@@ -264,9 +264,33 @@
               </div>
 
               <!-- Actions -->
-              <div class="col-span-2">
+              <div class="col-span-3">
                 <div class="flex items-center gap-2">
+                  <!-- Edit Button -->
                   <button
+                    v-if="entry.can_edited"
+                    @click="editEntry(entry.id)"
+                    class="p-2 text-blue-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                    title="Edit entry"
+                  >
+                    <svg
+                      class="w-5 h-5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                      />
+                    </svg>
+                  </button>
+
+                  <!-- Delete Button -->
+                  <button
+                    v-if="entry.can_deleted"
                     @click="deleteEntry(entry.id)"
                     class="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                     title="Delete entry"
@@ -285,6 +309,14 @@
                       />
                     </svg>
                   </button>
+
+                  <!-- No Actions Available -->
+                  <span
+                    v-if="!entry.can_edited && !entry.can_deleted"
+                    class="text-sm text-gray-400 italic"
+                  >
+                    No actions available
+                  </span>
                 </div>
               </div>
             </div>
@@ -325,6 +357,7 @@
             Close
           </button>
           <button
+            v-if="hasEditableEntries"
             @click="editWorklog"
             class="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 transition-colors"
           >
@@ -381,6 +414,7 @@ const worklogDetail = ref(null);
 const showDeleteConfirmation = ref(false);
 const entryToDelete = ref(null);
 const deleteConfirmMessage = ref("");
+const lastFetchedWorklogId = ref(null); // Track last fetched worklogId to avoid duplicate fetches
 
 // const getCategoryStyle = (category) => {
 //   const styles = {
@@ -433,7 +467,8 @@ const getMostUsedCategory = () => {
 
   const categoryCount = {};
   worklogDetail.value.entries.forEach((entry) => {
-    categoryCount[entry.category] = (categoryCount[entry.category] || 0) + 1;
+    const categoryName = entry.category?.name || "N/A";
+    categoryCount[categoryName] = (categoryCount[categoryName] || 0) + 1;
   });
 
   const mostUsed = Object.entries(categoryCount).reduce((a, b) =>
@@ -443,8 +478,24 @@ const getMostUsedCategory = () => {
   return mostUsed[0];
 };
 
-const fetchWorklogDetail = async () => {
+// Check if at least one entry can be edited
+const hasEditableEntries = computed(() => {
+  return (
+    worklogDetail.value?.entries?.some((entry) => entry.can_edited) || false
+  );
+});
+
+const fetchWorklogDetail = async (forceRefresh = false) => {
   if (!props.worklogId) return;
+
+  // Skip fetch if we already have data for this worklogId (unless forced refresh)
+  if (
+    !forceRefresh &&
+    lastFetchedWorklogId.value === props.worklogId &&
+    worklogDetail.value
+  ) {
+    return;
+  }
 
   isLoading.value = true;
   error.value = null;
@@ -469,10 +520,12 @@ const fetchWorklogDetail = async () => {
             id: entry.id,
             project_name: project.project_name,
             project_id: project.project_id,
-            category: entry.category || "Uncategorized",
-            description: entry.desc || "Work entry",
+            category: entry.category,
+            description: entry.desc,
             hours: entry.duration.hours,
             minutes: entry.duration.minutes,
+            can_edited: entry.can_edited,
+            can_deleted: entry.can_deleted,
           });
 
           // Add to total time
@@ -495,6 +548,8 @@ const fetchWorklogDetail = async () => {
         total_entries: entries.length,
       };
 
+      // Mark this worklogId as fetched
+      lastFetchedWorklogId.value = props.worklogId;
       isLoading.value = false;
       return;
     }
@@ -509,14 +564,21 @@ const projectId = ref("");
 const deleteEntry = (entryId) => {
   // Find the entry to delete
   const entry = worklogDetail.value.entries.find((e) => e.id === entryId);
-  projectId.value = entry.project_id;
   if (!entry) return;
+
+  // Check if entry can be deleted
+  if (!entry.can_deleted) {
+    toast.error("This entry cannot be deleted");
+    return;
+  }
+
+  projectId.value = entry.project_id;
 
   // Set the entry to delete and show confirmation
   entryToDelete.value = entryId;
 
   // Create a descriptive message
-  let description = entry.description || entry.category;
+  let description = entry.description || entry.category?.name || "N/A";
   if (description.length > 30) {
     description = description.substring(0, 30) + "...";
   }
@@ -564,11 +626,21 @@ const confirmDeleteEntry = async () => {
   }
 };
 
-// const editEntry = (entryId) => {
-//   // TODO: Implement edit entry functionality
-//   router.push("/worklog/edit/date=" + props.worklogId);
-//   // Could navigate to an edit entry page or open a modal
-// };
+const editEntry = (entryId) => {
+  // Find the entry to edit
+  const entry = worklogDetail.value.entries.find((e) => e.id === entryId);
+  if (!entry) return;
+
+  // Check if entry can be edited
+  if (!entry.can_edited) {
+    toast.error("This entry cannot be edited");
+    return;
+  }
+
+  // Navigate to edit page with entry ID
+  router.push(`/worklog/edit?date=${props.worklogId}&entryId=${entryId}`);
+  closeModal();
+};
 
 const editWorklog = () => {
   router.push(`/worklog/edit?date=${props.worklogId}`);
@@ -579,26 +651,29 @@ const closeModal = () => {
   emit("close");
 };
 
-// Watch for worklogId changes to fetch new data
+// Watch for both modal open and worklogId changes to fetch data
 watch(
-  () => props.worklogId,
-  (newId) => {
-    if (newId && props.isOpen) {
-      fetchWorklogDetail();
-    }
-  }
-);
+  [() => props.isOpen, () => props.worklogId],
+  ([isOpen, worklogId], [prevIsOpen, prevWorklogId]) => {
+    // Only fetch if modal is open and we have a worklogId
+    if (isOpen && worklogId) {
+      // Fetch data if:
+      // 1. Modal just opened (isOpen changed from false to true)
+      // 2. WorklogId changed while modal is already open
+      const modalJustOpened = isOpen && !prevIsOpen;
+      const worklogIdChanged = worklogId !== prevWorklogId && isOpen;
 
-// Watch for modal open to fetch data
-watch(
-  () => props.isOpen,
-  (isOpen) => {
-    if (isOpen && props.worklogId) {
-      // Always fetch fresh data when the modal is opened
-      worklogDetail.value = null;
-      fetchWorklogDetail();
+      if (modalJustOpened || worklogIdChanged) {
+        // Only clear data if worklogId actually changed
+        if (worklogIdChanged) {
+          worklogDetail.value = null;
+          lastFetchedWorklogId.value = null;
+        }
+        fetchWorklogDetail();
+      }
     }
-  }
+  },
+  { immediate: false }
 );
 </script>
 

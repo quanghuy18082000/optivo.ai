@@ -7,7 +7,7 @@
       @click="toggleDropdown"
       :disabled="disabled"
       :class="[
-        'w-full px-3 py-2 text-left bg-white border rounded-md shadow-sm focus:outline-none focus:ring-1 focus:border-blue-500',
+        'dropdown-trigger w-full px-3 py-2 text-left bg-white border rounded-md shadow-sm focus:outline-none focus:ring-1 focus:border-blue-500',
         disabled
           ? 'bg-gray-50 cursor-not-allowed'
           : 'cursor-pointer hover:border-gray-400',
@@ -91,18 +91,11 @@
   <!-- Dropdown using Teleport -->
   <Teleport to="body">
     <div v-if="isOpen">
-      <!-- Overlay -->
-      <div
-        class="fixed inset-0 bg-transparent multiselect-overlay"
-        @click="closeDropdown"
-        :style="{ zIndex: 40 }"
-      ></div>
-
-      <!-- Dropdown Menu -->
+      <!-- Dropdown Menu (no overlay needed, dropdown manager handles it) -->
       <div
         ref="dropdownRef"
         :style="popupStyle"
-        class="bg-white border border-gray-300 rounded-md shadow-lg multiselect-dropdown flex flex-col"
+        class="bg-white border border-gray-300 rounded-md shadow-lg multiselect-dropdown dropdown-content flex flex-col"
         :class="{ 'min-h-[200px]': filteredOptions.length > 0 }"
         @click.stop
       >
@@ -135,7 +128,7 @@
               :checked="isAllSelected"
               :indeterminate.prop="isIndeterminate"
               class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-              @click.stop
+              @click.stop="handleSelectAllClick"
             />
             <span class="text-sm font-medium text-gray-700">Select All</span>
           </div>
@@ -159,7 +152,7 @@
               type="checkbox"
               :checked="isOptionSelected(option)"
               class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-              @click.stop
+              @click.stop="handleOptionClick(option)"
             />
             <TruncateText
               :name="option.label"
@@ -183,6 +176,10 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch } from "vue";
 import TruncateText from "./TruncateText.vue";
+import {
+  useDropdownManager,
+  useEscapeKey,
+} from "@/composables/useDropdownManager";
 
 // Props
 const props = defineProps({
@@ -244,6 +241,14 @@ const dropdownRef = ref(null);
 const searchInputRef = ref(null);
 
 const popupStyle = ref({});
+
+// Initialize dropdown manager
+const { registerDropdown } = useDropdownManager();
+useEscapeKey(() => {
+  if (isOpen.value) {
+    closeDropdown();
+  }
+});
 
 // Computed
 const selectedItems = computed(() => {
@@ -422,7 +427,7 @@ const positionDropdown = () => {
       position: "fixed",
       maxWidth: "calc(100vw - 20px)",
       width: "300px",
-      zIndex: 50,
+      zIndex: 9999,
     };
     return;
   }
@@ -477,14 +482,8 @@ const positionDropdown = () => {
     width: `${Math.max(dropdownWidth, triggerRect.width)}px`,
     position: "fixed",
     transform: "none",
-    zIndex: 50,
+    zIndex: 9999,
   };
-};
-
-const handleEscape = (e) => {
-  if (e.key === "Escape" && isOpen.value) {
-    closeDropdown();
-  }
 };
 
 const updateOnResizeOrScroll = () => {
@@ -502,17 +501,21 @@ watch(isOpen, (isVisible) => {
 
 // Lifecycle
 onMounted(() => {
-  document.addEventListener("keydown", handleEscape);
+  // Register với dropdown manager
+  const cleanup = registerDropdown(isOpen, closeDropdown);
+
+  // Keep existing resize/scroll listeners
   window.addEventListener("resize", updateOnResizeOrScroll);
   window.addEventListener("scroll", updateOnResizeOrScroll, true);
-});
 
-onUnmounted(() => {
-  document.removeEventListener("keydown", handleEscape);
-  window.removeEventListener("resize", updateOnResizeOrScroll);
-  window.removeEventListener("scroll", updateOnResizeOrScroll, true);
-  // Cleanup body class on unmount
-  document.body.classList.remove("multiselect-open");
+  // Store cleanup function for unmount
+  onUnmounted(() => {
+    cleanup();
+    window.removeEventListener("resize", updateOnResizeOrScroll);
+    window.removeEventListener("scroll", updateOnResizeOrScroll, true);
+    // Cleanup body class on unmount
+    document.body.classList.remove("multiselect-open");
+  });
 });
 </script>
 

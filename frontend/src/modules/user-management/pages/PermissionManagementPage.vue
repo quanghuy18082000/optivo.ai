@@ -400,7 +400,7 @@ const permissionModules = computed(() => {
 
   // Filter permissions to only show global scope
   const globalPermissions = permissions.value.filter(
-    (permission) => permission.scope === "global"
+    (permission) => permission.scope === "Global"
   );
 
   // Group permissions by scope (only global now)

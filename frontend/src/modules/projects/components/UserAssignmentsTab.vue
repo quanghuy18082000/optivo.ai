@@ -48,7 +48,7 @@
           </div>
 
           <!-- Assign Button -->
-          <div class="flex w-fit items-end">
+          <div v-if="canAssignRole" class="flex w-fit items-end">
             <button
               @click="$emit('assign-role')"
               :disabled="

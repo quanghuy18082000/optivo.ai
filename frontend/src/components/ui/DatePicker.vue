@@ -10,7 +10,7 @@
         :placeholder="placeholder"
         :disabled="disabled"
         readonly
-        class="w-full px-3 py-2 pr-10 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 transition-all duration-200 text-gray-700 bg-white cursor-pointer"
+        class="dropdown-trigger w-full px-3 py-2 pr-10 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 transition-all duration-200 text-gray-700 bg-white cursor-pointer"
         :class="[
           error
             ? 'border-red-300 focus:ring-red-500 focus:border-red-500'
@@ -51,17 +51,11 @@
     <!-- Calendar Popup using Teleport -->
     <Teleport to="body">
       <div v-if="showCalendar">
-        <!-- Overlay -->
-        <div
-          class="fixed inset-0 bg-black bg-opacity-10 datepicker-overlay"
-          @click="closeCalendar"
-        ></div>
-
-        <!-- Calendar Popup -->
+        <!-- Calendar Popup (no overlay needed, dropdown manager handles it) -->
         <div
           ref="popupRef"
           :style="popupStyle"
-          class="fixed bg-white border border-gray-200 rounded-lg shadow-xl p-4 min-w-[280px] max-w-[320px] datepicker-popup"
+          class="fixed bg-white border border-gray-200 rounded-lg shadow-xl p-4 min-w-[280px] max-w-[320px] datepicker-popup dropdown-content"
           @click.stop
         >
           <!-- Calendar Header -->
@@ -176,6 +170,10 @@
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from "vue";
 import "./datepicker.css";
 import { format, parse, isValid } from "date-fns";
+import {
+  useDropdownManager,
+  useEscapeKey,
+} from "@/composables/useDropdownManager";
 
 const props = defineProps({
   id: {
@@ -199,6 +197,14 @@ const showCalendar = ref(false);
 const selectedDate = ref(null);
 const currentMonth = ref(new Date().getMonth());
 const currentYear = ref(new Date().getFullYear());
+
+// Initialize dropdown manager
+const { registerDropdown } = useDropdownManager();
+useEscapeKey(() => {
+  if (showCalendar.value) {
+    closeCalendar();
+  }
+});
 
 const months = [
   "Jan",
@@ -389,11 +395,8 @@ const positionPopup = () => {
     left: `${left}px`,
     position: "fixed",
     transform: "none",
+    zIndex: 9999,
   };
-};
-
-const handleEscape = (e) => {
-  if (e.key === "Escape") closeCalendar();
 };
 
 const updateOnResizeOrScroll = () => {
@@ -463,17 +466,21 @@ watch(showCalendar, (isVisible) => {
 });
 
 onMounted(() => {
-  document.addEventListener("keydown", handleEscape);
+  // Register với dropdown manager
+  const cleanup = registerDropdown(showCalendar, closeCalendar);
+
+  // Keep existing resize/scroll listeners
   window.addEventListener("resize", updateOnResizeOrScroll);
   window.addEventListener("scroll", updateOnResizeOrScroll, true);
-});
 
-onUnmounted(() => {
-  document.removeEventListener("keydown", handleEscape);
-  window.removeEventListener("resize", updateOnResizeOrScroll);
-  window.removeEventListener("scroll", updateOnResizeOrScroll, true);
-  // Cleanup body class on unmount
-  document.body.classList.remove("datepicker-open");
+  // Store cleanup function for unmount
+  onUnmounted(() => {
+    cleanup();
+    window.removeEventListener("resize", updateOnResizeOrScroll);
+    window.removeEventListener("scroll", updateOnResizeOrScroll, true);
+    // Cleanup body class on unmount
+    document.body.classList.remove("datepicker-open");
+  });
 });
 </script>
 

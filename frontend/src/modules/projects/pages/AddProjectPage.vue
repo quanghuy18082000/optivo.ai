@@ -529,9 +529,9 @@ const validateStep3 = () => {
     ) {
       newErrors[`plans.${index}.allocationRate`] =
         "Allocation must be greater than 0";
-    } else if (parseFloat(plan.allocationRate) > 1) {
+    } else if (parseFloat(plan.allocationRate) > 3) {
       newErrors[`plans.${index}.allocationRate`] =
-        "Allocation cannot exceed 1 (100%)";
+        "Allocation cannot exceed 3 (300%)";
     }
 
     // Date validation
@@ -812,8 +812,7 @@ const submitProject = async (skipPlan = false) => {
     toast.success("Project created successfully");
     router.push("/projects");
   } catch (error) {
-    console.error("Error creating project:", error);
-    toast.error("Failed to create project. Please try again.");
+    toast.error(error.message || "Failed to create project. Please try again.");
   } finally {
     isSubmitting.value = false;
   }

@@ -32,7 +32,7 @@ export function useWorklog(options = { fetchWorklogs: true }) {
   
     // Add project_ids if selected
     if (filters.value.projectIds && filters.value.projectIds.length > 0) {
-      params.project_ids = filters.value.projectIds.join(',')
+      params.project_ids = filters.value.projectIds
     }
     
     // Add category if selected

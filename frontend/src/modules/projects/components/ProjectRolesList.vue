@@ -18,6 +18,7 @@
         {{ $t("project_permission.project_roles") }}
       </h2>
       <button
+        v-if="canAddRole"
         @click="$emit('add-role')"
         class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
       >
@@ -85,6 +86,7 @@
 
         <!-- Delete Button -->
         <button
+          v-if="canDeleteRole"
           @click.stop="$emit('delete-role', role)"
           class="absolute top-3 right-3 p-1 text-gray-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-all duration-200 rounded hover:bg-red-50"
           :title="`Delete ${role.name}`"
@@ -126,6 +128,14 @@ defineProps({
     default: null,
   },
   loading: {
+    type: Boolean,
+    default: false,
+  },
+  canAddRole: {
+    type: Boolean,
+    default: false,
+  },
+  canDeleteRole: {
     type: Boolean,
     default: false,
   },

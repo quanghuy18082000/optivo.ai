@@ -2,7 +2,7 @@
   <div class="bg-white rounded-lg shadow overflow-hidden relative">
     <!-- Loading Overlay -->
     <div
-      v-if="isLoading"
+      v-if="props.isLoading"
       class="absolute inset-0 bg-white bg-opacity-70 z-10 flex items-center justify-center"
     >
       <div class="flex items-center gap-3">
@@ -331,9 +331,9 @@ import PopupMenu from "@/components/ui/PopupMenu.vue";
 import PopupMenuItem from "@/components/ui/PopupMenuItem.vue";
 import PermissionGuard from "@/components/PermissionGuard.vue";
 import TruncateText from "@/components/ui/TruncateText.vue";
-import { useProjects } from "../composables/useProjects";
 import { usePermissions } from "@/composables/usePermissions";
 import { useRouter } from "vue-router";
+import { deleteProject } from "../services/projectService";
 import {
   PROJECT_STATUS_LABELS,
   PROJECT_STATUS_COLORS,
@@ -343,6 +343,14 @@ const props = defineProps({
   projects: {
     type: Array,
     default: () => [],
+  },
+  isLoading: {
+    type: Boolean,
+    default: false,
+  },
+  onRefresh: {
+    type: Function,
+    required: true,
   },
 });
 
@@ -355,8 +363,8 @@ const emit = defineEmits([
 const router = useRouter();
 const { PERMISSIONS } = usePermissions();
 
-// Get the removeProject function and refetch from the useProjects composable
-const { removeProject, isDeleting, refetch, isLoading } = useProjects();
+// Local state for delete operation
+const isDeleting = ref(false);
 
 const expandedProjects = ref({});
 const activeActionMenu = ref(null); // Keep this for backward compatibility during transition
@@ -482,10 +490,11 @@ const handleDeleteProject = async () => {
 
   try {
     deleteError.value = null;
+    isDeleting.value = true;
     const deletedProject = { ...projectToDelete.value };
 
     // Call the API to delete the project
-    await removeProject(deletedProject.id);
+    await deleteProject(deletedProject.id);
 
     // Close the dialog and clear the selected project
     showDeleteConfirm.value = false;
@@ -497,14 +506,16 @@ const handleDeleteProject = async () => {
     );
     emitSelectionChange();
 
-    // Explicitly refresh the project list
-    await refetch();
+    // Call parent's refresh function
+    await props.onRefresh();
 
     // Emit events to notify parent components
     emit("project-deleted", deletedProject);
     emit("refresh-projects");
   } catch (error) {
     deleteError.value = error.message || "Failed to delete project";
+  } finally {
+    isDeleting.value = false;
   }
 };
 

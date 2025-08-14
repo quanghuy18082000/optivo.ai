@@ -16,8 +16,62 @@
       </div>
     </template>
 
+    <!-- Permission Error -->
+    <div
+      v-if="permissionError"
+      class="bg-red-50 border border-red-200 rounded-lg p-6 text-center"
+    >
+      <svg
+        class="mx-auto h-12 w-12 text-red-400 mb-4"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
+        />
+      </svg>
+      <h3 class="text-lg font-medium text-red-800 mb-2">Permission Error</h3>
+      <p class="text-red-600">{{ permissionError }}</p>
+    </div>
+
+    <!-- No Permission -->
+    <div
+      v-else-if="
+        selectedProjectId &&
+        !isLoadingPermissions &&
+        !canManageRoles &&
+        !canAssignRoles &&
+        !canAddUsers
+      "
+      class="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center"
+    >
+      <svg
+        class="mx-auto h-12 w-12 text-yellow-400 mb-4"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
+        />
+      </svg>
+      <h3 class="text-lg font-medium text-yellow-800 mb-2">
+        Access Restricted
+      </h3>
+      <p class="text-yellow-600">
+        You don't have permission to manage project permissions.
+      </p>
+    </div>
+
     <!-- Main Content -->
-    <div v-if="selectedProjectId" class="space-y-6">
+    <div v-else-if="selectedProjectId" class="space-y-6">
       <!-- Tab Navigation -->
       <TabNavigation
         :active-tab="activeTab"
@@ -34,6 +88,8 @@
               :roles="projectRoles"
               :selected-role="selectedRole"
               :loading="loadingRoles"
+              :can-add-role="canManageRoles"
+              :can-delete-role="canManageRoles"
               @add-role="handleAddRoleClick"
               @select-role="selectRole"
               @delete-role="confirmDeleteRole"
@@ -143,6 +199,9 @@ import { useRoute, useRouter } from "vue-router";
 import { useToast } from "@/composables/useToast";
 import { useI18n } from "vue-i18n";
 import { usePermissions } from "@/composables/usePermissions";
+import { useProjectPermissions } from "../composables/useProjectPermissions.js";
+import { PROJECT_PERMISSIONS } from "../constants/projectPermissions.js";
+import { debugRouteParams } from "../utils/debugPermissions.js";
 import MainLayout from "@/layouts/MainLayout.vue";
 import ConfirmModal from "@/components/ui/ConfirmModal.vue";
 import TabNavigation from "../components/TabNavigation.vue";
@@ -174,7 +233,20 @@ const router = useRouter();
 const toast = useToast();
 const { t } = useI18n();
 const authStore = useAuthStore();
-const { hasProjectPermission, PERMISSIONS } = usePermissions();
+const { hasGlobalPermission, PERMISSIONS } = usePermissions();
+const selectedProjectId = ref(route.params.projectId);
+
+// Project-specific permission management
+const {
+  fetchUserPermissions,
+  hasProjectPermission,
+  canManageRoles,
+  canAssignRoles,
+  canAddUsers,
+  canDeleteUsers,
+  isLoadingPermissions,
+  permissionError,
+} = useProjectPermissions(selectedProjectId);
 
 // State
 const loading = ref(false);
@@ -183,7 +255,6 @@ const loadingRoles = ref(false);
 const loadingRoleDetails = ref(false);
 const loadingUserAssignments = ref(false);
 const saving = ref(false);
-const selectedProjectId = ref(route.params.projectId);
 const selectedRole = ref(null);
 const activeTab = ref("permissions");
 const showAddRoleModal = ref(false);
@@ -275,11 +346,11 @@ const projectRolesOptions = computed(() => {
   }));
 });
 
-// Permission checks - temporarily disabled for testing
-const canCreateRole = computed(() => true);
-const canAssignRole = computed(() => true);
-const canAddUser = computed(() => true);
-const canDeleteUser = computed(() => true);
+// Permission checks using project permissions
+const canCreateRole = computed(() => canManageRoles.value);
+const canAssignRole = computed(() => canAssignRoles.value);
+const canAddUser = computed(() => canAddUsers.value);
+const canDeleteUser = computed(() => canDeleteUsers.value);
 
 // User assignment table columns
 const userAssignmentColumns = computed(() => [
@@ -408,8 +479,7 @@ const loadProjectRoles = async () => {
     projectRoles.value = response.data?.roles || [];
     console.log("✅ Project roles loaded:", projectRoles.value);
   } catch (error) {
-    console.error("Error loading project roles:", error);
-    toast.error(t("project_permission.error_loading_roles"));
+    toast.error(error.message || t("project_permission.error_loading_roles"));
   } finally {
     loadingRoles.value = false;
   }
@@ -623,10 +693,14 @@ watch(activeTab, (newTab) => {
 
 // Lifecycle
 onMounted(async () => {
+  // Debug route params
+  debugRouteParams(route);
+
   await Promise.all([
     loadProjectRoles(),
     loadPermissions(),
     loadAvailableUsers(),
+    fetchUserPermissions(),
   ]);
 });
 </script>

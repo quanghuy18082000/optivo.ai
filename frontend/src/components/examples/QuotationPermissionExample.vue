@@ -160,12 +160,10 @@ const canUpdateQuotationInSelectedProject = computed(() => {
 
 // Action handlers
 const handleCreateQuotation = () => {
-  console.log("🎯 Creating new quotation...");
   alert("Creating new quotation! (This is just a demo)");
 };
 
 const handleUpdateQuotation = () => {
-  console.log(`🎯 Updating quotation in project ${selectedProjectId.value}...`);
   alert(
     `Updating quotation in project ${selectedProjectId.value}! (This is just a demo)`
   );

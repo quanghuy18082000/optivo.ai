@@ -79,7 +79,18 @@ export function useProjects() {
 
   // Methods
   const updateFilters = (newFilters) => {
-    filters.value = { ...filters.value, ...newFilters }
+    // For arrays, we need to replace completely, not merge
+    // Reset arrays to empty first, then apply new values
+    const resetFilters = {
+      search_text: "",
+      start_date: "", 
+      end_date: "",
+      project_ids: [],
+      member_ids: []
+    };
+    
+    // Apply new filters completely
+    filters.value = { ...resetFilters, ...newFilters };
   }
 
   const resetFilters = () => {

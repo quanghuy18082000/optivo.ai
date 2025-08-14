@@ -28,11 +28,9 @@ const initializePermissions = async () => {
     const loadingKey = "app-init-permissions";
 
     try {
-      console.log("🔄 Initializing user permissions...");
       setLoading(loadingKey, true);
 
       await fetchUserPermissions(true); // Force refresh on app initialization
-      console.log("✅ User permissions initialized successfully");
     } catch (error) {
       console.error("❌ Failed to initialize user permissions:", error);
     } finally {

@@ -238,9 +238,20 @@ const selectOption = (option) => {
   // Don't select disabled options
   if (option.disabled) return;
 
+  console.log("Select component - selectOption called with:", option);
+  console.log("Select component - current modelValue:", props.modelValue);
+
   emit("update:modelValue", option.value);
+  console.log(
+    "Select component - emitted update:modelValue with:",
+    option.value
+  );
+
   emit("change", option);
+  console.log("Select component - emitted change with:", option);
+
   closeDropdown();
+  console.log("Select component - dropdown closed");
 };
 
 const selectFirstOption = () => {

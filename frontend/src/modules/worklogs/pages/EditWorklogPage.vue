@@ -3,7 +3,6 @@ import { ref, computed, onMounted, watch } from "vue";
 import { useForm, useFieldArray } from "vee-validate";
 import { toTypedSchema } from "@vee-validate/yup";
 import * as yup from "yup";
-import { v4 as uuidv4 } from "uuid";
 import { useI18n } from "vue-i18n";
 import { useQuery } from "@tanstack/vue-query";
 import { useRouter, useRoute } from "vue-router";
@@ -16,6 +15,7 @@ import MainLayout from "@/layouts/MainLayout.vue";
 import Input from "@/components/ui/Input.vue";
 import Select from "@/components/ui/Select.vue";
 import Button from "@/components/ui/Button.vue";
+import HoursMinutesInput from "@/components/ui/HoursMinutesInput.vue";
 import { useWorklog } from "../composables/useWorklog";
 import {
   getProjects,
@@ -38,6 +38,7 @@ const isLoading = ref(true);
 const isError = ref(false);
 const errorMessage = ref("");
 const worklogData = ref(null);
+const originalFormData = ref(null); // Store original data for comparison
 const isBatchMode = ref(!!worklogDate); // If date is provided, we're in batch mode
 
 // Use the worklog composable with fetchWorklogs set to false to prevent unnecessary API calls
@@ -144,29 +145,47 @@ const getAvailableProjectOptions = (currentGroupIndex) => {
 };
 
 // Yup Schemas for validation
-const workEntrySchema = yup
-  .object({
-    id: yup.string().required(), // ID can be a string or number
-    description: yup.string().required(t("common.required")),
-    hours: yup
-      .number()
-      .typeError(t("common.required"))
-      .min(0, "Hours cannot be negative")
-      .max(23, "Max 23 hours")
-      .required(t("common.required")),
-    minutes: yup
-      .number()
-      .typeError(t("common.required"))
-      .min(0, "Minutes cannot be negative")
-      .max(59, "Max 59 minutes")
-      .required(t("common.required")),
-  })
-  .test("total-time", "Total time must be greater than 0", function (value) {
-    return value.hours * 60 + value.minutes > 0;
-  });
+const workEntrySchema = yup.object({
+  id: yup.string().required(),
+  description: yup.string().required("Description is required"),
+  hours: yup
+    .number()
+    .nullable()
+    .transform((value, originalValue) => {
+      // Convert empty string to null
+      if (
+        originalValue === "" ||
+        originalValue === null ||
+        originalValue === undefined
+      ) {
+        return null;
+      }
+      return value;
+    })
+    .min(0, "Cannot be negative")
+    .max(23, "Max 23 hours"),
+  minutes: yup
+    .number()
+    .nullable()
+    .transform((value, originalValue) => {
+      // Convert empty string to null
+      if (
+        originalValue === "" ||
+        originalValue === null ||
+        originalValue === undefined
+      ) {
+        return null;
+      }
+      return value;
+    })
+    .min(0, "Cannot be negative")
+    .max(59, "Max 59 minutes"),
+  can_edited: yup.boolean().optional(),
+  can_deleted: yup.boolean().optional(),
+});
 
 const worklogGroupSchema = yup.object({
-  id: yup.string().required(), // Group ID can be a string or number
+  id: yup.string().required(),
   projectId: yup.string().required("Project selection is required"),
   workEntries: yup
     .array()
@@ -175,12 +194,61 @@ const worklogGroupSchema = yup.object({
 });
 
 const formSchema = toTypedSchema(
-  yup.object({
-    worklogGroups: yup
-      .array()
-      .of(worklogGroupSchema)
-      .min(1, "At least one worklog group is required"),
-  })
+  yup
+    .object({
+      worklogGroups: yup.array().of(worklogGroupSchema).min(1),
+    })
+    .test("total-time-validation", "Time validation", function (value) {
+      const { worklogGroups } = value;
+      const errors = [];
+
+      for (
+        let groupIndex = 0;
+        groupIndex < worklogGroups.length;
+        groupIndex++
+      ) {
+        const group = worklogGroups[groupIndex];
+
+        for (
+          let entryIndex = 0;
+          entryIndex < group.workEntries.length;
+          entryIndex++
+        ) {
+          const entry = group.workEntries[entryIndex];
+          const { hours, minutes } = entry;
+
+          // Convert null/undefined to 0 for calculation
+          const hoursValue = hours === null || hours === undefined ? 0 : hours;
+          const minutesValue =
+            minutes === null || minutes === undefined ? 0 : minutes;
+
+          if (hoursValue === 0 && minutesValue === 0) {
+            errors.push({
+              path: `worklogGroups[${groupIndex}].workEntries[${entryIndex}].hours`,
+              message: "Enter time worked",
+            });
+          }
+        }
+      }
+
+      // Create multiple errors using Yup's ValidationError
+      if (errors.length > 0) {
+        const validationError = new yup.ValidationError(
+          "Multiple time validation errors",
+          value,
+          "worklogGroups"
+        );
+
+        // Add inner errors for each field
+        validationError.inner = errors.map(
+          (error) => new yup.ValidationError(error.message, value, error.path)
+        );
+
+        throw validationError;
+      }
+
+      return true;
+    })
 );
 
 // VeeValidate form setup
@@ -197,15 +265,17 @@ const { handleSubmit, errors, resetForm, setValues } = useForm({
             description: "",
             hours: 0,
             minutes: 0,
+            can_edited: true,
+            can_deleted: true,
           },
         ],
       },
     ],
   },
   validateOnMount: false,
-  validateOnBlur: false,
-  validateOnChange: false,
-  validateOnInput: false,
+  validateOnBlur: false, // Don't validate on blur initially
+  validateOnChange: false, // Don't validate on change initially
+  validateOnInput: false, // Don't validate on every keystroke
 });
 
 const { fields: worklogGroups, push, remove } = useFieldArray("worklogGroups");
@@ -231,6 +301,8 @@ const initializeForm = () => {
             description: entry.desc || "",
             hours: entry.duration?.hours || 0,
             minutes: entry.duration?.minutes || 0,
+            can_edited: entry.can_edited || false,
+            can_deleted: entry.can_deleted || false,
           };
         }),
       };
@@ -241,7 +313,16 @@ const initializeForm = () => {
       formData.worklogGroups.push({
         id: "new_group", // Temporary ID for new group
         projectId: null,
-        workEntries: [{ id: "0", description: "", hours: 0, minutes: 0 }], // Use "0" for new entries
+        workEntries: [
+          {
+            id: "0",
+            description: "",
+            hours: 0,
+            minutes: 0,
+            can_edited: true, // New entries can always be edited
+            can_deleted: true, // New entries can always be deleted
+          },
+        ], // Use "0" for new entries
       });
     }
   } else {
@@ -267,6 +348,9 @@ const initializeForm = () => {
   // Set the form values
   setValues(formData);
 
+  // Store original data for comparison (deep clone)
+  originalFormData.value = JSON.parse(JSON.stringify(formData));
+
   // Update the selected projects map
   updateSelectedProjects();
 };
@@ -288,8 +372,20 @@ const addWorklogGroup = () => {
   push({
     id: "new_group_" + Date.now(), // Use timestamp for new groups
     projectId: null,
-    workEntries: [{ id: "0", description: "", hours: 0, minutes: 0 }], // Use "0" for new entries
+    workEntries: [
+      {
+        id: "0",
+        description: "",
+        hours: 0,
+        minutes: 0,
+        can_edited: true, // New entries can always be edited
+        can_deleted: true, // New entries can always be deleted
+      },
+    ], // Use "0" for new entries
   });
+
+  // Note: We don't update originalFormData here because adding new groups/entries
+  // should be considered as changes that need to be saved
 };
 
 const addWorkEntry = (groupIndex) => {
@@ -298,28 +394,156 @@ const addWorkEntry = (groupIndex) => {
     description: "",
     hours: 0,
     minutes: 0,
+    can_edited: true, // New entries can always be edited
+    can_deleted: true, // New entries can always be deleted
   });
 };
 
 const removeWorklogGroup = (index) => {
-  remove(index);
-  // Update the selected projects map after removing a group
+  // Check if group has any deletable entries
+  if (!hasGroupDeletableEntries(index)) {
+    toast.error(
+      "This project group cannot be deleted - all entries are protected"
+    );
+    return;
+  }
+
+  const group = worklogGroups.value[index];
+  const deletableEntries = group.value.workEntries.filter(
+    (entry) => entry.can_deleted
+  );
+  const protectedEntries = group.value.workEntries.filter(
+    (entry) => !entry.can_deleted
+  );
+
+  // If there are protected entries, only remove deletable ones
+  if (protectedEntries.length > 0) {
+    // Update the group to only contain protected entries
+    group.value.workEntries = protectedEntries;
+
+    toast.info(
+      `Removed ${deletableEntries.length} deletable entries. ${protectedEntries.length} protected entries remain.`
+    );
+  } else {
+    // If no protected entries, remove the entire group
+    remove(index);
+    toast.success("Project group deleted successfully");
+  }
+
+  // Update the selected projects map after removing entries/group
   updateSelectedProjects();
 };
 
 const removeWorkEntry = (groupIndex, entryIndex) => {
+  const entry = worklogGroups.value[groupIndex].value.workEntries[entryIndex];
+
+  // Check if entry can be deleted (for existing entries)
+  if (entry.id !== "0" && !entry.can_deleted) {
+    toast.error("This entry cannot be deleted");
+    return;
+  }
+
   worklogGroups.value[groupIndex].value.workEntries.splice(entryIndex, 1);
 };
 
 // Track if form has been submitted (for showing validation errors)
 const hasAttemptedSubmit = ref(false);
 
+// Track which fields have been touched by user
+const touchedFields = ref(new Set());
+
+// Function to mark field as touched and enable validation
+const markFieldTouched = (fieldPath) => {
+  touchedFields.value.add(fieldPath);
+};
+
+// Function to check if field should show error
+const shouldShowError = (fieldPath) => {
+  return hasAttemptedSubmit.value || touchedFields.value.has(fieldPath);
+};
+
+// Custom validation function for editable entries only
+const validateEditableEntries = () => {
+  const validationErrors = [];
+
+  worklogGroups.value.forEach((group, groupIndex) => {
+    // Check if group has editable entries and needs project selection
+    const hasEditableEntries = group.value.workEntries.some(
+      (entry) => entry.can_edited
+    );
+
+    if (hasEditableEntries && !group.value.projectId) {
+      validationErrors.push(
+        `Project selection is required for group ${groupIndex + 1}`
+      );
+    }
+
+    group.value.workEntries.forEach((entry, entryIndex) => {
+      if (entry.can_edited) {
+        // Validate description
+        if (!entry.description || entry.description.trim() === "") {
+          validationErrors.push(
+            `Description is required for entry ${entryIndex + 1} in group ${
+              groupIndex + 1
+            }`
+          );
+        }
+
+        // Validate time
+        const totalMinutes = (entry.hours || 0) * 60 + (entry.minutes || 0);
+        if (totalMinutes <= 0) {
+          validationErrors.push(
+            `Total time must be greater than 0 for entry ${
+              entryIndex + 1
+            } in group ${groupIndex + 1}`
+          );
+        }
+
+        // Validate hours and minutes ranges
+        if (entry.hours < 0 || entry.hours > 23) {
+          validationErrors.push(
+            `Hours must be between 0-23 for entry ${entryIndex + 1} in group ${
+              groupIndex + 1
+            }`
+          );
+        }
+
+        if (entry.minutes < 0 || entry.minutes > 59) {
+          validationErrors.push(
+            `Minutes must be between 0-59 for entry ${
+              entryIndex + 1
+            } in group ${groupIndex + 1}`
+          );
+        }
+      }
+    });
+  });
+
+  return validationErrors;
+};
+
 // Form submission handler
 const onSubmit = handleSubmit(async (values) => {
   // Set submission attempt flag to true to show validation errors if any
   hasAttemptedSubmit.value = true;
 
+  console.log("Form submission started", values);
+  console.log("Form errors:", errors.value);
+
+  // Custom validation for editable entries
+  const customValidationErrors = validateEditableEntries();
+  if (customValidationErrors.length > 0) {
+    console.log("Custom validation errors:", customValidationErrors);
+    toast.error(`Validation errors: ${customValidationErrors.join(", ")}`);
+    return;
+  }
+
   try {
+    console.log(
+      "EditWorklogPage form submission started, isUpdating:",
+      isUpdating.value
+    );
+
     // Handle batch mode submission
     // Transform the form data to match the API format
     const batchData = values.worklogGroups.map((group) => {
@@ -345,14 +569,39 @@ const onSubmit = handleSubmit(async (values) => {
       };
     });
 
+    console.log(
+      "About to call updateBatchWorklogs, isUpdating:",
+      isUpdating.value
+    );
+
     // Submit the batch data using PUT update
     await updateBatchWorklogs(batchData, worklogDate);
+
+    console.log("updateBatchWorklogs completed, isUpdating:", isUpdating.value);
+
+    // Update original data to current data after successful save
+    const currentData = {
+      worklogGroups: worklogGroups.value.map((group) => ({
+        id: group.value.id,
+        projectId: group.value.projectId,
+        workEntries: group.value.workEntries.map((entry) => ({
+          id: entry.id,
+          description: entry.description,
+          hours: entry.hours,
+          minutes: entry.minutes,
+          can_edited: entry.can_edited,
+          can_deleted: entry.can_deleted,
+        })),
+      })),
+    };
+    originalFormData.value = JSON.parse(JSON.stringify(currentData));
 
     // Show success toast
     toast.success("Worklogs updated successfully");
     router.push("/"); // Redirect to dashboard
   } catch (err) {
     console.error("Failed to update worklog:", err);
+    console.log("updateBatchWorklogs failed, isUpdating:", isUpdating.value);
 
     // Show error toast
     toast.error(err.message || "Failed to update worklog");
@@ -361,13 +610,102 @@ const onSubmit = handleSubmit(async (values) => {
   }
 });
 
-const isFormLoading = computed(
-  () =>
+const isFormLoading = computed(() => {
+  const loading =
     isLoading.value ||
     isUpdating.value ||
     isCreating.value ||
-    isLoadingProjects.value
-);
+    isLoadingProjects.value;
+
+  console.log("EditWorklogPage isFormLoading computed:", {
+    isLoading: isLoading.value,
+    isUpdating: isUpdating.value,
+    isCreating: isCreating.value,
+    isLoadingProjects: isLoadingProjects.value,
+    loading,
+  });
+
+  return loading;
+});
+
+// Check if at least one entry can be edited
+const hasEditableEntries = computed(() => {
+  return (
+    worklogGroups.value?.some((group) =>
+      group.value.workEntries?.some((entry) => entry.can_edited)
+    ) || false
+  );
+});
+
+// Check if a specific group has any editable entries
+const isGroupEditable = (groupIndex) => {
+  const group = worklogGroups.value?.[groupIndex];
+  return group?.value.workEntries?.some((entry) => entry.can_edited) || false;
+};
+
+// Check if a specific group has any deletable entries
+const hasGroupDeletableEntries = (groupIndex) => {
+  const group = worklogGroups.value?.[groupIndex];
+  return group?.value.workEntries?.some((entry) => entry.can_deleted) || false;
+};
+
+// Compare current form data with original data to detect changes
+const hasFormChanges = computed(() => {
+  if (!originalFormData.value || !worklogGroups.value) {
+    return false;
+  }
+
+  // Helper function to normalize data for comparison (only editable fields)
+  const normalizeDataForComparison = (data) => {
+    return {
+      worklogGroups: data.worklogGroups.map((group) => ({
+        id: group.id,
+        projectId: group.projectId,
+        workEntries: group.workEntries
+          .filter((entry) => entry.can_edited) // Only compare editable entries
+          .map((entry) => ({
+            id: entry.id,
+            description: entry.description,
+            hours: entry.hours,
+            minutes: entry.minutes,
+          })),
+      })),
+    };
+  };
+
+  // Get current form data (normalized)
+  const currentData = {
+    worklogGroups: worklogGroups.value.map((group) => ({
+      id: group.value.id,
+      projectId: group.value.projectId,
+      workEntries: group.value.workEntries.map((entry) => ({
+        id: entry.id,
+        description: entry.description,
+        hours: entry.hours,
+        minutes: entry.minutes,
+        can_edited: entry.can_edited,
+        can_deleted: entry.can_deleted,
+      })),
+    })),
+  };
+
+  // Normalize both datasets for comparison
+  const normalizedCurrent = normalizeDataForComparison(currentData);
+  const normalizedOriginal = normalizeDataForComparison(originalFormData.value);
+
+  // Compare normalized data
+  return (
+    JSON.stringify(normalizedCurrent) !== JSON.stringify(normalizedOriginal)
+  );
+});
+
+// Reset form to original state
+const resetFormToOriginal = () => {
+  if (originalFormData.value) {
+    setValues(originalFormData.value);
+    updateSelectedProjects();
+  }
+};
 
 // Watch for changes in worklog groups to update available project options
 watch(
@@ -451,8 +789,7 @@ onMounted(() => {
         <div class="grid grid-cols-12 gap-4 text-sm font-medium text-gray-500">
           <div class="col-span-3">Project</div>
           <div class="col-span-5">Description</div>
-          <div class="col-span-1">Hours</div>
-          <div class="col-span-1">Minutes</div>
+          <div class="col-span-2">Time</div>
           <div class="col-span-1"></div>
           <div class="col-span-1"></div>
         </div>
@@ -462,7 +799,36 @@ onMounted(() => {
           v-for="(group, groupIndex) in worklogGroups"
           :key="group.value.id"
           class="space-y-4 border-b pb-6 mb-6 last:border-b-0 last:pb-0 last:mb-0"
+          :class="{
+            'bg-gray-50 border-gray-200 rounded-lg p-4':
+              !isGroupEditable(groupIndex),
+            'border-l-4 border-l-gray-400': !isGroupEditable(groupIndex),
+          }"
         >
+          <!-- Protected Group Indicator -->
+          <div
+            v-if="!isGroupEditable(groupIndex)"
+            class="flex items-center gap-2 mb-4 text-sm text-gray-600"
+          >
+            <svg
+              class="w-4 h-4 text-gray-500"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+              />
+            </svg>
+            <span class="font-medium">Protected Project Group</span>
+            <span class="text-xs text-gray-500"
+              >- All entries in this project are read-only</span
+            >
+          </div>
+
           <!-- Work Entries with Project Selection -->
           <div
             v-for="(entry, entryIndex) in group.value.workEntries"
@@ -478,18 +844,24 @@ onMounted(() => {
                 placeholder="Select project"
                 searchable
                 search-placeholder="Search projects..."
-                :disabled="isFormLoading"
+                :disabled="isFormLoading || !isGroupEditable(groupIndex)"
                 :error="
-                  hasAttemptedSubmit &&
+                  shouldShowError(`worklogGroups[${groupIndex}].projectId`) &&
                   !!errors[`worklogGroups[${groupIndex}].projectId`]
                 "
                 :error-message="
-                  hasAttemptedSubmit
-                    ? errors[`worklogGroups[${groupIndex}].projectId`]
+                  shouldShowError(`worklogGroups[${groupIndex}].projectId`)
+                    ? errors[`worklogGroups[${groupIndex}].projectId`] || ''
                     : ''
                 "
-                class="w-full"
+                :class="{
+                  'w-full': true,
+                  'opacity-60': !isGroupEditable(groupIndex),
+                }"
                 @change="updateSelectedProjects"
+                @blur="
+                  markFieldTouched(`worklogGroups[${groupIndex}].projectId`)
+                "
               />
             </div>
 
@@ -498,73 +870,105 @@ onMounted(() => {
               <Input
                 v-model="entry.description"
                 placeholder="Work description"
-                :disabled="isFormLoading"
+                :disabled="isFormLoading || !entry.can_edited"
                 :error="
-                  hasAttemptedSubmit &&
+                  shouldShowError(
+                    `worklogGroups[${groupIndex}].workEntries[${entryIndex}].description`
+                  ) &&
                   !!errors[
                     `worklogGroups[${groupIndex}].workEntries[${entryIndex}].description`
                   ]
                 "
                 :error-message="
-                  hasAttemptedSubmit
+                  shouldShowError(
+                    `worklogGroups[${groupIndex}].workEntries[${entryIndex}].description`
+                  )
                     ? errors[
                         `worklogGroups[${groupIndex}].workEntries[${entryIndex}].description`
-                      ]
+                      ] || ''
                     : ''
                 "
                 class="w-full"
+                :class="{ 'opacity-60': !entry.can_edited }"
+                @blur="
+                  markFieldTouched(
+                    `worklogGroups[${groupIndex}].workEntries[${entryIndex}].description`
+                  )
+                "
               />
             </div>
 
-            <!-- Hours -->
-            <div class="col-span-1">
-              <Input
-                v-model.number="entry.hours"
-                type="number"
-                placeholder="00"
-                :min="0"
-                :max="23"
-                :disabled="isFormLoading"
+            <!-- Time Input (Hours & Minutes) -->
+            <div class="col-span-2">
+              <HoursMinutesInput
+                v-model:hours="entry.hours"
+                v-model:minutes="entry.minutes"
+                :disabled="isFormLoading || !entry.can_edited"
+                :class="{ 'opacity-60': !entry.can_edited }"
                 :error="
-                  hasAttemptedSubmit &&
+                  shouldShowError(
+                    `worklogGroups[${groupIndex}].workEntries[${entryIndex}].hours`
+                  ) &&
                   !!errors[
                     `worklogGroups[${groupIndex}].workEntries[${entryIndex}].hours`
                   ]
                 "
                 :error-message="
-                  hasAttemptedSubmit
+                  shouldShowError(
+                    `worklogGroups[${groupIndex}].workEntries[${entryIndex}].hours`
+                  )
                     ? errors[
                         `worklogGroups[${groupIndex}].workEntries[${entryIndex}].hours`
-                      ]
+                      ] || ''
                     : ''
                 "
-                class="w-full"
-              />
-            </div>
-
-            <!-- Minutes -->
-            <div class="col-span-1">
-              <Input
-                v-model.number="entry.minutes"
-                type="number"
-                placeholder="00"
-                :min="0"
-                :max="59"
-                :disabled="isFormLoading"
-                :error="
-                  hasAttemptedSubmit &&
+                :hours-error="
+                  shouldShowError(
+                    `worklogGroups[${groupIndex}].workEntries[${entryIndex}].hours`
+                  ) &&
+                  !!errors[
+                    `worklogGroups[${groupIndex}].workEntries[${entryIndex}].hours`
+                  ]
+                "
+                :hours-error-message="
+                  shouldShowError(
+                    `worklogGroups[${groupIndex}].workEntries[${entryIndex}].hours`
+                  )
+                    ? errors[
+                        `worklogGroups[${groupIndex}].workEntries[${entryIndex}].hours`
+                      ] || ''
+                    : ''
+                "
+                :minutes-error="
+                  shouldShowError(
+                    `worklogGroups[${groupIndex}].workEntries[${entryIndex}].minutes`
+                  ) &&
                   !!errors[
                     `worklogGroups[${groupIndex}].workEntries[${entryIndex}].minutes`
                   ]
                 "
-                :error-message="
-                  hasAttemptedSubmit
+                :minutes-error-message="
+                  shouldShowError(
+                    `worklogGroups[${groupIndex}].workEntries[${entryIndex}].minutes`
+                  )
                     ? errors[
                         `worklogGroups[${groupIndex}].workEntries[${entryIndex}].minutes`
-                      ]
+                      ] || ''
                     : ''
                 "
-                class="w-full"
+                @blur="
+                  (field) => {
+                    if (field === 'hours') {
+                      markFieldTouched(
+                        `worklogGroups[${groupIndex}].workEntries[${entryIndex}].hours`
+                      );
+                    } else if (field === 'minutes') {
+                      markFieldTouched(
+                        `worklogGroups[${groupIndex}].workEntries[${entryIndex}].minutes`
+                      );
+                    }
+                  }
+                "
               />
             </div>
 
@@ -572,13 +976,14 @@ onMounted(() => {
             <div class="col-span-1 flex justify-start gap-2">
               <!-- Remove Entry Button -->
               <Button
-                v-if="group.value.workEntries.length > 1"
+                v-if="group.value.workEntries.length > 1 && entry.can_deleted"
                 type="button"
                 variant="danger"
                 size="small"
                 class="!bg-transparent !text-red-500 hover:!bg-red-50"
                 @click="removeWorkEntry(groupIndex, entryIndex)"
                 :disabled="isFormLoading"
+                title="Delete this entry"
               >
                 <svg
                   class="w-5 h-5"
@@ -594,17 +999,35 @@ onMounted(() => {
                   />
                 </svg>
               </Button>
+
+              <!-- Disabled indicator for non-deletable entries -->
+              <span
+                v-if="group.value.workEntries.length > 1 && !entry.can_deleted"
+                class="text-xs text-gray-400 italic self-center"
+                title="This entry cannot be deleted"
+              >
+                Protected
+              </span>
             </div>
             <div class="col-span-1 flex justify-end gap-2">
               <!-- Remove Group Button (only show for first entry in group) -->
               <Button
-                v-if="entryIndex === 0 && worklogGroups.length > 1"
+                v-if="
+                  entryIndex === 0 &&
+                  worklogGroups.length > 1 &&
+                  hasGroupDeletableEntries(groupIndex)
+                "
                 type="button"
                 variant="danger"
                 size="small"
                 class="!bg-transparent !text-red-500 hover:!bg-red-50"
                 @click="removeWorklogGroup(groupIndex)"
                 :disabled="isFormLoading"
+                :title="
+                  group.value.workEntries.some((entry) => !entry.can_deleted)
+                    ? 'Delete deletable entries from this project group'
+                    : 'Delete this project group'
+                "
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -626,11 +1049,27 @@ onMounted(() => {
                   <path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3" />
                 </svg>
               </Button>
+
+              <!-- Protected indicator for non-deletable groups -->
+              <span
+                v-if="
+                  entryIndex === 0 &&
+                  worklogGroups.length > 1 &&
+                  !hasGroupDeletableEntries(groupIndex)
+                "
+                class="text-xs text-gray-400 italic self-center"
+                title="This project group cannot be deleted - all entries are protected"
+              >
+                Protected Group
+              </span>
             </div>
           </div>
 
           <!-- Add new work description for same project -->
-          <div class="grid grid-cols-12 gap-4 mt-2">
+          <div
+            v-if="group.value.workEntries.some((entry) => entry.can_edited)"
+            class="grid grid-cols-12 gap-4 mt-2"
+          >
             <div class="col-span-12">
               <button
                 type="button"
@@ -678,24 +1117,8 @@ onMounted(() => {
                 d="M12 6v6m0 0v6m0-6h6m-6 0H6"
               />
             </svg>
-            Add a new project
+            Add a new work
           </button>
-        </div>
-
-        <!-- Error message -->
-        <div
-          v-if="updateError || createError"
-          class="text-center text-red-500 text-sm mt-3"
-        >
-          {{
-            t("common.error", { msg: (updateError || createError)?.message })
-          }}
-        </div>
-        <div
-          v-if="hasAttemptedSubmit && Object.keys(errors).length > 0"
-          class="text-center text-red-500 text-sm mt-3"
-        >
-          Please correct the errors in the form.
         </div>
 
         <!-- Action Buttons -->
@@ -708,9 +1131,22 @@ onMounted(() => {
           >
             Cancel
           </Button>
-          <Button type="submit" variant="primary" :loading="isFormLoading">
+          <Button
+            v-if="hasFormChanges"
+            type="submit"
+            variant="primary"
+            :loading="isFormLoading"
+          >
             {{ isBatchMode ? "Update Worklogs" : "Update Worklog" }}
           </Button>
+
+          <!-- Message when no changes detected -->
+          <div
+            v-if="!hasFormChanges && worklogGroups.length > 0"
+            class="text-sm text-gray-500 italic self-center"
+          >
+            No changes detected
+          </div>
         </div>
       </form>
     </div>

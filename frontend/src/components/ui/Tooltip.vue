@@ -93,16 +93,12 @@ let hideTimeout = null;
 // Calculate tooltip position
 const calculatePosition = () => {
   if (!triggerRef.value) {
-    console.log("No trigger ref available");
     return;
   }
 
   const triggerRect = triggerRef.value.getBoundingClientRect();
   const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
   const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
-
-  console.log("Trigger rect:", triggerRect);
-  console.log("Scroll:", { scrollTop, scrollLeft });
 
   let top = 0;
   let left = 0;
@@ -135,7 +131,6 @@ const calculatePosition = () => {
   if (left > viewportWidth - 200) left = viewportWidth - 210; // Assuming max tooltip width
   if (top < 0) top = 10;
 
-  console.log("Calculated position:", { top, left });
   tooltipPosition.value = { top, left };
 };
 
@@ -143,13 +138,7 @@ const calculatePosition = () => {
 const shouldShowTooltip = computed(() => {
   const hasContent = !!(props.content || slots.default);
   const result = isVisible.value && hasContent;
-  console.log("Should show tooltip:", {
-    isVisible: isVisible.value,
-    hasContent,
-    content: props.content,
-    hasSlot: !!slots.default,
-    result,
-  });
+
   return result;
 });
 
@@ -188,22 +177,14 @@ const tooltipStyle = computed(() => {
       break;
   }
 
-  console.log("Final tooltip style:", baseStyle);
   return baseStyle;
 });
 
 // Show tooltip function
 const showTooltip = async () => {
-  console.log("Tooltip showTooltip called:", {
-    disabled: props.disabled,
-    content: props.content,
-    hasSlot: !!slots.default,
-  });
-
   if (props.disabled) return;
   // Check if there's content to show
   if (!props.content && !slots.default) {
-    console.log("No content to show in tooltip");
     return;
   }
 

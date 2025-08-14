@@ -157,7 +157,6 @@ const canUpdateQuotationProject1 = computed(() => {
 });
 
 const handleRefresh = async () => {
-  console.log("🔄 Manual refresh triggered from test component");
   await refetchPermissions(true);
 };
 
@@ -165,13 +164,9 @@ const handleForceRefresh = async () => {
   const loadingKey = "manual-force-refresh";
 
   try {
-    console.log(
-      "🔄 Force refresh with loading screen triggered from test component"
-    );
     setLoading(loadingKey, true);
 
     await fetchUserPermissions(true);
-    console.log("✅ Force refresh completed");
   } catch (error) {
     console.error("❌ Force refresh failed:", error);
   } finally {

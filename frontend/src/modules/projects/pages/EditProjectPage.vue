@@ -35,7 +35,10 @@
     </template>
 
     <!-- Loading State -->
-    <div v-if="isLoadingProject" class="flex items-center justify-center py-12">
+    <div
+      v-if="isLoadingProject || isLoadingPermissions"
+      class="flex items-center justify-center py-12"
+    >
       <div class="flex items-center gap-3">
         <svg
           class="animate-spin h-8 w-8 text-blue-600"
@@ -56,12 +59,21 @@
             d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
           ></path>
         </svg>
-        <span class="text-gray-600">Loading project details...</span>
+        <span class="text-gray-600">
+          {{
+            isLoadingProject
+              ? "Loading project details..."
+              : "Loading permissions..."
+          }}
+        </span>
       </div>
     </div>
 
     <!-- Error State -->
-    <div v-else-if="loadError" class="flex items-center justify-center py-12">
+    <div
+      v-else-if="loadError || permissionError"
+      class="flex items-center justify-center py-12"
+    >
       <div class="text-center">
         <svg
           class="mx-auto h-12 w-12 text-red-400"
@@ -77,9 +89,11 @@
           />
         </svg>
         <h3 class="mt-2 text-lg font-medium text-red-800">
-          Error loading project
+          {{ loadError ? "Error loading project" : "Permission Error" }}
         </h3>
-        <p class="mt-1 text-sm text-red-600">{{ loadError }}</p>
+        <p class="mt-1 text-sm text-red-600">
+          {{ loadError || permissionError }}
+        </p>
         <button
           @click="fetchProjectDetails"
           class="mt-4 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
@@ -98,6 +112,7 @@
         :errors="errors"
         :title="stepDescriptions[0].title"
         :description="stepDescriptions[0].description"
+        :disabled="!canEditProject"
         @next="nextStep"
       />
 
@@ -111,6 +126,7 @@
         :positionOptions="positionOptions"
         :isLoadingPositions="isLoadingPositions"
         :positionError="positionError"
+        :disabled="!canEditQuotation"
         @next="nextStep"
         @previous="previousStep"
         @refreshPositions="fetchPositions"
@@ -128,12 +144,23 @@
         :isSubmitting="isSubmitting"
         :isLoadingPositions="isLoadingPositions"
         :positionError="positionError"
+        :disabled="!canEditPlan"
         @previous="previousStep"
         @submit="updateProject"
         @skipAndSubmit="skipAndSubmit"
         @cloneFromQuotation="cloneFromQuotation"
       />
     </div>
+
+    <!-- Permission Error Handler -->
+    <PermissionErrorHandler
+      :is-loading-permissions="isLoadingPermissions"
+      :permission-error="permissionError"
+      :project-id="projectId.value"
+      :user-permissions="userPermissions"
+      :user-roles="userRoles"
+      :fetch-user-permissions="fetchUserPermissions"
+    />
   </MainLayout>
 </template>
 
@@ -150,10 +177,19 @@ import StepIndicator from "../components/StepIndicator.vue";
 import BasicInformationStep from "../components/steps/BasicInformationStep.vue";
 import QuotationStep from "../components/steps/QuotationStep.vue";
 import PlanStep from "../components/steps/PlanStep.vue";
+import PermissionDebugger from "../components/PermissionDebugger.vue";
+import PermissionErrorHandler from "../components/PermissionErrorHandler.vue";
+import PermissionStatusIndicator from "../components/PermissionStatusIndicator.vue";
 import { useToast } from "@/composables/useToast";
 import { getPositions } from "@/services/systemService.js";
 import { usePageInitLoading } from "@/composables/usePageLoading";
 import { usePermissions } from "@/composables/usePermissions.js";
+import { useProjectPermissions } from "../composables/useProjectPermissions.js";
+import { useAuthStore } from "@/modules/auth/store";
+import { PROJECT_PERMISSIONS } from "../constants/projectPermissions.js";
+import { debugRouteParams } from "../utils/debugPermissions.js";
+import { runQuickTests } from "../utils/quickTest.js";
+import { troubleshootPermissions } from "../utils/permissionTroubleshooter.js";
 
 const router = useRouter();
 const route = useRoute();
@@ -164,21 +200,77 @@ const { stopLoading } = usePageInitLoading("edit-project");
 
 // Permission management
 const { hasGlobalPermission, PERMISSIONS } = usePermissions();
+const authStore = useAuthStore();
 
-// Check if user can create quotations
-const canCreateQuotation = computed(() => {
-  return hasGlobalPermission(PERMISSIONS.CREATE_QUOTATION);
+// Get project ID from route params and validate
+const rawProjectId = route.params.projectId;
+const projectId = computed(() => {
+  if (
+    !rawProjectId ||
+    rawProjectId === "undefined" ||
+    rawProjectId === "null"
+  ) {
+    return null;
+  }
+
+  const parsed = parseInt(rawProjectId, 10);
+  return isNaN(parsed) || parsed <= 0 ? null : parsed;
 });
 
-// Get project ID from route params
-const projectId = route.params.projectId;
+// Project-specific permission management
+const {
+  fetchUserPermissions,
+  hasProjectPermission,
+  canEditProject,
+  canEditQuotation,
+  canEditPlan,
+  canManageRoles,
+  canAssignRoles,
+  canAddUsers,
+  canDeleteUsers,
+  userPermissions,
+  userRoles,
+  isLoadingPermissions,
+  permissionError,
+} = useProjectPermissions(projectId);
 
 // Current step state
 const currentStep = ref(1);
+
+// Computed property to determine which steps are accessible
+const accessibleSteps = computed(() => {
+  const steps = [];
+
+  if (canEditProject.value) {
+    steps.push(1); // Basic Information
+  }
+
+  if (canEditQuotation.value) {
+    steps.push(2); // Quotation
+  }
+
+  if (canEditPlan.value) {
+    steps.push(3); // Plan
+  }
+
+  return steps;
+});
+
+// Computed property to get the initial step based on permissions
+const initialStep = computed(() => {
+  if (accessibleSteps.value.length === 0) {
+    return 1; // Default to first step if no permissions
+  }
+  return Math.min(...accessibleSteps.value);
+});
+
 const isSubmitting = ref(false);
 const isLoadingProject = ref(true);
 const loadError = ref(null);
 const errors = ref({});
+
+// Store original quotation data for users without edit permission
+const originalQuotationData = ref(null);
 
 // Form data
 const formData = ref({
@@ -250,7 +342,7 @@ const fetchProjectDetails = async () => {
   loadError.value = null;
 
   try {
-    const response = await getProjectById(projectId);
+    const response = await getProjectById(projectId.value);
     const project = response.data;
 
     // Populate form data with project details
@@ -263,8 +355,28 @@ const fetchProjectDetails = async () => {
       plans: transformPlans(project.plan || []),
     };
 
-    // If no quotations exist, add a default one
-    if (formData.value.quotations.length === 0) {
+    // Store original quotation data for users without quotation edit permission
+    if (!canEditQuotation.value && project.quotation === null) {
+      // User doesn't have permission and API returned null - keep it null
+      console.log(
+        "🔒 User has no quotation edit permission, API returned null - preserving null"
+      );
+      originalQuotationData.value = null;
+    } else if (!canEditQuotation.value && project.quotation) {
+      // User doesn't have permission but has existing quotation data - preserve it
+      console.log(
+        "🔒 User has no quotation edit permission, preserving existing quotation data:",
+        project.quotation
+      );
+      originalQuotationData.value = project.quotation;
+    } else if (canEditQuotation.value) {
+      console.log(
+        "✅ User has quotation edit permission, can modify quotations"
+      );
+    }
+
+    // Only add default quotation if user has permission and no quotations exist
+    if (canEditQuotation.value && formData.value.quotations.length === 0) {
       formData.value.quotations.push({
         id: uuidv4(),
         position_id: "",
@@ -406,6 +518,11 @@ const validateStep1 = () => {
 };
 
 const validateStep2 = () => {
+  // Skip validation if user doesn't have quotation edit permission
+  if (!canEditQuotation.value) {
+    return true;
+  }
+
   const newErrors = {};
 
   if (!formData.value.quotations || formData.value.quotations.length === 0) {
@@ -483,6 +600,9 @@ const validateStep3 = () => {
     ) {
       newErrors[`plans.${index}.allocationRate`] =
         "Allocation must be greater than 0";
+    } else if (parseFloat(plan.allocationRate) > 3) {
+      newErrors[`plans.${index}.allocationRate`] =
+        "Allocation cannot exceed 3 (300%)";
     }
 
     if (!plan.start_date) {
@@ -528,14 +648,44 @@ const nextStep = () => {
   }
 
   if (isValid && currentStep.value < 3) {
-    currentStep.value++;
+    // Find next accessible step
+    const nextAccessibleStep = accessibleSteps.value.find(
+      (step) => step > currentStep.value
+    );
+
+    if (nextAccessibleStep) {
+      const previousStep = currentStep.value;
+      currentStep.value = nextAccessibleStep;
+
+      // Show info message if skipping steps
+      if (nextAccessibleStep > previousStep + 1) {
+        toast.info("Skipping steps you don't have permission to edit.");
+      }
+    } else {
+      // No more accessible steps, stay on current step
+      toast.warning("No more steps available with your current permissions.");
+    }
+
     errors.value = {};
   }
 };
 
 const previousStep = () => {
   if (currentStep.value > 1) {
-    currentStep.value--;
+    // Find previous accessible step
+    const previousAccessibleStep = accessibleSteps.value
+      .filter((step) => step < currentStep.value)
+      .sort((a, b) => b - a)[0]; // Get the highest step that's less than current
+
+    if (previousAccessibleStep) {
+      currentStep.value = previousAccessibleStep;
+    } else {
+      // No previous accessible step, stay on current step
+      toast.warning(
+        "No previous steps available with your current permissions."
+      );
+    }
+
     errors.value = {};
   }
 };
@@ -567,7 +717,8 @@ const skipAndSubmit = async () => {
     return;
   }
 
-  if (!validateStep2()) {
+  // Only validate step 2 if user has quotation edit permission
+  if (canEditQuotation.value && !validateStep2()) {
     currentStep.value = 2;
     return;
   }
@@ -583,7 +734,8 @@ const updateProject = async (skipPlan = false) => {
     return;
   }
 
-  if (!validateStep2()) {
+  // Only validate step 2 if user has quotation edit permission
+  if (canEditQuotation.value && !validateStep2()) {
     currentStep.value = 2;
     return;
   }
@@ -595,20 +747,27 @@ const updateProject = async (skipPlan = false) => {
   isSubmitting.value = true;
 
   try {
+    console.log("📤 Preparing project update data...");
+    console.log("🔐 Can edit quotation:", canEditQuotation.value);
+    console.log("📋 Original quotation data:", originalQuotationData.value);
+
     const projectData = {
       name: formData.value.projectName.trim(),
       description: formData.value.description || "",
       start_date: formData.value.start_date,
       end_date: formData.value.end_date,
 
-      quotation: formData.value.quotations
-        .filter((q) => q.position_id)
-        .map((q) => ({
-          position_id: q.position_id,
-          quantity: parseFloat(q.quantity),
-          start_date: q.start_date,
-          end_date: q.end_date,
-        })),
+      // Handle quotation based on user permissions
+      quotation: canEditQuotation.value
+        ? formData.value.quotations
+            .filter((q) => q.position_id)
+            .map((q) => ({
+              position_id: q.position_id,
+              quantity: parseFloat(q.quantity),
+              start_date: q.start_date,
+              end_date: q.end_date,
+            }))
+        : originalQuotationData.value, // Preserve original data if no permission
 
       plan: skipPlan
         ? []
@@ -623,13 +782,16 @@ const updateProject = async (skipPlan = false) => {
             })),
     };
 
-    await updateProjectAPI(projectId, projectData);
+    console.log("📤 Final project data being sent:", projectData);
+    console.log("📋 Quotation in payload:", projectData.quotation);
+
+    await updateProjectAPI(projectId.value, projectData);
 
     toast.success("Project updated successfully");
     router.push("/projects");
   } catch (error) {
     console.error("Error updating project:", error);
-    toast.error("Failed to update project. Please try again.");
+    toast.error(error.message || "Failed to update project. Please try again.");
   } finally {
     isSubmitting.value = false;
   }
@@ -637,10 +799,65 @@ const updateProject = async (skipPlan = false) => {
 
 // Initialize component
 onMounted(async () => {
-  await fetchPositions();
-  await fetchProjectDetails();
+  // Debug route params
+  debugRouteParams(route);
+
+  // Run comprehensive troubleshooting
+  const troubleshootResults = troubleshootPermissions(route, authStore);
+
+  if (troubleshootResults.hasIssues) {
+    console.error(
+      "❌ Permission system issues detected. Check troubleshooting report above."
+    );
+
+    // Show user-friendly error messages
+    if (!troubleshootResults.canMakeAPICall) {
+      if (!projectId.value) {
+        toast.error(
+          "Invalid project URL. Please check the link and try again."
+        );
+        return; // Don't continue loading if project ID is invalid
+      } else if (!authStore?.user?.id) {
+        toast.error("Please log in to continue.");
+        return; // Don't continue loading if not authenticated
+      } else {
+        toast.error("Unable to load project permissions. Please try again.");
+      }
+    }
+  } else {
+    console.log("✅ Permission system ready to go!");
+  }
+
+  // Only proceed if we have a valid project ID
+  if (projectId.value) {
+    await fetchPositions();
+    await fetchProjectDetails();
+    await fetchUserPermissions();
+  } else {
+    console.error("Cannot load project: Invalid project ID");
+  }
+
   stopLoading();
 });
+
+// Watch for permissions to be loaded and set initial step
+watch(
+  () => [
+    canEditProject.value,
+    canEditQuotation.value,
+    canEditPlan.value,
+    isLoadingPermissions.value,
+  ],
+  ([editProject, editQuotation, editPlan, loading]) => {
+    if (!loading && (editProject || editQuotation || editPlan)) {
+      // Set to initial accessible step only if we're still on step 1
+      if (currentStep.value === 1) {
+        currentStep.value = initialStep.value;
+      }
+    }
+  },
+  { immediate: true }
+);
 
 // Watch for changes in project dates and propagate to quotations and plans
 watch(

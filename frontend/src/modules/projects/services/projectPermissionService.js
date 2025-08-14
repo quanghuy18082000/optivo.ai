@@ -185,5 +185,45 @@ export const getProjectsForDropdown = async (params = {}) => {
   }
 }
 
+/**
+ * Get user's permissions in a specific project
+ * @param {number} projectId - Project ID
+ * @param {number} userId - User ID
+ * @returns {Promise<Object>} Object with user's permissions and roles in the project
+ */
+export const getUserProjectPermissions = async (projectId, userId) => {
+  try {
+    // Validate inputs
+    if (!projectId || projectId === 'undefined' || projectId === 'null') {
+      throw new Error('Invalid project ID provided');
+    }
+    
+    if (!userId || userId === 'undefined' || userId === 'null') {
+      throw new Error('Invalid user ID provided');
+    }
+
+    // Convert to numbers if they're strings
+    const validProjectId = typeof projectId === 'string' ? parseInt(projectId, 10) : projectId;
+    const validUserId = typeof userId === 'string' ? parseInt(userId, 10) : userId;
+
+    // Check if conversion was successful
+    if (isNaN(validProjectId) || validProjectId <= 0) {
+      throw new Error('Project ID must be a valid positive number');
+    }
+    
+    if (isNaN(validUserId) || validUserId <= 0) {
+      throw new Error('User ID must be a valid positive number');
+    }
+
+    console.log('Fetching permissions for:', { projectId: validProjectId, userId: validUserId });
+    
+    const response = await get(`/projects/${validProjectId}/users/${validUserId}/permissions`)
+    return response.data || { data: { user_id: validUserId, permissions: [], roles: [] } }
+  } catch (error) {
+    console.error('getUserProjectPermissions error:', error);
+    throw new Error(error.response?.data?.message || error.message || 'Failed to fetch user project permissions');
+  }
+}
+
 // Re-export permissions service from global roleService
 export { getPermissions } from '@/services/roleService.js'

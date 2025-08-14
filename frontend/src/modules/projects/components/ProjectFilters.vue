@@ -170,6 +170,7 @@ const localFilters = ref({
   member_ids: Array.isArray(props.filters.member_ids)
     ? [...props.filters.member_ids]
     : [],
+  _synced: false, // Flag to track sync state
 });
 
 // Options for dropdowns
@@ -236,18 +237,16 @@ const closePanel = () => {
 };
 
 const applyFilters = () => {
-  // Clean up the filters before emitting
+  // Send all filters to parent, including empty ones
+  // Parent will handle the reset and apply logic correctly
+  console.log(111, localFilters.value);
   const cleanFilters = { ...localFilters.value };
 
-  // Remove empty arrays and empty strings
-  Object.keys(cleanFilters).forEach((key) => {
-    if (Array.isArray(cleanFilters[key]) && cleanFilters[key].length === 0) {
-      delete cleanFilters[key];
-    } else if (cleanFilters[key] === "" || cleanFilters[key] === null) {
-      delete cleanFilters[key];
-    }
-  });
+  // Remove internal tracking properties only
+  delete cleanFilters._synced;
 
+  // No longer remove empty values here - let parent handle the complete reset
+  console.log(222, cleanFilters);
   emit("apply", cleanFilters);
   closePanel();
 };
@@ -259,26 +258,35 @@ const resetFilters = () => {
     end_date: "",
     project_ids: [],
     member_ids: [],
+    _synced: false,
   };
   localFilters.value = resetValues;
   emit("reset");
 };
 
 // Watch for external filter changes to keep localFilters in sync
+// Only sync when panel is closed to avoid losing unsaved changes
 watch(
-  () => props.filters,
-  (newFilters) => {
-    localFilters.value = {
-      search_text: newFilters.search_text || "",
-      start_date: newFilters.start_date || "",
-      end_date: newFilters.end_date || "",
-      project_ids: Array.isArray(newFilters.project_ids)
-        ? [...newFilters.project_ids]
-        : [],
-      member_ids: Array.isArray(newFilters.member_ids)
-        ? [...newFilters.member_ids]
-        : [],
-    };
+  [() => props.filters, () => props.isOpen],
+  ([newFilters, isOpen]) => {
+    // Only sync when the panel is being opened (not when it's already open)
+    if (isOpen && !localFilters.value._synced) {
+      localFilters.value = {
+        search_text: newFilters.search_text || "",
+        start_date: newFilters.start_date || "",
+        end_date: newFilters.end_date || "",
+        project_ids: Array.isArray(newFilters.project_ids)
+          ? [...newFilters.project_ids]
+          : [],
+        member_ids: Array.isArray(newFilters.member_ids)
+          ? [...newFilters.member_ids]
+          : [],
+        _synced: true, // Mark as synced to avoid re-syncing
+      };
+    } else if (!isOpen) {
+      // Reset sync flag when panel closes
+      localFilters.value._synced = false;
+    }
   },
   { deep: true, immediate: true }
 );

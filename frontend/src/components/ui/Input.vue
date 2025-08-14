@@ -73,7 +73,7 @@ const props = defineProps({
   },
   errorMessage: {
     type: String,
-    default: "This field has an error",
+    default: "",
   },
   min: {
     type: [String, Number],
