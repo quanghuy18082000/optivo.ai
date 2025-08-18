@@ -117,7 +117,7 @@
       <UserAssignmentsTab
         v-else-if="activeTab === 'assignments'"
         :selected-user-for-assignment="selectedUserForAssignment"
-        :selected-role-for-assignment="selectedRoleForAssignment"
+        :selected-roles-for-assignment="selectedRolesForAssignment"
         :available-users-options="availableUsersOptions"
         :project-roles-options="projectRolesOptions"
         :loading-users="loadingUsers"
@@ -126,16 +126,23 @@
         :can-assign-role="canAssignRole"
         :can-add-user="canAddUser"
         :can-delete-user="canDeleteUser"
-        :loading-user-assignments="loadingUserAssignments"
-        :user-assignment-columns="userAssignmentColumns"
-        :project-users-with-roles="projectUsersWithRoles"
+        :loading-user-assignments="loadingUserAssignmentsPagination"
+        :user-assignments="userAssignments"
+        :pagination-data="userAssignmentsPagination"
+        :is-editing-user="isEditingUser"
+        :current-editing-user="currentEditingUser"
         @assign-role="handleAssignUserRole"
         @update:selected-user-for-assignment="
           selectedUserForAssignment = $event
         "
-        @update:selected-role-for-assignment="
-          selectedRoleForAssignment = $event
+        @update:selected-roles-for-assignment="
+          selectedRolesForAssignment = $event
         "
+        @page-change="handleUserAssignmentsPageChange"
+        @edit-user-roles="handleEditUserRoles"
+        @manage-roles="handleManageUserRoles"
+        @remove-user="handleRemoveUser"
+        @cancel-editing="resetAssignmentForm"
       />
     </div>
 
@@ -201,7 +208,7 @@ import { useI18n } from "vue-i18n";
 import { usePermissions } from "@/composables/usePermissions";
 import { useProjectPermissions } from "../composables/useProjectPermissions.js";
 import { PROJECT_PERMISSIONS } from "../constants/projectPermissions.js";
-import { debugRouteParams } from "../utils/debugPermissions.js";
+
 import MainLayout from "@/layouts/MainLayout.vue";
 import ConfirmModal from "@/components/ui/ConfirmModal.vue";
 import TabNavigation from "../components/TabNavigation.vue";
@@ -218,8 +225,9 @@ import {
   deleteProjectRole,
   getProjectsForDropdown,
   unassignProjectRoleFromUser,
+  getProjectUserAssignments,
 } from "../services/projectPermissionService";
-import { getProjectRoles } from "../services/projectService";
+import { getProjectRoles, getProjectById } from "../services/projectService";
 import { useAuthStore } from "@/modules/auth/store";
 import {
   getPermissionDisplayName,
@@ -281,9 +289,23 @@ const projectUsersWithRoles = ref([]);
 // User assignment form data
 const availableUsers = ref([]);
 const selectedUserForAssignment = ref(null);
-const selectedRoleForAssignment = ref(null);
+const selectedRolesForAssignment = ref([]);
 const loadingUsers = ref(false);
 const assigningRole = ref(false);
+
+// Editing state
+const isEditingUser = ref(false);
+const currentEditingUser = ref(null);
+
+// New state for paginated user assignments
+const userAssignments = ref([]);
+const userAssignmentsPagination = ref({
+  current_page: 1,
+  total_pages: 0,
+  total_count: 0,
+  per_page: 10,
+});
+const loadingUserAssignmentsPagination = ref(false);
 
 // Computed
 const projectOptions = computed(() => {
@@ -293,6 +315,19 @@ const projectOptions = computed(() => {
     description: project.description,
   }));
 });
+
+// Load current project by ID to show name in header
+const loadCurrentProject = async () => {
+  if (!selectedProjectId.value) return;
+  try {
+    const res = await getProjectById(selectedProjectId.value);
+    // API returns { data: { ...project } }
+    currentProject.value = res?.data || null;
+  } catch (e) {
+    console.error("Failed to load current project:", e);
+    currentProject.value = null;
+  }
+};
 
 // Permission modules based on API data - filtered for Project scope only
 const permissionModules = computed(() => {
@@ -510,6 +545,77 @@ const loadProjectUsersWithRoles = async () => {
   }
 };
 
+// New function to load user assignments with pagination
+const loadUserAssignmentsPaginated = async (page = 1, limit = 10) => {
+  if (!selectedProjectId.value) return;
+
+  try {
+    loadingUserAssignmentsPagination.value = true;
+    const params = {
+      page,
+      limit,
+    };
+
+    const response = await getProjectUserAssignments(
+      selectedProjectId.value,
+      params
+    );
+
+    userAssignments.value = response.data || [];
+    userAssignmentsPagination.value = {
+      current_page: response.current_page || 1,
+      total_pages: response.total_pages || 0,
+      total_count: response.total_count || 0,
+      per_page: response.per_page || 10,
+    };
+  } catch (error) {
+    console.error("Error loading user assignments:", error);
+    toast.error(t("project_permission.error_loading_user_assignments"));
+  } finally {
+    loadingUserAssignmentsPagination.value = false;
+  }
+};
+
+// Handle pagination page change
+const handleUserAssignmentsPageChange = (page) => {
+  loadUserAssignmentsPaginated(page, userAssignmentsPagination.value.per_page);
+};
+
+// Handle edit user roles
+const handleEditUserRoles = (user) => {
+  // TODO: Open modal to edit user roles
+  console.log("Edit user roles:", user);
+  toast.info(`Edit roles for ${user.user_name} - Feature coming soon`);
+};
+
+// Handle manage user roles
+const handleManageUserRoles = (user) => {
+  console.log("Manage roles for user:", user);
+
+  // Set editing mode
+  isEditingUser.value = true;
+  currentEditingUser.value = user;
+
+  // Map user data to form
+  selectedUserForAssignment.value = user.user_id;
+
+  // Map current roles to form
+  const currentRoleIds = user.list_role.map((role) => role.project_role_id);
+  selectedRolesForAssignment.value = currentRoleIds;
+
+  // Scroll to top to show the form
+  window.scrollTo({ top: 0, behavior: "smooth" });
+
+  toast.info(`${t("project_permission.manage_roles")} for ${user.user_name}`);
+};
+
+// Handle remove user
+const handleRemoveUser = (user) => {
+  // TODO: Show confirmation and remove user
+  console.log("Remove user:", user);
+  toast.info(`Remove ${user.user_name} - Feature coming soon`);
+};
+
 const loadAvailableUsers = async () => {
   try {
     loadingUsers.value = true;
@@ -524,33 +630,56 @@ const loadAvailableUsers = async () => {
 };
 
 const handleAssignUserRole = async () => {
-  if (!selectedUserForAssignment.value || !selectedRoleForAssignment.value) {
+  if (
+    !selectedUserForAssignment.value ||
+    !selectedRolesForAssignment.value ||
+    selectedRolesForAssignment.value.length === 0
+  ) {
     return;
   }
 
   try {
     assigningRole.value = true;
 
+    // Store editing state before reset
+    const wasEditing = isEditingUser.value;
+
     await assignProjectRolesToUser(
       selectedProjectId.value,
       selectedUserForAssignment.value,
-      [selectedRoleForAssignment.value]
+      selectedRolesForAssignment.value
     );
 
-    // Reset form
-    selectedUserForAssignment.value = null;
-    selectedRoleForAssignment.value = null;
+    // Reset form and editing state
+    resetAssignmentForm();
 
     // Reload user assignments
     await loadProjectUsersWithRoles();
+    await loadUserAssignmentsPaginated(); // Refresh paginated data
 
-    toast.success(t("project_permission.role_assigned_successfully"));
+    const successMessage = wasEditing
+      ? t("project_permission.roles_updated_successfully")
+      : t("project_permission.roles_assigned_successfully");
+
+    toast.success(successMessage);
   } catch (error) {
-    console.error("Error assigning role to user:", error);
-    toast.error(t("project_permission.error_assigning_role"));
+    console.error("Error assigning/updating roles:", error);
+    const errorMessage = isEditingUser.value
+      ? t("project_permission.error_updating_roles")
+      : t("project_permission.error_assigning_roles");
+
+    toast.error(errorMessage);
   } finally {
     assigningRole.value = false;
   }
+};
+
+// Reset assignment form
+const resetAssignmentForm = () => {
+  selectedUserForAssignment.value = null;
+  selectedRolesForAssignment.value = [];
+  isEditingUser.value = false;
+  currentEditingUser.value = null;
 };
 
 const onProjectChange = () => {
@@ -558,6 +687,7 @@ const onProjectChange = () => {
   selectedRolePermissions.value = [];
   loadProjectRoles();
   loadAvailableUsers(); // Load users for assignment dropdown
+  loadCurrentProject(); // Refresh header project name
   if (activeTab.value === "assignments") {
     loadProjectUsersWithRoles();
   }
@@ -687,20 +817,39 @@ const removeUserFromProject = async (user) => {
 // Watch for tab changes
 watch(activeTab, (newTab) => {
   if (newTab === "assignments" && selectedProjectId.value) {
-    loadProjectUsersWithRoles();
+    loadProjectUsersWithRoles(); // Keep old function for backward compatibility
+    loadUserAssignmentsPaginated(); // Load paginated data
   }
 });
 
+// React to route projectId changes
+watch(
+  () => route.params.projectId,
+  async (newProjectId) => {
+    if (!newProjectId) return;
+    selectedProjectId.value = newProjectId;
+    await Promise.all([
+      loadCurrentProject(),
+      loadProjectRoles(),
+      loadAvailableUsers(),
+      fetchUserPermissions(),
+    ]);
+    if (activeTab.value === "assignments") {
+      loadProjectUsersWithRoles();
+      loadUserAssignmentsPaginated();
+    }
+  }
+);
+
 // Lifecycle
 onMounted(async () => {
-  // Debug route params
-  debugRouteParams(route);
-
   await Promise.all([
     loadProjectRoles(),
     loadPermissions(),
     loadAvailableUsers(),
     fetchUserPermissions(),
   ]);
+  // Load current project info for header
+  await loadCurrentProject();
 });
 </script>

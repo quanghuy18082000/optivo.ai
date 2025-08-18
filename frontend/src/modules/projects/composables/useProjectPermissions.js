@@ -1,7 +1,7 @@
 import { ref, computed } from 'vue'
 import { getUserProjectPermissions } from '../services/projectPermissionService'
 import { useAuthStore } from '@/modules/auth/store'
-import { debugPermissionCall, debugAuthStore } from '../utils/debugPermissions'
+
 
 /**
  * Composable for managing project-specific permissions
@@ -57,9 +57,7 @@ export function useProjectPermissions(projectId) {
     permissionError.value = null
 
     try {
-      // Debug information
-      debugAuthStore(authStore)
-      debugPermissionCall(currentProjectId, currentUserId.value)
+
 
       const response = await getUserProjectPermissions(currentProjectId, currentUserId.value)
       const data = response.data || response

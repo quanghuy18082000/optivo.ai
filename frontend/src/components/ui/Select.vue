@@ -1,5 +1,5 @@
 <template>
-  <div class="relative" ref="containerRef">
+  <div class="relative" ref="containerRef" v-bind="$attrs">
     <button
       type="button"
       ref="triggerRef"
@@ -40,85 +40,85 @@
     <span v-if="error" class="text-sm text-red-500 mt-1 block">
       {{ errorMessage }}
     </span>
-  </div>
 
-  <!-- Dropdown using Teleport -->
-  <Teleport to="body">
-    <div v-if="isOpen">
-      <!-- Overlay -->
-      <div
-        class="fixed inset-0 bg-transparent select-overlay"
-        @click="closeDropdown"
-        :style="{ zIndex: 40 }"
-      ></div>
-
-      <!-- Dropdown -->
-      <div
-        ref="dropdownRef"
-        :style="popupStyle"
-        class="bg-white border border-gray-300 rounded-md shadow-lg select-dropdown flex flex-col"
-        :class="{ 'min-h-[200px]': filteredOptions.length > 0 }"
-        @click.stop
-      >
-        <!-- Sticky Search Input -->
+    <!-- Dropdown using Teleport -->
+    <Teleport to="body">
+      <div v-if="isOpen">
+        <!-- Overlay -->
         <div
-          v-if="searchable"
-          class="sticky top-0 z-10 bg-white p-3 border-b border-gray-200 rounded-t-md flex-shrink-0"
-        >
-          <input
-            ref="searchInputRef"
-            v-model="searchQuery"
-            type="text"
-            :placeholder="searchPlaceholder"
-            class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-            @click.stop
-            @keydown.enter.prevent="selectFirstOption"
-            @keydown.escape.prevent="closeDropdown"
-          />
-        </div>
+          class="fixed inset-0 bg-transparent select-overlay"
+          @click="closeDropdown"
+          :style="{ zIndex: 40 }"
+        ></div>
 
-        <!-- Scrollable Options List -->
+        <!-- Dropdown -->
         <div
-          class="overflow-y-auto flex-1"
-          :style="{
-            maxHeight: maxHeight + 'px',
-            minHeight: getMinHeight() + 'px',
-          }"
+          ref="dropdownRef"
+          :style="popupStyle"
+          class="bg-white border border-gray-300 rounded-md shadow-lg select-dropdown flex flex-col"
+          :class="{ 'min-h-[200px]': filteredOptions.length > 0 }"
+          @click.stop
         >
+          <!-- Sticky Search Input -->
           <div
-            v-for="option in filteredOptions"
-            :key="option.value"
-            @click="!option.disabled && selectOption(option)"
-            class="px-3 py-2 transition-colors duration-150"
-            :class="{
-              'bg-blue-50 text-blue-600':
-                selectedOption?.value === option.value && !option.disabled,
-              'cursor-pointer hover:bg-gray-100': !option.disabled,
-              'cursor-not-allowed text-gray-400 bg-gray-50': option.disabled,
-            }"
-            :title="
-              option.disabled
-                ? 'This project is already selected in another group'
-                : ''
-            "
+            v-if="searchable"
+            class="sticky top-0 z-10 bg-white p-3 border-b border-gray-200 rounded-t-md flex-shrink-0"
           >
-            <TruncateText :name="option.label" text-class="inline" />
-            <span v-if="option.disabled" class="ml-1 text-xs text-gray-500">
-              (already selected)
-            </span>
+            <input
+              ref="searchInputRef"
+              v-model="searchQuery"
+              type="text"
+              :placeholder="searchPlaceholder"
+              class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+              @click.stop
+              @keydown.enter.prevent="selectFirstOption"
+              @keydown.escape.prevent="closeDropdown"
+            />
           </div>
 
-          <!-- No Options Message -->
+          <!-- Scrollable Options List -->
           <div
-            v-if="filteredOptions.length === 0"
-            class="px-3 py-2 text-gray-500 text-sm"
+            class="overflow-y-auto flex-1"
+            :style="{
+              maxHeight: maxHeight + 'px',
+              minHeight: getMinHeight() + 'px',
+            }"
           >
-            {{ searchQuery ? "No options found" : "No options available" }}
+            <div
+              v-for="option in filteredOptions"
+              :key="option.value"
+              @click="!option.disabled && selectOption(option)"
+              class="px-3 py-2 transition-colors duration-150"
+              :class="{
+                'bg-blue-50 text-blue-600':
+                  selectedOption?.value === option.value && !option.disabled,
+                'cursor-pointer hover:bg-gray-100': !option.disabled,
+                'cursor-not-allowed text-gray-400 bg-gray-50': option.disabled,
+              }"
+              :title="
+                option.disabled
+                  ? 'This project is already selected in another group'
+                  : ''
+              "
+            >
+              <TruncateText :name="option.label" text-class="inline" />
+              <span v-if="option.disabled" class="ml-1 text-xs text-gray-500">
+                (already selected)
+              </span>
+            </div>
+
+            <!-- No Options Message -->
+            <div
+              v-if="filteredOptions.length === 0"
+              class="px-3 py-2 text-gray-500 text-sm"
+            >
+              {{ searchQuery ? "No options found" : "No options available" }}
+            </div>
           </div>
         </div>
       </div>
-    </div>
-  </Teleport>
+    </Teleport>
+  </div>
 </template>
 
 <script setup>

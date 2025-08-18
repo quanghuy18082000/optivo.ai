@@ -35,10 +35,15 @@
     "saving": "Đang lưu...",
     "select_all": "Chọn tất cả",
     "clear_all": "Xóa tất cả",
+    "search": "Tìm kiếm",
+    "search_placeholder": "Tìm kiếm...",
     "user": "Người dùng",
+    "user_id": "ID Người dùng",
     "actions": "Thao tác",
     "remove": "Xóa",
-    "close": "Đóng"
+    "close": "Đóng",
+    "active": "Hoạt động",
+    "inactive": "Không hoạt động"
   },
   "auth": {
     "login": {
@@ -269,6 +274,7 @@
     "select_user": "Chọn người dùng",
     "select_user_placeholder": "Chọn người dùng để gán vai trò",
     "select_roles": "Chọn vai trò",
+    "search_roles": "Tìm kiếm vai trò...",
     "user_required": "Vui lòng chọn người dùng",
     "roles_required": "Vui lòng chọn ít nhất một vai trò",
     "no_roles_available": "Không có vai trò nào cho dự án này. Vui lòng tạo vai trò trước.",
@@ -295,6 +301,12 @@
     "choose_user":"Chọn một người dùng",
     "assign_role":"Gán vai trò",
     "assign_user_role": "Gán vai trò người dùng",
+    "update_user_roles": "Cập nhật vai trò người dùng",
+    "update_roles": "Cập nhật vai trò",
+    "editing_roles_for": "Đang chỉnh sửa vai trò cho",
+    "editing": "Đang chỉnh sửa...",
+    "roles_updated_successfully": "Cập nhật vai trò người dùng thành công",
+    "error_updating_roles": "Không thể cập nhật vai trò người dùng",
     "select_role":"Chọn vai trò",
     "role_assigned_successfully": "Vai trò đã được gán thành công"
   }

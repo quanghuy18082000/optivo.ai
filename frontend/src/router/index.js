@@ -16,18 +16,7 @@ const routes = [
   ...projectRoutes,
   ...systemConfigRoutes,
   ...userManagementRoutes,
-  {
-    path: "/permission-test",
-    name: "PermissionTest",
-    component: () => import("@/pages/PermissionTestPage.vue"),
-    meta: { requiresAuth: true }
-  },
-  {
-    path: "/dropdown-test",
-    name: "DropdownTest",
-    component: () => import("@/test/DropdownTest.vue"),
-    meta: { requiresAuth: true }
-  },
+
   {
     path: "/unauthorized",
     name: "Unauthorized",

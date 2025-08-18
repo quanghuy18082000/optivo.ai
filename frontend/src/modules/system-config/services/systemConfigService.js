@@ -17,6 +17,17 @@ export const getSystemConfiguration = async (companyId) => {
   }
 }
 
+// New endpoint variant without company context if needed
+export const getGlobalSystemConfiguration = async () => {
+  try {
+    const response = await get(`/system-config/system-configuration`)
+    return response.data || { data: {} }
+  } catch (error) {
+    console.error("API Error:", error)
+    throw new Error(error.response?.data?.message || error.message || "Failed to fetch system configuration")
+  }
+}
+
 /**
  * Update system configuration for a specific company
  * @param {number} companyId - The company ID

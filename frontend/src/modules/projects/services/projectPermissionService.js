@@ -155,6 +155,28 @@ export const getProjectUsersWithRoles = async (projectId, params = {}) => {
 }
 
 /**
+ * Get user assignments for a project with pagination
+ * @param {number} projectId - Project ID
+ * @param {Object} params - Query parameters (page, limit, search, etc.)
+ * @returns {Promise<Object>} Object with data array and pagination info
+ */
+export const getProjectUserAssignments = async (projectId, params = {}) => {
+  try {
+    const response = await get(`/projects/${projectId}/users/roles`, params)
+    return response.data || { 
+      data: [], 
+      current_page: 1, 
+      total_pages: 0, 
+      total_count: 0,
+      per_page: 10
+    }
+  } catch (error) {
+    console.error('API Error:', error);
+    throw new Error(error.response?.data?.message || error.message || 'Failed to fetch project user assignments');
+  }
+}
+
+/**
  * Get user's roles in a specific project
  * @param {number} projectId - Project ID
  * @param {number} userId - User ID

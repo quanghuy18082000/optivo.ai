@@ -187,9 +187,6 @@ import { usePermissions } from "@/composables/usePermissions.js";
 import { useProjectPermissions } from "../composables/useProjectPermissions.js";
 import { useAuthStore } from "@/modules/auth/store";
 import { PROJECT_PERMISSIONS } from "../constants/projectPermissions.js";
-import { debugRouteParams } from "../utils/debugPermissions.js";
-import { runQuickTests } from "../utils/quickTest.js";
-import { troubleshootPermissions } from "../utils/permissionTroubleshooter.js";
 
 const router = useRouter();
 const route = useRoute();
@@ -799,42 +796,25 @@ const updateProject = async (skipPlan = false) => {
 
 // Initialize component
 onMounted(async () => {
-  // Debug route params
-  debugRouteParams(route);
-
-  // Run comprehensive troubleshooting
-  const troubleshootResults = troubleshootPermissions(route, authStore);
-
-  if (troubleshootResults.hasIssues) {
-    console.error(
-      "❌ Permission system issues detected. Check troubleshooting report above."
-    );
-
-    // Show user-friendly error messages
-    if (!troubleshootResults.canMakeAPICall) {
-      if (!projectId.value) {
-        toast.error(
-          "Invalid project URL. Please check the link and try again."
-        );
-        return; // Don't continue loading if project ID is invalid
-      } else if (!authStore?.user?.id) {
-        toast.error("Please log in to continue.");
-        return; // Don't continue loading if not authenticated
-      } else {
-        toast.error("Unable to load project permissions. Please try again.");
-      }
-    }
-  } else {
-    console.log("✅ Permission system ready to go!");
+  // Validate project ID and user authentication
+  if (!projectId.value) {
+    toast.error("Invalid project URL. Please check the link and try again.");
+    return;
   }
 
-  // Only proceed if we have a valid project ID
-  if (projectId.value) {
+  if (!authStore?.user?.id) {
+    toast.error("Please log in to continue.");
+    return;
+  }
+
+  // Load project data
+  try {
     await fetchPositions();
     await fetchProjectDetails();
     await fetchUserPermissions();
-  } else {
-    console.error("Cannot load project: Invalid project ID");
+  } catch (error) {
+    console.error("Error loading project data:", error);
+    toast.error("Unable to load project data. Please try again.");
   }
 
   stopLoading();

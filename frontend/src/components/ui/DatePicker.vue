@@ -138,19 +138,22 @@
             <button
               v-for="date in calendarDays"
               :key="`${date.year}-${date.month}-${date.day}`"
-              @click="selectDate(date)"
+              @click="!date.isDisabled && selectDate(date)"
               class="w-9 h-9 text-sm rounded-lg transition-all duration-150 flex items-center justify-center font-medium"
               :class="[
-                date.isCurrentMonth
+                date.isDisabled
+                  ? 'text-gray-300 cursor-not-allowed opacity-50'
+                  : date.isCurrentMonth
                   ? 'text-gray-900 hover:bg-blue-50'
                   : 'text-gray-400 hover:bg-gray-50',
-                date.isSelected
+                date.isSelected && !date.isDisabled
                   ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-md'
                   : '',
-                date.isToday && !date.isSelected
+                date.isToday && !date.isSelected && !date.isDisabled
                   ? 'bg-blue-100 text-blue-700 font-bold ring-2 ring-blue-200'
                   : '',
               ]"
+              :disabled="date.isDisabled"
             >
               {{ date.day }}
             </button>
@@ -186,6 +189,11 @@ const props = defineProps({
   error: { type: Boolean, default: false },
   errorMessage: { type: String, default: "This field has an error" },
   dateFormat: { type: String, default: "yyyy-MM-dd" },
+  // Optional min/max date boundaries in 'yyyy-MM-dd' format
+  minDate: { type: String, default: null },
+  maxDate: { type: String, default: null },
+  // Optional function(Date): boolean -> return true to disable a specific date
+  disabledDates: { type: Function, default: null },
 });
 
 const emit = defineEmits(["update:modelValue", "blur"]);
@@ -252,11 +260,19 @@ const getDisplayFormat = () => {
 
 const calendarDays = computed(() => {
   const firstDay = new Date(currentYear.value, currentMonth.value, 1);
-  const lastDay = new Date(currentYear.value, currentMonth.value + 1, 0);
   const startDate = new Date(firstDay);
   startDate.setDate(startDate.getDate() - firstDay.getDay());
   const today = new Date();
   const days = [];
+
+  // Parse min/max to Date
+  const parseYmd = (s) => {
+    if (!s) return null;
+    const [y, m, d] = s.split("-").map(Number);
+    return new Date(y, (m || 1) - 1, d || 1);
+  };
+  const min = parseYmd(props.minDate);
+  const max = parseYmd(props.maxDate);
 
   for (let i = 0; i < 42; i++) {
     const date = new Date(startDate);
@@ -267,6 +283,18 @@ const calendarDays = computed(() => {
       selectedDate.value &&
       date.toDateString() === selectedDate.value.toDateString();
 
+    // Disable if out of [min, max] range or matches custom disabled predicate
+    const beforeMin = min
+      ? date < new Date(min.getFullYear(), min.getMonth(), min.getDate())
+      : false;
+    const afterMax = max
+      ? date > new Date(max.getFullYear(), max.getMonth(), max.getDate())
+      : false;
+    const customDisabled =
+      typeof props.disabledDates === "function"
+        ? !!props.disabledDates(date)
+        : false;
+
     days.push({
       day: date.getDate(),
       month: date.getMonth(),
@@ -275,6 +303,7 @@ const calendarDays = computed(() => {
       isCurrentMonth,
       isToday,
       isSelected,
+      isDisabled: beforeMin || afterMax || customDisabled,
     });
   }
 

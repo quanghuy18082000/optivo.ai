@@ -17,6 +17,11 @@ import Input from "@/components/ui/Input.vue";
 import Select from "@/components/ui/Select.vue";
 import Button from "@/components/ui/Button.vue";
 import DatePicker from "@/components/ui/DatePicker.vue";
+import { useAuthStore } from "@/modules/auth/store";
+import {
+  getSystemConfiguration,
+  getGlobalSystemConfiguration,
+} from "@/modules/system-config/services/systemConfigService";
 import HoursMinutesInput from "@/components/ui/HoursMinutesInput.vue";
 import { useWorklog } from "../composables/useWorklog";
 import { getProjects } from "../services/worklogService";
@@ -35,6 +40,72 @@ const { stopLoading } = usePageInitLoading("create-worklog");
 const selectedDate = ref(
   route.query.date || new Date().toISOString().split("T")[0]
 );
+
+// System configuration based date limits
+const authStore = useAuthStore();
+const minDate = ref(null); // 'yyyy-MM-dd'
+// Default: always disable future dates even if config not loaded
+const maxDate = ref(new Date().toISOString().split("T")[0]); // 'yyyy-MM-dd'
+
+const loadDateLimits = async () => {
+  try {
+    const companyId = authStore.user?.company_id;
+    const cfgRes = companyId
+      ? await getSystemConfiguration(companyId)
+      : await getGlobalSystemConfiguration();
+    const cfg = cfgRes?.data || {};
+
+    // Strictest window among edit/delete (minutes) -> inclusive days
+    const minutesEdit = Number(cfg.worklog_edit_time_limit_minutes ?? NaN);
+    const minutesDelete = Number(cfg.worklog_delete_time_limit_minutes ?? NaN);
+
+    const toDaysInclusive = (mins) =>
+      Number.isFinite(mins)
+        ? Math.max(1, Math.ceil(mins / (60 * 24)))
+        : Infinity;
+
+    const daysEdit = toDaysInclusive(minutesEdit);
+    const daysDelete = toDaysInclusive(minutesDelete);
+
+    // N includes today: [today - (N - 1), today]
+    const n = Math.min(daysEdit, daysDelete);
+    const today = new Date();
+
+    if (Number.isFinite(n)) {
+      const start = new Date(today);
+      start.setDate(today.getDate() - (n - 1));
+      const y = start.getFullYear();
+      const m = String(start.getMonth() + 1).padStart(2, "0");
+      const d = String(start.getDate()).padStart(2, "0");
+      minDate.value = `${y}-${m}-${d}`;
+
+      const y2 = today.getFullYear();
+      const m2 = String(today.getMonth() + 1).padStart(2, "0");
+      const d2 = String(today.getDate()).padStart(2, "0");
+      maxDate.value = `${y2}-${m2}-${d2}`;
+    } else {
+      // Fallback to today only
+      const y2 = today.getFullYear();
+      const m2 = String(today.getMonth() + 1).padStart(2, "0");
+      const d2 = String(today.getDate()).padStart(2, "0");
+      minDate.value = `${y2}-${m2}-${d2}`;
+      maxDate.value = `${y2}-${m2}-${d2}`;
+    }
+
+    // Clamp selectedDate to range if needed
+    const clampToRange = (dateStr) => {
+      const date = new Date(dateStr);
+      const min = minDate.value ? new Date(minDate.value) : null;
+      const max = maxDate.value ? new Date(maxDate.value) : null;
+      if (min && date < min) return minDate.value;
+      if (max && date > max) return maxDate.value;
+      return dateStr;
+    };
+    selectedDate.value = clampToRange(selectedDate.value);
+  } catch (e) {
+    console.error("Failed to load date limits:", e);
+  }
+};
 
 // Update URL when date changes
 const updateDateInURL = (date) => {
@@ -367,7 +438,8 @@ watch(
 );
 
 // Initialize the selected projects map when component is mounted
-onMounted(() => {
+onMounted(async () => {
+  await loadDateLimits();
   updateSelectedProjects();
   stopLoading();
 });
@@ -400,6 +472,8 @@ onMounted(() => {
             v-model="selectedDate"
             class="w-full sm:w-64"
             :disabled="isFormLoading"
+            :min-date="minDate"
+            :max-date="maxDate"
             @update:modelValue="updateDateInURL"
           />
         </div>

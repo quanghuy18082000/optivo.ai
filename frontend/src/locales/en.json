@@ -35,10 +35,16 @@
     "saving": "Saving...",
     "select_all": "Select All",
     "clear_all": "Clear All",
+    "search": "Search",
+    "search_placeholder": "Search...",
     "user": "User",
+    "user_id": "User ID",
     "actions": "Actions",
     "remove": "Remove",
-    "close": "Close"
+    "close": "Close",
+    "active": "Active",
+    "inactive": "Inactive",
+    "status":"Status"
   },
   "auth": {
     "login": {
@@ -271,6 +277,7 @@
     "select_user": "Select User",
     "select_user_placeholder": "Choose a user to assign roles",
     "select_roles": "Select Roles",
+    "search_roles": "Search roles...",
     "user_required": "Please select a user",
     "roles_required": "Please select at least one role",
     "no_roles_available": "No roles available for this project. Please create roles first.",
@@ -294,10 +301,19 @@
     "error_assigning_roles": "Failed to assign project roles",
     "error_saving_permissions": "Failed to save role permissions",
     "choose_role": "Choose a role",
+    "choose_roles": "Choose a roles",
     "choose_user":"Choose User",
     "assign_role":"Assign Role",
     "assign_user_role": "Assign User Role",
+    "update_user_roles": "Update User Roles",
+    "update_roles": "Update Roles",
+    "editing_roles_for": "Editing roles for",
+    "editing": "Editing...",
+    "roles_updated_successfully": "User roles updated successfully",
+    "error_updating_roles": "Failed to update user roles",
     "select_role":"Select Role",
-    "role_assigned_successfully": "Role assigned successfully"
+    "role_assigned_successfully": "Role assigned successfully",
+    "manage_roles":"Manage Roles"
+
   }
 }
