@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, watch, onMounted } from "vue";
-import { useForm, useFieldArray } from "vee-validate";
+// import { useForm, useFieldArray } from "vee-validate";
 import { toTypedSchema } from "@vee-validate/yup";
 import * as yup from "yup";
 import { v4 as uuidv4 } from "uuid";
@@ -22,11 +22,13 @@ import {
   getSystemConfiguration,
   getGlobalSystemConfiguration,
 } from "@/modules/system-config/services/systemConfigService";
-import HoursMinutesInput from "@/components/ui/HoursMinutesInput.vue";
+import HourSlider from "@/components/ui/HourSlider.vue";
 import { useWorklog } from "../composables/useWorklog";
 import { getProjects } from "../services/worklogService";
 import { useToast } from "@/composables/useToast";
 import { usePageInitLoading } from "@/composables/usePageLoading";
+import WorklogSection from "../components/WorklogSection.vue";
+import { getCategories } from "../services/worklogService";
 
 const router = useRouter();
 const route = useRouter().currentRoute.value;
@@ -123,13 +125,18 @@ const { createNewWorklog, createBatchWorklogs, isCreating, createError } =
     fetchWorklogs: false,
   });
 
-// Fetch projects only
+// Fetch projects and categories
 const { data: projectsData, isLoading: isLoadingProjects } = useQuery({
   queryKey: ["projects"],
   queryFn: getProjects,
 });
+const { data: categoriesData, isLoading: isLoadingCategories } = useQuery({
+  queryKey: ["categories", authStore.user?.company_id],
+  queryFn: () => getCategories({ company_id: authStore.user?.company_id }),
+  enabled: computed(() => Boolean(authStore.user?.company_id)),
+});
 
-// Integrate projects loading with global loading screen
+// Integrate loading with global loading screen
 useLoadingIntegration(LOADING_KEYS.PROJECTS, isLoadingProjects);
 
 // All available projects
@@ -142,49 +149,39 @@ const allProjectOptions = computed(() => {
   );
 });
 
-// Track selected projects for dropdown filtering
+// All available categories (strings -> options)
+const allCategoryOptions = computed(() => {
+  const raw = categoriesData?.value?.data || [];
+  // backend may return [{name, id}] or strings; normalize to label/value
+  return raw.map((c) => {
+    if (typeof c === "string") return { label: c, value: c };
+    if (c && typeof c === "object")
+      return {
+        label: c.name ?? String(c.id),
+        value: c.name ?? String(c.id),
+        id: c.id,
+      };
+    return { label: String(c), value: String(c) };
+  });
+});
+
+// Helper: find category_id by category name from fetched list
+const findCategoryIdByName = (name) => {
+  const raw = categoriesData?.value?.data || [];
+  for (const c of raw) {
+    if (c && typeof c === "object" && c.name === name) return c.id ?? null;
+  }
+  return null;
+};
+
+// Track selected projects for dropdown filtering (handled inside WorklogSection)
 const selectedProjects = ref(new Map());
 
-// Update the selected projects map when a project is selected
-const updateSelectedProjects = () => {
-  // Clear the current map
-  selectedProjects.value.clear();
+// No-op to keep compatibility with old calls
+const updateSelectedProjects = () => {};
 
-  // Rebuild the map with current selections
-  if (worklogGroups.value && worklogGroups.value.length > 0) {
-    worklogGroups.value.forEach((group, index) => {
-      if (group.value.projectId) {
-        selectedProjects.value.set(group.value.projectId, index);
-      }
-    });
-  }
-};
-
-// Function to get available project options for a specific group
-const getAvailableProjectOptions = (currentGroupIndex) => {
-  // If there are no worklog groups yet, return all projects
-  if (!worklogGroups.value || worklogGroups.value.length === 0) {
-    return allProjectOptions.value;
-  }
-
-  // Filter out already selected projects
-  const result = allProjectOptions.value.map((option) => {
-    // Check if this project is selected in any group other than the current one
-    const selectedInGroupIndex = selectedProjects.value.get(option.value);
-    const isDisabled =
-      selectedInGroupIndex !== undefined &&
-      selectedInGroupIndex !== currentGroupIndex;
-
-    return {
-      ...option,
-      disabled: isDisabled,
-      // Keep the original label - the Select component will handle showing the disabled state
-      label: option.label,
-    };
-  });
-
-  return result;
-};
+// Always return all options; uniqueness is handled at section level
+const getAvailableProjectOptions = () => allProjectOptions.value;
 
 // Yup Schemas for validation
 const workEntrySchema = yup.object({
@@ -235,191 +232,214 @@ const worklogGroupSchema = yup.object({
     .min(1, "At least one work entry is required for each project"),
 });
 
-const formSchema = toTypedSchema(
-  yup
-    .object({
-      worklogGroups: yup
-        .array()
-        .of(worklogGroupSchema)
-        .min(1, "At least one worklog group is required"),
-    })
-    .test("total-time-validation", "Time validation", function (value) {
-      const { worklogGroups } = value;
-      const errors = [];
+// Remove old VeeValidate schema because we moved to slider-based simple validation
+const formSchema = null;
 
-      for (
-        let groupIndex = 0;
-        groupIndex < worklogGroups.length;
-        groupIndex++
-      ) {
-        const group = worklogGroups[groupIndex];
+// UI state for new sections
+const projectRows = ref([
+  {
+    id: uuidv4(),
+    name: null, // projectId as string
+    hours: 0,
+    minutes: 0,
+    desc: "",
+  },
+]);
 
-        for (
-          let entryIndex = 0;
-          entryIndex < group.workEntries.length;
-          entryIndex++
-        ) {
-          const entry = group.workEntries[entryIndex];
-          const { hours, minutes } = entry;
+const generalRows = ref([
+  {
+    id: uuidv4(),
+    name: "", // category_name free text
+    hours: 0,
+    minutes: 0,
+    desc: "",
+  },
+]);
 
-          // Convert null/undefined to 0 for calculation
-          const hoursValue = hours === null || hours === undefined ? 0 : hours;
-          const minutesValue =
-            minutes === null || minutes === undefined ? 0 : minutes;
-
-          if (hoursValue === 0 && minutesValue === 0) {
-            errors.push({
-              path: `worklogGroups[${groupIndex}].workEntries[${entryIndex}].hours`,
-              message: "Enter time worked",
-            });
-          }
-        }
-      }
-
-      // Create multiple errors using Yup's ValidationError
-      if (errors.length > 0) {
-        const validationError = new yup.ValidationError(
-          "Multiple time validation errors",
-          value,
-          "worklogGroups"
-        );
-
-        // Add inner errors for each field
-        validationError.inner = errors.map(
-          (error) => new yup.ValidationError(error.message, value, error.path)
-        );
-
-        throw validationError;
-      }
-
-      return true;
-    })
+const totalMinutes = computed(() => {
+  const sumRows = (rows) =>
+    rows.reduce(
+      (acc, r) => acc + (Number(r.hours || 0) * 60 + Number(r.minutes || 0)),
+      0
+    );
+  return sumRows(projectRows.value) + sumRows(generalRows.value);
+});
+const totalHoursDisplay = computed(
+  () => (totalMinutes.value / 60).toFixed(2) + "h"
 );
 
-// VeeValidate form setup with validation mode set to submit
-const { handleSubmit, errors, resetForm, validate } = useForm({
-  validationSchema: formSchema,
-  initialValues: {
-    worklogGroups: [
-      {
-        id: uuidv4(),
-        projectId: null,
-        workEntries: [
-          {
-            id: uuidv4(),
-            description: "",
-            hours: null,
-            minutes: null,
-          },
-        ],
-      },
-    ],
-  },
-  validateOnMount: false, // Don't validate on component mount
-  validateOnBlur: false, // Don't validate on blur initially
-  validateOnChange: false, // Don't validate on change initially
-  validateOnInput: false, // Don't validate on every keystroke
-});
-
-const { fields: worklogGroups, push, remove } = useFieldArray("worklogGroups");
-
-// Functions to manage form structure
-const addWorklogGroup = () => {
-  // Check if there are any available projects left to select
-  const currentGroupCount = worklogGroups.value.length;
-  const availableProjects = getAvailableProjectOptions(currentGroupCount);
-  const hasAvailableProjects = availableProjects.some((p) => !p.disabled);
-
-  if (!hasAvailableProjects) {
-    toast.warning(
-      "All projects have already been selected. You cannot add more project groups."
-    );
-    return;
-  }
-
-  push({
-    id: uuidv4(),
-    projectId: null,
-    workEntries: [
-      { id: uuidv4(), description: "", hours: null, minutes: null },
-    ],
-  });
-
-  // Update the selected projects map after adding a new group
-  updateSelectedProjects();
+// Add-row helpers for "Khác" buttons
+const addProjectRow = () => {
+  projectRows.value = [
+    ...projectRows.value,
+    { id: uuidv4(), name: null, hours: 0, minutes: 0, desc: "" },
+  ];
+};
+const addGeneralRow = () => {
+  generalRows.value = [
+    ...generalRows.value,
+    { id: uuidv4(), name: "", hours: 0, minutes: 0, desc: "" },
+  ];
 };
 
-const addWorkEntry = (groupIndex) => {
-  worklogGroups.value[groupIndex].value.workEntries.push({
-    id: uuidv4(),
-    description: "",
-    hours: null,
-    minutes: null,
-  });
-};
-
-const removeWorklogGroup = (index) => {
-  remove(index);
-  // Update the selected projects map after removing a group
-  updateSelectedProjects();
-};
-
-const removeWorkEntry = (groupIndex, entryIndex) => {
-  worklogGroups.value[groupIndex].value.workEntries.splice(entryIndex, 1);
-};
-
-// Track if form has been submitted (for showing validation errors)
+// Track if form has been submitted (for simple validation messaging if needed)
 const hasAttemptedSubmit = ref(false);
-
-// Track which fields have been touched by user
-const touchedFields = ref(new Set());
-
-// Function to mark field as touched and enable validation
-const markFieldTouched = (fieldPath) => {
-  touchedFields.value.add(fieldPath);
-};
-
-// Function to check if field should show error
-const shouldShowError = (fieldPath) => {
-  return hasAttemptedSubmit.value || touchedFields.value.has(fieldPath);
-};
 
 const isFormLoading = ref(false);
 
-// Form submission handler
-const onSubmit = handleSubmit(async (values) => {
-  isFormLoading.value = true; // Set loading state to true
-  // Set submission attempt flag to true to show validation errors if any
+// Form submission handler (no vee-validate wrapper)
+const onSubmit = async () => {
+  isFormLoading.value = true;
   hasAttemptedSubmit.value = true;
 
-  const worklogsToCreate = values.worklogGroups.flatMap((group) =>
-    group.workEntries?.map((entry) => ({
-      project_id: Number(group.projectId), // Convert to number for API
-      description: entry.description,
-      hours: entry.hours,
-      minutes: entry.minutes,
-      // Remove date from individual entries as it will be passed separately
-    }))
-  );
+  // Clear previous inline errors
+  const clearErrors = (rows) => {
+    rows.forEach((r) => {
+      delete r.errorName;
+      delete r.errorTime;
+      delete r.errorDesc;
+    });
+  };
+  clearErrors(projectRows.value);
+  clearErrors(generalRows.value);
+
+  // Normalize project selection: map typed label -> id
+  const projectOptions = allProjectOptions.value || [];
+  const findProjectIdByLabel = (label) => {
+    const m = projectOptions.find((o) => o.label === label);
+    return m ? m.value : null;
+  };
+  projectRows.value = projectRows.value.map((r) => {
+    if (!r?.name) return r;
+    const val = String(r.name);
+    const byValue = projectOptions.some((o) => o.value === val);
+    if (byValue) return r; // already selected
+    const mapped = findProjectIdByLabel(val);
+    if (mapped) return { ...r, name: mapped };
+    return { ...r, name: null };
+  });
+
+  // Row-level validation per requirements
+  let hasErrors = false;
+  const isNonEmptyText = (s) => (s || "").trim().length > 0;
+  const validateProjectRow = (r) => {
+    const durMin = Number(r.hours || 0) * 60 + Number(r.minutes || 0);
+    const active = r.name != null || durMin > 0 || isNonEmptyText(r.desc);
+    if (!active) return; // ignore untouched empty row
+    if (!r.name) {
+      r.errorName = "Project is required";
+      hasErrors = true;
+    }
+    if (durMin <= 0) {
+      r.errorTime = "Time must be > 0";
+      hasErrors = true;
+    }
+    if (!isNonEmptyText(r.desc)) {
+      r.errorDesc = "Description is required";
+      hasErrors = true;
+    }
+  };
+  const validateGeneralRow = (r) => {
+    const durMin = Number(r.hours || 0) * 60 + Number(r.minutes || 0);
+    const active =
+      (r.name && r.name.trim().length > 0) ||
+      durMin > 0 ||
+      isNonEmptyText(r.desc);
+    if (!active) return; // ignore untouched empty row
+    if (!(r.name && r.name.trim().length > 0)) {
+      r.errorName = "Category is required";
+      hasErrors = true;
+    }
+    if (durMin <= 0) {
+      r.errorTime = "Time must be > 0";
+      hasErrors = true;
+    }
+    if (!isNonEmptyText(r.desc)) {
+      r.errorDesc = "Description is required";
+      hasErrors = true;
+    }
+  };
+
+  projectRows.value.forEach(validateProjectRow);
+  generalRows.value.forEach(validateGeneralRow);
+
+  if (hasErrors) {
+    toast.error("Please fix the highlighted errors");
+    isFormLoading.value = false;
+    return;
+  }
+
+  // Build payload in { root, more } format from slider sections
+  // root: project-based entries
+  const rootMap = new Map();
+  for (const r of projectRows.value) {
+    if (!r.name) continue; // require project selection
+    const durMin = Number(r.hours || 0) * 60 + Number(r.minutes || 0);
+    if (durMin <= 0) continue; // skip zero time
+    const pid = Number(r.name);
+    const entry = {
+      duration: { hours: r.hours || 0, minutes: r.minutes || 0 },
+    };
+    const descTrim = (r.desc || "").trim();
+    if (descTrim.length > 0) entry.desc = descTrim; // only send desc if non-empty
+    if (!rootMap.has(pid)) rootMap.set(pid, []);
+    rootMap.get(pid).push(entry);
+  }
+  const root = Array.from(rootMap.entries()).map(([project_id, worklog]) => ({
+    project_id,
+    worklog,
+  }));
+
+  // more: general work entries (category_name free text)
+  const more = generalRows.value
+    .filter(
+      (r) =>
+        r.name &&
+        r.name.trim().length > 0 &&
+        ((r.hours || 0) > 0 || (r.minutes || 0) > 0)
+    )
+    .map((r) => {
+      const worklog = {
+        duration: { hours: r.hours || 0, minutes: r.minutes || 0 },
+        category_name: r.name.trim(),
+      };
+      const descTrim = (r.desc || "").trim();
+      if (descTrim.length > 0) worklog.desc = descTrim; // only send desc if non-empty
+      const categoryId = findCategoryIdByName(r.name.trim());
+      if (categoryId) worklog.category_id = categoryId;
+      return { worklog };
+    });
+
+  // Only include non-empty sections
+  const payload = {};
+  if (root.length > 0) payload.root = root;
+  if (more.length > 0) payload.more = more;
+
+  // Block submit if nothing to send
+  if (!payload.root && !payload.more) {
+    toast.error("Nothing to submit");
+    isFormLoading.value = false;
+    return;
+  }
 
   try {
-    // Use the batch API endpoint if there are multiple entries
-    await createBatchWorklogs(worklogsToCreate, selectedDate.value);
-
+    await createBatchWorklogs(payload, selectedDate.value);
     toast.success("Worklog created successfully");
-
-    resetForm(); // Clear the form
-    hasAttemptedSubmit.value = false; // Reset submission attempt flag
-    router.push("/"); // Redirect to dashboard
+    // reset sections
+    projectRows.value = [
+      { id: uuidv4(), name: null, hours: 0, minutes: 0, desc: "" },
+    ];
+    generalRows.value = [
+      { id: uuidv4(), name: "", hours: 0, minutes: 0, desc: "" },
+    ];
+    hasAttemptedSubmit.value = false;
+    router.push("/");
   } catch (err) {
-    // Show error toast
     toast.error(err.message || "Failed to create worklog");
-
-    // Error message is handled by useWorklog composable's error ref
   } finally {
-    isFormLoading.value = false; // Reset loading state
+    isFormLoading.value = false;
   }
-});
+};
 
 // Watch for date changes and update URL
 watch(selectedDate, (newDate) => {
@@ -428,14 +448,8 @@ watch(selectedDate, (newDate) => {
   }
 });
 
-// Watch for changes in worklog groups to update available project options
-watch(
-  worklogGroups,
-  () => {
-    updateSelectedProjects();
-  },
-  { deep: true, immediate: true }
-);
+// Watch projectRows to keep uniqueness inside section (handled internally)
+watch(projectRows, () => {}, { deep: true });
 
 // Initialize the selected projects map when component is mounted
 onMounted(async () => {
@@ -449,9 +463,11 @@ onMounted(async () => {
   <MainLayout>
     <template #header-left>
       <div class="flex items-center gap-4">
-        <h1 class="text-2xl font-semibold text-gray-900">Log Work</h1>
+        <h1 class="text-2xl font-semibold text-gray-900">
+          {{ t("worklog.create.title") }}
+        </h1>
         <span class="text-sm text-gray-500">
-          Record activities for
+          {{ t("worklog.create.subtitle") }}
           {{ new Date(selectedDate).toLocaleDateString() }}
         </span>
       </div>
@@ -465,7 +481,7 @@ onMounted(async () => {
             for="worklog-date"
             class="block text-sm font-medium text-gray-700 mb-1"
           >
-            Worklog Date
+            {{ t("worklog.common.date_label") }}
           </label>
           <DatePicker
             id="worklog-date"
@@ -478,282 +494,52 @@ onMounted(async () => {
           />
         </div>
 
-        <!-- Form Header -->
-        <div class="grid grid-cols-12 gap-4 text-sm font-medium text-gray-500">
-          <div class="col-span-3">Project</div>
-          <div class="col-span-5">Description</div>
-          <div class="col-span-2">Time</div>
-          <div class="col-span-1"></div>
-          <div class="col-span-1"></div>
-        </div>
-
         <!-- Worklog Groups -->
-        <div
-          v-for="(group, groupIndex) in worklogGroups"
-          :key="group.value.id"
-          class="space-y-4 border-b pb-6 mb-6 last:border-b-0 last:pb-0 last:mb-0"
-        >
-          <!-- Work Entries with Project Selection -->
-          <div
-            v-for="(entry, entryIndex) in group.value.workEntries"
-            :key="entry.id"
-            class="grid grid-cols-12 gap-4 items-start"
-          >
-            <!-- Project Selection (only show for first entry in group) -->
-            <div class="col-span-3">
-              <Select
-                v-if="entryIndex === 0"
-                v-model="group.value.projectId"
-                :options="getAvailableProjectOptions(groupIndex)"
-                placeholder="Select project"
-                searchable
-                search-placeholder="Search projects..."
-                :disabled="isFormLoading"
-                :error="
-                  shouldShowError(`worklogGroups[${groupIndex}].projectId`) &&
-                  !!errors[`worklogGroups[${groupIndex}].projectId`]
-                "
-                :error-message="
-                  shouldShowError(`worklogGroups[${groupIndex}].projectId`)
-                    ? errors[`worklogGroups[${groupIndex}].projectId`] || ''
-                    : ''
-                "
-                class="w-full"
-                @change="updateSelectedProjects"
-                @blur="
-                  markFieldTouched(`worklogGroups[${groupIndex}].projectId`)
-                "
-              />
-            </div>
-
-            <!-- Description -->
-            <div class="col-span-5">
-              <Input
-                v-model="entry.description"
-                placeholder="Work description"
-                :disabled="isFormLoading"
-                :error="
-                  shouldShowError(
-                    `worklogGroups[${groupIndex}].workEntries[${entryIndex}].description`
-                  ) &&
-                  !!errors[
-                    `worklogGroups[${groupIndex}].workEntries[${entryIndex}].description`
-                  ]
-                "
-                :error-message="
-                  shouldShowError(
-                    `worklogGroups[${groupIndex}].workEntries[${entryIndex}].description`
-                  )
-                    ? errors[
-                        `worklogGroups[${groupIndex}].workEntries[${entryIndex}].description`
-                      ] || ''
-                    : ''
-                "
-                class="w-full"
-                @blur="
-                  markFieldTouched(
-                    `worklogGroups[${groupIndex}].workEntries[${entryIndex}].description`
-                  )
-                "
-              />
-            </div>
-
-            <!-- Time Input (Hours & Minutes) -->
-            <div class="col-span-2">
-              <HoursMinutesInput
-                v-model:hours="entry.hours"
-                v-model:minutes="entry.minutes"
-                :disabled="isFormLoading"
-                :error="
-                  shouldShowError(
-                    `worklogGroups[${groupIndex}].workEntries[${entryIndex}].hours`
-                  ) &&
-                  !!errors[
-                    `worklogGroups[${groupIndex}].workEntries[${entryIndex}].hours`
-                  ]
-                "
-                :error-message="
-                  shouldShowError(
-                    `worklogGroups[${groupIndex}].workEntries[${entryIndex}].hours`
-                  )
-                    ? errors[
-                        `worklogGroups[${groupIndex}].workEntries[${entryIndex}].hours`
-                      ] || ''
-                    : ''
-                "
-                :hours-error="
-                  shouldShowError(
-                    `worklogGroups[${groupIndex}].workEntries[${entryIndex}].hours`
-                  ) &&
-                  !!errors[
-                    `worklogGroups[${groupIndex}].workEntries[${entryIndex}].hours`
-                  ]
-                "
-                :hours-error-message="
-                  shouldShowError(
-                    `worklogGroups[${groupIndex}].workEntries[${entryIndex}].hours`
-                  )
-                    ? errors[
-                        `worklogGroups[${groupIndex}].workEntries[${entryIndex}].hours`
-                      ] || ''
-                    : ''
-                "
-                :minutes-error="
-                  shouldShowError(
-                    `worklogGroups[${groupIndex}].workEntries[${entryIndex}].minutes`
-                  ) &&
-                  !!errors[
-                    `worklogGroups[${groupIndex}].workEntries[${entryIndex}].minutes`
-                  ]
-                "
-                :minutes-error-message="
-                  shouldShowError(
-                    `worklogGroups[${groupIndex}].workEntries[${entryIndex}].minutes`
-                  )
-                    ? errors[
-                        `worklogGroups[${groupIndex}].workEntries[${entryIndex}].minutes`
-                      ] || ''
-                    : ''
-                "
-                @blur="
-                  (field) => {
-                    if (field === 'hours') {
-                      markFieldTouched(
-                        `worklogGroups[${groupIndex}].workEntries[${entryIndex}].hours`
-                      );
-                    } else if (field === 'minutes') {
-                      markFieldTouched(
-                        `worklogGroups[${groupIndex}].workEntries[${entryIndex}].minutes`
-                      );
-                    }
-                  }
-                "
-              />
-            </div>
-
-            <!-- Action Buttons -->
-            <div class="col-span-1 flex justify-start gap-2">
-              <!-- Remove Entry Button -->
-              <Button
-                v-if="group.value.workEntries.length > 1"
-                type="button"
-                variant="danger"
-                size="small"
-                class="!bg-transparent !text-red-500 hover:!bg-red-50"
-                @click="removeWorkEntry(groupIndex, entryIndex)"
-                :disabled="isFormLoading"
-              >
-                <svg
-                  class="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-              </Button>
-            </div>
-            <div class="col-span-1 flex justify-end gap-2">
-              <!-- Remove Group Button (only show for first entry in group) -->
-              <Button
-                v-if="entryIndex === 0 && worklogGroups.length > 1"
-                type="button"
-                variant="danger"
-                size="small"
-                class="!bg-transparent !text-red-500 hover:!bg-red-50"
-                @click="removeWorklogGroup(groupIndex)"
-                :disabled="isFormLoading"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="24"
-                  height="24"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  class="icon icon-tabler icons-tabler-outline icon-tabler-trash"
-                >
-                  <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-                  <path d="M4 7l16 0" />
-                  <path d="M10 11l0 6" />
-                  <path d="M14 11l0 6" />
-                  <path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12" />
-                  <path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3" />
-                </svg>
-              </Button>
-            </div>
-          </div>
-
-          <!-- Add new work description for same project -->
-          <div class="grid grid-cols-12 gap-4 mt-2">
-            <div class="col-span-10 text-right">
-              <button
-                type="button"
-                @click="addWorkEntry(groupIndex)"
-                class="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 text-sm font-medium transition-colors ml-3"
-                :disabled="isFormLoading"
-              >
-                <svg
-                  class="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-                  />
-                </svg>
-                Add a new work description for the same project
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <!-- Add a new line (for a new project) -->
-        <div class="flex justify-start mt-4">
-          <button
-            type="button"
-            @click="addWorklogGroup"
-            class="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 text-sm font-medium transition-colors px-4 py-2 border border-blue-600 rounded-md"
+        <!-- New simplified UI using WorklogSection and sliders -->
+        <div class="space-y-8">
+          <!-- Projects section -->
+          <WorklogSection
+            :title="t('worklog.create.projects_section')"
+            :name-label="t('worklog.create.project_name')"
+            :name-input-is-select="true"
+            :options="allProjectOptions"
+            :enforce-unique="false"
+            v-model="projectRows"
+            @add="addProjectRow"
             :disabled="isFormLoading"
-          >
-            <svg
-              class="w-4 h-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-              />
-            </svg>
-            Add a new work
-          </button>
+            :add-at-bottom="true"
+            :desc-placeholder="t('worklog.common.description_placeholder')"
+            :name-placeholder="t('worklog.create.select_project_placeholder')"
+            :add-label="t('worklog.common.add_more')"
+          />
+
+          <!-- General work section -->
+          <WorklogSection
+            :title="t('worklog.create.general_section')"
+            :name-label="t('worklog.create.category_name')"
+            :name-input-is-select="true"
+            :options="allCategoryOptions"
+            :enforce-unique="false"
+            :allow-free-input="true"
+            v-model="generalRows"
+            @add="addGeneralRow"
+            :disabled="isFormLoading"
+            :add-at-bottom="true"
+            :desc-placeholder="t('worklog.common.description_placeholder')"
+            :name-placeholder="t('worklog.create.select_category_placeholder')"
+            :add-label="t('worklog.common.add_more')"
+          />
         </div>
 
         <!-- Action Buttons -->
-        <div class="flex justify-end gap-4 pt-4">
+        <div class="flex justify-end gap-3 pt-4">
           <Button
             type="button"
             variant="secondary"
             :disabled="isFormLoading"
             @click="router.push('/')"
           >
-            Cancel
+            {{ t("common.cancel") }}
           </Button>
           <Button
             type="submit"
@@ -762,7 +548,7 @@ onMounted(async () => {
             class="bg-blue-600 hover:bg-blue-700"
             @click="hasAttemptedSubmit = true"
           >
-            Save Worklog
+            {{ t("worklog.create.save_button") }}
           </Button>
         </div>
       </form>

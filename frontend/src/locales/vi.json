@@ -204,6 +204,41 @@
     "assign_single_role": "Gán vai trò đơn",
     "remove": "Xóa"
   },
+  "worklog": {
+    "common": {
+      "date_label": "Ngày",
+      "description": "Mô tả",
+      "description_placeholder": "Bạn đã làm gì?",
+      "time": "Thời gian",
+      "add_more": "Thêm dòng",
+      "error_loading": "Không thể tải dữ liệu",
+      "return_to_dashboard": "Về trang chính"
+    },
+    "create": {
+      "title_batch": "Tạo nhật ký",
+      "projects_section": "Dự án",
+      "general_section": "Công việc chung",
+      "project_name": "Dự án",
+      "category_name": "Danh mục",
+      "select_project_placeholder": "Chọn dự án...",
+      "select_category_placeholder": "Chọn hoặc nhập danh mục...",
+      "save_button": "Lưu"
+    },
+    "edit": {
+      "title_batch": "Sửa nhật ký",
+      "subtitle_batch_prefix": "cho ngày",
+      "toast_updated_success": "Cập nhật nhật ký thành công",
+      "toast_update_failed": "Cập nhật nhật ký thất bại"
+    },
+    "validation": {
+      "project_required": "Bắt buộc chọn dự án",
+      "category_required": "Bắt buộc chọn danh mục",
+      "time_required": "Thời gian phải > 0",
+      "desc_required": "Mô tả là bắt buộc",
+      "fix_errors": "Vui lòng sửa các lỗi được đánh dấu",
+      "nothing_to_submit": "Không có dữ liệu để gửi"
+    }
+  },
   "permission_management": {
     "title": "Quản lý phân quyền",
     "roles": "Vai trò",

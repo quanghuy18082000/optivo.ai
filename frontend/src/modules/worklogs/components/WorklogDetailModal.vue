@@ -220,6 +220,7 @@
               <!-- Project -->
               <div class="col-span-2">
                 <div
+                  v-if="entry.project_id !== 0"
                   class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800"
                 >
                   <TruncateText

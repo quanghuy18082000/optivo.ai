@@ -42,10 +42,7 @@
           <label class="block text-sm font-medium text-gray-700 mb-3">
             Search Text
           </label>
-          <Input
-            v-model="localFilters.search_text"
-            placeholder="Search projects, members, or descriptions..."
-          />
+          <Input v-model="localFilters.search_text" placeholder="Search..." />
         </div>
 
         <!-- Date Range Filters -->

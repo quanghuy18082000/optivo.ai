@@ -245,6 +245,44 @@
     "role_assignment_moved": "Role Assignment Moved",
     "role_assignment_moved_description": "Role assignment functionality has been moved to the User Management page for better user experience. You can now assign roles directly from the user list."
   },
+  "worklog": {
+    "common": {
+      "date_label": "Date",
+      "description": "Description",
+      "description_placeholder": "What did you work on?",
+      "time": "Time",
+      "add_more": "Add more",
+      "error_loading": "Failed to load data",
+      "return_to_dashboard": "Return to Dashboard"
+    },
+    "create": {
+      "title_batch": "Create Worklog",
+      "projects_section": "Projects",
+      "general_section": "General Work",
+      "project_name": "Project",
+      "category_name": "Category",
+      "select_project_placeholder": "Select a project...",
+      "select_category_placeholder": "Select or type a category...",
+      "save_button": "Save"
+    },
+    "edit": {
+      "title_batch": "Edit Worklog",
+      "subtitle_batch_prefix": "for",
+      "toast_updated_success": "Worklog updated",
+      "toast_update_failed": "Failed to update worklog",
+      "validation_description_required": "Description is required",
+      "validation_project_required": "Project is required",
+      "validation_time": "Time validation"
+    },
+    "validation": {
+      "project_required": "Project is required",
+      "category_required": "Category is required",
+      "time_required": "Time must be > 0",
+      "desc_required": "Description is required",
+      "fix_errors": "Please fix the highlighted errors",
+      "nothing_to_submit": "Nothing to submit"
+    }
+  },
   "project_permission": {
     "title": "Project Permission Management",
     "description": "Manage roles and permissions for each project. Create project-specific roles and assign them to users.",
@@ -315,5 +353,53 @@
     "role_assigned_successfully": "Role assigned successfully",
     "manage_roles":"Manage Roles"
 
+  },
+  "worklog": {
+    "common": {
+      "date_label": "Worklog Date",
+      "project": "Project",
+      "description": "Description",
+      "description_placeholder": "Work description",
+      "time": "Time",
+      "select_project": "Select project",
+      "search_projects": "Search projects...",
+      "error_loading": "Error loading worklog",
+      "return_to_dashboard": "Return to Dashboard",
+      "add_more": "Add more"
+    },
+    "create": {
+      "title": "Log Work",
+      "subtitle": "Record activities for",
+      "projects_section": "Projects",
+      "project_name": "Project name",
+      "general_section": "General work",
+      "category_name": "Work type",
+      "save_button": "Save Worklog",
+      "select_project_placeholder": "Select a project",
+      "select_category_placeholder": "Select or enter a category"
+    },
+    "edit": {
+      "title_batch": "Edit Daily Work Logs",
+      "title_single": "Edit Work Log",
+      "subtitle_batch_prefix": "Update your work records for",
+      "subtitle_single": "Update your work record",
+      "protected_group_title": "Protected Project Group",
+      "protected_group_desc": "All entries in this project are read-only",
+      "protected_short": "Protected",
+      "protected_group_short": "Protected Group",
+      "entry_not_deletable_tip": "This entry cannot be deleted",
+      "group_not_deletable_tip": "This project group cannot be deleted - all entries are protected",
+      "btn_delete_group_tip": "Delete this project group",
+      "btn_delete_group_some_deletable_tip": "Delete deletable entries from this project group",
+      "toast_deleted_entry": "Worklog entry deleted",
+      "toast_deleted_group": "Project group deleted",
+      "toast_delete_failed": "Delete failed",
+      "toast_all_projects_selected": "All projects have already been selected. You cannot add more project groups.",
+      "toast_updated_success": "Worklog updated successfully",
+      "toast_update_failed": "Failed to update worklog",
+      "validation_description_required": "Description is required",
+      "validation_project_required": "Project selection is required",
+      "validation_time": "Time validation"
+    }
   }
 }

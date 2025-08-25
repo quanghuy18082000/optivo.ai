@@ -120,12 +120,20 @@
             <div class="col-span-2">
               <div class="flex items-center gap-2">
                 <div
+                  v-if="
+                    entry.project_name !== 'Unknown Project' &&
+                    entry.project_name !== ''
+                  "
                   class="w-2 h-2 rounded-full"
                   :style="{ backgroundColor: entry.color || '#3B82F6' }"
                 ></div>
 
                 <TruncateText
-                  :name="entry.project_name"
+                  :name="
+                    entry.project_name === 'Unknown Project'
+                      ? ''
+                      : entry.project_name
+                  "
                   text-class="text-sm font-medium text-gray-700"
                 />
               </div>

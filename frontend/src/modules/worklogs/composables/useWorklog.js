@@ -156,48 +156,14 @@ export function useWorklog(options = { fetchWorklogs: true }) {
     return createWorklogMutation.mutateAsync([worklogData, date]);
   }
   
-  const createBatchWorklogs = (worklogsData, date) => {
-    // Transform the data to match the API format if needed
-    const transformedData = worklogsData.reduce((acc, worklog) => {
-      // Find if there's already an entry for this project
-      const projectIndex = acc.findIndex(item => item.project_id === worklog.project_id);
-      
-      // Create the worklog entry
-      const worklogEntry = {
-        id: worklog.id || 0, // Use provided ID or default to 0 for new entries
-        desc: worklog.description,
-        duration: {
-          hours: worklog.hours || 0,
-          minutes: worklog.minutes || 0
-        },
-      };
-      
-      if (projectIndex >= 0) {
-        // Add to existing project
-        acc[projectIndex].worklog.push(worklogEntry);
-      } else {
-        // Create new project entry
-        acc.push({
-          project_id: worklog.project_id,
-          project_name: worklog.project_name,
-          worklog: [worklogEntry]
-        });
-      }
-      
-      return acc;
-    }, []);
-    
-    // Pass the transformed data and date separately to the service function
-    return createWorklogBatchMutation.mutateAsync([transformedData, date]);
+  const createBatchWorklogs = (payload, date) => {
+    // Payload is already in BE-required format { root: [...], more: [...] }
+    return createWorklogBatchMutation.mutateAsync([payload, date]);
   }
   
-  const updateBatchWorklogs = (worklogsData, date) => {
-    
-    // The data is already in the correct format for the API
-    // No need for additional transformation since we're receiving it in the right format
-    
-    // Pass the data and date separately to the service function
-    return updateWorklogBatchMutation.mutateAsync([worklogsData, date]);
+  const updateBatchWorklogs = (payload, date) => {
+    // Keep pass-through for update as well
+    return updateWorklogBatchMutation.mutateAsync([payload, date]);
   }
 
   const removeWorklog = (id) => {

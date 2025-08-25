@@ -40,9 +40,10 @@ export const getProjects = async () => {
   }
 }
 
-export const getCategories = async () => {
+export const getCategories = async (params = {}) => {
   try {
-    const response = await get('/worklogs/categories')
+    // params can include: { company_id }
+    const response = await get('/worklogs/categories', params)
     return response.data
   } catch (error) {
     console.error('API Error:', error);
